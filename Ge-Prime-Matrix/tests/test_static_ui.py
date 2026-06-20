@@ -213,7 +213,7 @@ class TestStaticUi(unittest.TestCase):
         self.assertIn("Das .gpm-Format (v7 — verlustfrei)", html)
         self.assertIn("Zell-Geometrie", html)
         self.assertIn("favicon.svg", html)
-        self.assertIn("?v=56", html)
+        self.assertIn("?v=57", html)
         self.assertIn("ikurve-geometric-matrix-a", html)
         self.assertIn("ikurve-ingest-root", html)
         self.assertIn("ikurve-ingest-lock-banner", html)

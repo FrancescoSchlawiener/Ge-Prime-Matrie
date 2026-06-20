@@ -1,6 +1,6 @@
 # License
 
-Copyright © 2026 Francesco Schauer. All rights reserved.
+Copyright © 2026 Francesco Silvano Schauer. All rights reserved.
 
 The software, source code, documentation, and assets contained within this repository (collectively referred to as the "Software") are licensed under the **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License** (CC BY-NC-SA 4.0), subject to the terms and clarifications outlined below.
 
@@ -29,7 +29,7 @@ The "NonCommercial" clause of this license is applied strictly and without excep
 
 ## COMMERCIAL USE REQUIRES A SEPARATE LICENSE
 
-If you intend to use this Software, its algorithms, matrices, or compiled formats for any commercial, enterprise, or profit-generating purpose, **you must obtain a separate, written, and signed Commercial License** from the copyright holder (Francesco Schauer). 
+If you intend to use this Software, its algorithms, matrices, or compiled formats for any commercial, enterprise, or profit-generating purpose, **you must obtain a separate, written, and signed Commercial License** from the copyright holder (Francesco Silvano Schauer). 
 
 Please refer to `COMMERCIAL_LICENSE.md` for information on how to acquire commercial exploitation rights.
 

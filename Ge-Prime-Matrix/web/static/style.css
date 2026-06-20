@@ -1693,12 +1693,15 @@ footer {
 
 .footer-meta {
   display: inline-flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: center;
   gap: 0.45rem;
   margin: 0;
   line-height: 1.4;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .footer-sep {

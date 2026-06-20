@@ -9,7 +9,7 @@ Darauf aufbauend:
 - **S(I)-Verschlüsselung** — symmetrische Obfuskation mit Wort-/Primzahl-Schlüsseln
 - **GPC** — verschlüsselte `.gpm`-Hülle für den Editor (ohne Schlüssel kein lesbares Genom)
 
-**Build:** `2026.06-gpm-v9` · **GPM-Format:** v5 (v1–v4 lesbar) · **GPC-Cipher:** v1
+**Build:** `2026.06-gpm-v49` · **GPM-Format:** v7 (v1–v6 lesbar) · **GPC-Cipher:** v1
 
 ---
 
@@ -26,10 +26,11 @@ Darauf aufbauend:
 9. [HTTP-API](#http-api)
 10. [CLI-Werkzeuge](#cli-werkzeuge)
 11. [Projektstruktur & Module](#projektstruktur--module)
-12. [Deployment (Render)](#deployment-render)
-13. [Tests](#tests)
-14. [Umgebungsvariablen](#umgebungsvariablen)
-15. [Fehlerbehebung](#fehlerbehebung)
+12. [Repository & GitHub](#repository--github)
+13. [Deployment (Render)](#deployment-render)
+14. [Tests](#tests)
+15. [Umgebungsvariablen](#umgebungsvariablen)
+16. [Fehlerbehebung](#fehlerbehebung)
 
 ---
 
@@ -405,9 +406,11 @@ Ge-Prime-Matrix/
 ├── start.bat / start.sh   # Server starten
 ├── stop.bat               # Server stoppen (Windows)
 ├── setup.bat / dev.bat    # Setup bzw. Python-Wrapper
+├── .env.example           # Vorlage für lokale Umgebungsvariablen (committet)
+├── .gitignore             # DB, .env, Logs, venv, IDE-Settings — siehe unten
 ├── render.yaml            # Render.com Deployment
 ├── requirements.txt
-├── data/                  # SQLite (gitignored), Beispiel-Wortlisten
+├── data/                  # SQLite (gitignored), sample_words_de.txt, .gitkeep
 ├── db/                    # SQLite: Repository, Schema, Sprachen
 ├── gpm/                   # .gpm v4: Compiler, Reader, Separator, GPC-Hülle
 ├── pipeline/              # Text → S/I: Normalisierung, Token, Hilfetexte
@@ -464,6 +467,67 @@ Root-CLI (`main.py`, `scrape.py`, `run_tests.py`) liegen bewusst im Projektroot 
 
 ---
 
+## Repository & GitHub
+
+**Öffentliches Repo:** [github.com/FrancescoSchlawiener/Ge-Prime-Matrie](https://github.com/FrancescoSchlawiener/Ge-Prime-Matrie)
+
+Das Repository ist für GitHub vorbereitet: Quellcode, Tests und Vorlagen sind versioniert; Laufzeitdaten und maschinenspezifische Pfade bleiben lokal.
+
+### Clone
+
+```batch
+git clone https://github.com/FrancescoSchlawiener/Ge-Prime-Matrie.git
+cd Ge-Prime-Matrie\Ge-Prime-Matrix
+setup.bat
+dev.bat scripts\bootstrap.py
+start.bat
+```
+
+Unter Linux/macOS: `./start.sh` statt `start.bat`; Python-Pfad ggf. manuell setzen.
+
+### Was **nicht** im Repo liegt (`.gitignore`)
+
+| Kategorie | Beispiele | Grund |
+|-----------|-----------|--------|
+| **Datenbank** | `data/ge_prime.db`, `*.db`, SQLite-WAL/SHM | Lokal gepflegt (~ Millionen Wörter), zu groß für Git |
+| **Umgebung** | `.env`, `.env.local` | Secrets und lokale Overrides |
+| **Python-Laufzeit** | `.venv/`, `__pycache__/`, `.pytest_cache/` | Reproduzierbar per `setup.bat` / `pip install` |
+| **Server-Lock** | `data/.server.lock` | Prozess-Artefakt beim lokalen Start |
+| **Interpreter-Pfad** | `.python-path` | Maschinenspezifisch (Windows pgAdmin/Python) |
+| **IDE** | `.vscode/settings.json` | Wird von `setup.bat` / `find_python.py` lokal erzeugt |
+| **Logs & Scraper** | `*.log`, `scrapers/logs/*.tsv` | Laufzeit-Ausgaben |
+| **Test-Artefakte** | `test_result*.txt`, `test_out.txt` | Temporäre Test-Outputs |
+| **OS** | `.DS_Store`, `Thumbs.db` | Systemdateien |
+
+Committet bleiben u. a. [`data/sample_words_de.txt`](Ge-Prime-Matrix/data/sample_words_de.txt), [`data/.gitkeep`](Ge-Prime-Matrix/data/.gitkeep) und [`.env.example`](Ge-Prime-Matrix/.env.example).
+
+Ignore-Regeln: [`.gitignore`](.gitignore) (Repo-Root) und [`Ge-Prime-Matrix/.gitignore`](Ge-Prime-Matrix/.gitignore) (App).
+
+### Lokale Konfiguration
+
+**Umgebungsvariablen:** Vorlage [`.env.example`](Ge-Prime-Matrix/.env.example) nach `.env` kopieren (optional — alle Werte haben Defaults im Code):
+
+```batch
+copy .env.example .env
+```
+
+**IDE:** Vorlage [`.vscode/settings.json.example`](Ge-Prime-Matrix/.vscode/settings.json.example). Nach `setup.bat` zeigt die gitignored `settings.json` auf den gefundenen Interpreter (pgAdmin, `.venv` oder System-Python).
+
+**Datenbank-Pfad:** Standard `data/ge_prime.db`; Override via `GE_PRIME_DB` (siehe [`db/paths.py`](Ge-Prime-Matrix/db/paths.py)).
+
+### Vor dem Push prüfen
+
+```powershell
+git status
+git ls-files | Select-String -Pattern '\.(db|sqlite|env)$|settings\.json|\.python-path'
+cd Ge-Prime-Matrix
+dev.bat run_tests.py
+```
+
+Keine `.db`, `.env` oder `settings.json` im Index — dann ist das Repo sicher öffentlich sichtbar.
+
+---
+
 ## Deployment (Render)
 
 `render.yaml` ist vorkonfiguriert:
@@ -512,6 +576,8 @@ Abdeckung (Auswahl):
 
 ## Umgebungsvariablen
 
+Alle Variablen sind optional — der Server startet ohne `.env` mit den Defaults unten. Vorlage zum Kopieren: [`.env.example`](Ge-Prime-Matrix/.env.example) (committet); echte `.env`-Dateien sind gitignored.
+
 | Variable | Standard | Beschreibung |
 |----------|----------|--------------|
 | `PORT` | `5000` | HTTP-Port |
@@ -533,7 +599,7 @@ Abdeckung (Auswahl):
 2. Danach `dev.bat` statt `python` nutzen  
 3. Oder echten Python installieren / Store-Alias deaktivieren (siehe oben)
 
-### Port 5000 belegt / alte UI (v8 statt v9)
+### Port 5000 belegt / alte UI
 
 ```batch
 stop.bat
@@ -548,7 +614,7 @@ Alter Server-Prozess läuft noch → `stop.bat`, dann `start.bat`.
 
 ### GPM: „Payload-Länge inkonsistent“ / CRC-Fehler
 
-Datei beschädigt oder von alter/incompatibler Version. Neu kompilieren mit aktuellem Build (v9 / GPM v4).
+Datei beschädigt oder von alter/incompatibler Version. Neu kompilieren mit aktuellem Build (`2026.06-gpm-v49` / GPM v7).
 
 ### GPC: „Schlüssel erforderlich“ / `needs_keys`
 
@@ -570,6 +636,6 @@ Normal — pgAdmin-Python hat oft kein `venv`-Modul. `setup.bat` nutzt dann pgAd
 
 ## Lizenz & Version
 
-Projektversion: **`2026.06-gpm-v9`** · GPM-Format: **v4**
+Projektversion: **`2026.06-gpm-v49`** · GPM-Format: **v7** · Quellcode: [GitHub](https://github.com/FrancescoSchlawiener/Ge-Prime-Matrie)
 
 Bei Fragen oder Bugs: Tests laufen lassen (`dev.bat run_tests.py`) und `/api/health` prüfen.
