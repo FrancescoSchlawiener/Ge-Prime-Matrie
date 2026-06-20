@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: ge-prime-matrix
+    runtime: python
+    rootDir: Ge-Prime-Matrix
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scripts/run_server.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+      - key: GE_PRIME_ENV
+        value: production
+      - key: OPEN_BROWSER
+        value: "0"
+      - key: PYTHONUNBUFFERED
+        value: "1"

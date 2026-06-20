@@ -1,0 +1,12 @@
+# Sample German words for local testing: python scrape.py --file data/sample_words_de.txt --lang de
+Straße
+Strasse
+Strauß
+Müller
+Größe
+FRÄULEIN
+ROBOTERHEIT
+HALLO
+WELT
+GUTEN
+MORGEN

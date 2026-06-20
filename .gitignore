@@ -1,0 +1,54 @@
+# Repo-Root: Debug-Artefakte und Laufzeitdateien
+debug-*.log
+*.log
+
+# App liegt in Ge-Prime-Matrix/ — Details siehe Ge-Prime-Matrix/.gitignore
+
+# Umgebung (nur .env.example committen)
+Ge-Prime-Matrix/.env
+Ge-Prime-Matrix/.env.*
+!Ge-Prime-Matrix/.env.example
+
+# SQLite / DB (Runtime — nicht versionieren)
+Ge-Prime-Matrix/**/*.db
+Ge-Prime-Matrix/**/*.sqlite
+Ge-Prime-Matrix/**/*.sqlite3
+Ge-Prime-Matrix/**/*.db-journal
+Ge-Prime-Matrix/**/*.db-wal
+Ge-Prime-Matrix/**/*.db-shm
+Ge-Prime-Matrix/data/*.db
+Ge-Prime-Matrix/gpm_words.db
+
+# Server / lokale Python-Auflösung
+Ge-Prime-Matrix/data/.server.lock
+Ge-Prime-Matrix/.python-path
+
+# IDE — setup.bat/find_python.py schreibt settings.json lokal neu
+.vscode/settings.json
+Ge-Prime-Matrix/.vscode/settings.json
+
+# Scraper-Logs
+Ge-Prime-Matrix/scrapers/logs/*.log
+Ge-Prime-Matrix/scrapers/logs/skipped_*.tsv
+
+# Tests / Build-Artefakte
+Ge-Prime-Matrix/test_result*.txt
+Ge-Prime-Matrix/test_out.txt
+Ge-Prime-Matrix/**/__pycache__/
+Ge-Prime-Matrix/**/*.pyc
+Ge-Prime-Matrix/.pytest_cache/
+Ge-Prime-Matrix/.mypy_cache/
+Ge-Prime-Matrix/.coverage
+Ge-Prime-Matrix/htmlcov/
+Ge-Prime-Matrix/dist/
+Ge-Prime-Matrix/build/
+Ge-Prime-Matrix/**/*.egg-info/
+
+# Virtualenv
+Ge-Prime-Matrix/.venv/
+Ge-Prime-Matrix/venv/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

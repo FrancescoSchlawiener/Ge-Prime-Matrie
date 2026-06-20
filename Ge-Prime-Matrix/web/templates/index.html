@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ge-Prime-Matrix</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}?v={{ static_version }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ static_version }}">
+</head>
+<body data-app-version="{{ app_version }}" data-tab-gpm="1">
+  <header>
+    <h1>Ge-Prime-Matrix <span class="build-tag">{{ app_version }}</span></h1>
+    <p class="tagline">Sprache als reine Mathematik — verlustfrei komprimieren und rekonstruieren</p>
+    <p class="formula-hero">Datenobjekt = S(I)</p>
+    <nav class="tabs" role="tablist">
+      <button type="button" class="tab-btn active" data-tab="konzept" role="tab" aria-selected="true">Konzept</button>
+      <button type="button" class="tab-btn" data-tab="encodieren" role="tab" aria-selected="false">Encodieren</button>
+      <button type="button" class="tab-btn" data-tab="decodieren" role="tab" aria-selected="false">Decodieren</button>
+      <button type="button" class="tab-btn" data-tab="wortpaar" role="tab" aria-selected="false">Wortpaar</button>
+      <button type="button" class="tab-btn" data-tab="ikurve" role="tab" aria-selected="false">I-Kurve</button>
+      <button type="button" class="tab-btn tab-gpm" data-tab="gpm" role="tab" aria-selected="false">GPM Datei</button>
+      <button type="button" class="tab-btn" data-tab="datenbank" role="tab" aria-selected="false">Datenbank</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- KONZEPT -->
+    <section id="tab-konzept" class="tab-panel active">
+      <div class="card">
+        <h2>Was ist Ge-Prime-Matrix?</h2>
+        <p class="lead">Jedes Wort lässt sich in zwei Ganzzahlen zerlegen: die <strong>Substanz S</strong> (welche Buchstaben vorkommen) und den <strong>Index I</strong> (in welcher Reihenfolge sie stehen). Zusammen sind sie das Datenobjekt <strong>S(I)</strong> — verlustfrei umkehrbar.</p>
+        <p>Die Substanz entsteht aus dem Produkt fester Primzahlen pro Buchstabe. Der Index ist die Position im lexikographisch sortierten Raum aller Anordnungen mit denselben Buchstaben. So wird Sprache zu reiner Mathematik — ohne Wörterbuch und ohne Näherung.</p>
+        <div class="flow">
+          <span class="flow-box">Wort</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-box">Normalisierung</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-box">S + I</span>
+          <span class="flow-arrow">⇄</span>
+          <span class="flow-box">Wort</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Die Oberfläche — was du hier machen kannst</h2>
+        <dl class="tool-guide">
+          <dt>Encodieren</dt>
+          <dd>Bis zu 50 Wörter eingeben. Du siehst Schritt für Schritt, wie S und I entstehen; die Werte landen optional in der Wort-Datenbank.</dd>
+          <dt>Decodieren</dt>
+          <dd>Substanz S und Index I einfügen — das Werkzeug rekonstruiert das normalisierte Wort und erklärt den Rückweg durch Faktorisierung und Permutationsbaum.</dd>
+          <dt>Wortpaar</dt>
+          <dd>Vergleichen: ggT und kgV zweier Wörter. Differenz: S_rest = S₁ ÷ ggT — Teilmenge und Anagramm.</dd>
+          <dt>I-Kurve</dt>
+          <dd>Index-Vektoren über den Textverlauf — I-Distanz, Meta-Genom (Sprache/Domäne via ggT), Kurvenvergleich und kombinierte Plagiats-Heuristik.</dd>
+          <dt>GPM Datei</dt>
+          <dd>Ganzen Text in <strong>.gpm</strong> kompilieren — optional <strong>verschlüsselt (GPC)</strong>. Editor, S(I)-Verschlüsselung, Lesen, Substanz-/ggT-/kgV-Suche.</dd>
+          <dt>Datenbank</dt>
+          <dd>Übersicht gespeicherter Wörter nach Sprache (Web-Einträge ohne Sprachangabe erscheinen als Random / unsortiert).</dd>
+        </dl>
+      </div>
+
+      <div class="card">
+        <h2>S — Substanz (Primzahlprodukt)</h2>
+        <p>Jeder Buchstabe <strong>A–Z und ß</strong> trägt eine <strong>feste Primzahl</strong> (27 Zeichen — ß = 103). S ist das Produkt aller Primzahlen im Wort.</p>
+        <ul>
+          <li>Reihenfolge spielt keine Rolle — nur die Multimenge zählt.</li>
+          <li>Kollisionsfrei durch eindeutige Primfaktorzerlegung.</li>
+          <li>Aus S allein lässt sich die Buchstaben-Zutatenliste rekonstruieren.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>I — Index (Permutations-Rang)</h2>
+        <p>S kennt die Buchstaben, aber nicht ihre Anordnung. I ist die Zeilennummer im lexikographisch sortierten Raum aller Permutationen.</p>
+        <ul>
+          <li>N = L! / (k₁! · k₂! · …) — Anzahl möglicher Anordnungen.</li>
+          <li>Berechnung über fraktale Intervallschachtelung (Entscheidungsbaum).</li>
+          <li>Rechenaufwand wächst nur mit Wortlänge, nicht mit Wörterbuchgröße.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>Decodieren — der Rückweg</h2>
+        <ol>
+          <li><strong>Faktorisiere S</strong> → welche Buchstaben, wie oft?</li>
+          <li><strong>Öffne den Permutations-Raum</strong> → wie viele Anordnungen gibt es?</li>
+          <li><strong>Führe I durch den Baum</strong> → welches Zeichen an welcher Position?</li>
+          <li><strong>Ergebnis</strong> → normalisierte Form (Großbuchstaben, <strong>ß bleibt ß</strong>; Umlaute nur mit gespeichertem Original).</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <h2>Sprache in der Datenbank</h2>
+        <ul>
+          <li><strong>Web (Encodieren):</strong> Random / unsortiert — keine Sprache angegeben</li>
+          <li><strong>Scraper:</strong> jeweils die passende Sprache (z.&nbsp;B. Deutsch, Englisch, Spanisch, Französisch, …)</li>
+          <li><strong>Sonst:</strong> Random / unsortiert</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>I-Kurve &amp; Meta-Genom</h2>
+        <p>Über die Token-Reihenfolge entsteht pro Text eine <strong>I-Kurve</strong>: für jedes Wort der Quotient <strong>I / N</strong> (Position im Permutationsraum) und die Sprünge zwischen Token (<strong>delta_ratio</strong>).</p>
+        <ul>
+          <li><strong>Geometrie-Score</strong> — Ähnlichkeit zweier Kurven (Ratio + Delta).</li>
+          <li><strong>Literal-Match</strong> — Anteil gleicher Wörter an gleicher Position (Kontrast zur Geometrie).</li>
+          <li><strong>suspicious_parallel</strong> — hohe Geometrie, niedriger Literal-Match, gleiche Token-Anzahl.</li>
+          <li><strong>Meta-Genom V</strong> — Produkt aller Header-Substanzen gewichtet mit Häufigkeit; ggT(V₁, V₂) für Domänen-Überlappung.</li>
+          <li><strong>Sprache / Domäne</strong> — Referenz-Genome (de/en, Medizin/Recht als Demo).</li>
+        </ul>
+        <p class="muted">Heuristische Demo — kein Ersatz für juristische Plagiatsgutachten. Max. {{ index_help.icurve_token_max }} Token pro Seite.</p>
+      </div>
+
+      <div class="card">
+        <h2>Verschlüsselung &amp; GPC</h2>
+        <p>Text wird kompiliert; <strong>S</strong>, <strong>I</strong> und die Separator-Schicht werden schlüsselabhängig transformiert (Bereich <strong>S(I)-Verschlüsselung</strong> im Tab GPM Datei).</p>
+        <ul>
+          <li><strong>Wort-Schlüssel</strong> — Buchstabenwort → Substanz S (Lernmodus).</li>
+          <li><strong>Primzahl-Schlüssel</strong> — <code>prime:17</code> aus der festen Map.</li>
+          <li><strong>Hardcore</strong> — kommagetrennte Wörter und <code>prime:N</code> wechseln pro Token.</li>
+          <li><strong>GPC</strong> — verschlüsselte <strong>.gpm</strong> (Magic <code>GPC</code>): ohne Schlüssel kein lesbares Genom im Editor.</li>
+        </ul>
+        <p class="muted">Symmetrische Obfuskation — wer PRIME_MAP und den Schlüssel kennt, kann entschlüsseln. Kein AES-Ersatz.</p>
+      </div>
+
+      <div class="card">
+        <h2>Primzahl-Mapping (27 Buchstaben — ß = 103)</h2>
+        <p class="muted norm-prime-hint">Sortiert nach Primzahl. <strong>ß</strong> ist kein Umlaut und wird nicht zu ss expandiert.</p>
+        <div class="prime-grid">
+          {% for letter, prime in prime_map %}
+          <span>{{ letter }}→{{ prime }}</span>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Normalisierung</h2>
+        <p class="lead">Vor dem Encodieren werden Wörter vereinheitlicht. Diese Regeln gelten überall gleich:</p>
+        {% include 'partials/normalize_rules.html' %}
+      </div>
+    </section>
+
+    <!-- ENCODIEREN -->
+    <section id="tab-encodieren" class="tab-panel" hidden>
+      <div class="card">
+        <div class="tool-page-head">
+          {% with title='Wort → S(I)', lead='Gib ein oder mehrere Wörter ein (max. 50). Nach dem Encodieren siehst du für jedes Wort die Schritte Normalisierung → Substanz → Index. Die Einträge werden unter Random / unsortiert in der Datenbank gespeichert, sofern du keine Sprache angibst.', guide=tab_guide.encode %}
+          {% include 'partials/tool_page_head.html' %}
+          {% endwith %}
+        </div>
+        <form id="encode-form" class="tool-form tool-form-stack">
+          <label class="full-width">Wörter oder Text
+            <textarea id="encode-text" rows="4" placeholder="z.B. Straße, HELLO, Müller&#10;oder mehrere Wörter durch Leerzeichen getrennt" autocomplete="off"></textarea>
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="btn">Encodieren</button>
+            <span class="hint-muted">Max. 50 Wörter · Standard: eingeklappt</span>
+          </div>
+        </form>
+        <div id="encode-result" class="result hidden"></div>
+      </div>
+    </section>
+
+    <!-- DECODIEREN -->
+    <section id="tab-decodieren" class="tab-panel" hidden>
+      <div class="card">
+        <div class="tool-page-head">
+          {% with title='S(I) → Wort', lead=norm_help.decode_result, guide=tab_guide.decode %}
+          {% include 'partials/tool_page_head.html' %}
+          {% endwith %}
+        </div>
+        <form id="decode-form" class="tool-form">
+          <label>Substanz S
+            <input type="text" id="decode-s" placeholder="z.B. 10363926" inputmode="numeric" autocomplete="off">
+          </label>
+          <label>Index I
+            <input type="text" id="decode-i" placeholder="z.B. 42" inputmode="numeric" autocomplete="off">
+          </label>
+          <button type="submit" class="btn">Decodieren</button>
+        </form>
+        <p class="muted tip-below-form">Tipp: Erst ein Wort encodieren, dann S und I hier einfügen.</p>
+        <div id="decode-result" class="result hidden"></div>
+      </div>
+    </section>
+
+    <!-- WORTPAAR (Vergleichen + Differenz) -->
+    <section id="tab-wortpaar" class="tab-panel" hidden>
+      <div class="card">
+        <div class="tool-page-head">
+          {% with title='Wortpaar — Vergleichen & Differenz', lead=norm_help.compare, guide=tab_guide.wortpaar %}
+          {% include 'partials/tool_page_head.html' %}
+          {% endwith %}
+        </div>
+        <fieldset class="pair-mode-toggle" role="radiogroup" aria-label="Modus">
+          <label class="pair-mode-option">
+            <input type="radio" name="pair-mode" value="compare" checked> Vergleichen (ggT/kgV)
+          </label>
+          <label class="pair-mode-option">
+            <input type="radio" name="pair-mode" value="diff"> Differenz
+          </label>
+        </fieldset>
+        <div id="pair-help-compare" class="pair-help-panel">
+          <details class="tool-help-details">
+            <summary>Mehr zu Vergleichen</summary>
+            <div class="tool-help-details-body">
+              <p>{{ norm_help.eszett_compare }}</p>
+              <p>{{ tab_guide.compare }}</p>
+            </div>
+          </details>
+        </div>
+        <div id="pair-help-diff" class="pair-help-panel hidden">
+          <details class="tool-help-details" open>
+            <summary>Mehr zur Differenz</summary>
+            <div class="tool-help-details-body">
+              <p>{{ diff_help.intro }}</p>
+              <p>{{ diff_help.subset }}</p>
+              <p>{{ diff_help.anagram }}</p>
+              <p>{{ diff_help.multiset_note }}</p>
+              <p>{{ diff_help.example_subset }} {{ diff_help.example_anagram }}</p>
+              <p>{{ tab_guide.diff }}</p>
+            </div>
+          </details>
+        </div>
+        <form id="wortpaar-form" class="tool-form">
+          <label>Wort 1
+            <input type="text" id="word1" placeholder="z. B. Straße oder AT" autocomplete="off">
+          </label>
+          <label>Wort 2
+            <input type="text" id="word2" placeholder="z. B. Schule oder CAT" autocomplete="off">
+          </label>
+          <button type="submit" class="btn" id="wortpaar-submit">Vergleichen</button>
+        </form>
+        <div id="compare-result" class="result hidden"></div>
+        <div id="diff-result" class="result hidden"></div>
+      </div>
+    </section>
+
+    <!-- Legacy-Panel-IDs für Hash-Kompatibilität (Inhalt in tab-wortpaar) -->
+    <section id="tab-vergleichen" class="tab-panel" hidden aria-hidden="true"></section>
+    <section id="tab-differenz" class="tab-panel" hidden aria-hidden="true"></section>
+
+    <!-- I-KURVE -->
+    <section id="tab-ikurve" class="tab-panel" hidden>
+      <div class="card">
+        <div class="tool-page-head">
+          {% with title='Index-Vektoren — Stil & Geometrie', lead=index_help.intro, guide=tab_guide.ikurve %}
+          {% include 'partials/tool_page_head.html' %}
+          {% endwith %}
+          <details class="tool-help-details">
+            <summary>Details zu I-Kurve & Meta-Genom</summary>
+            <div class="tool-help-details-body">
+              <p>{{ index_help.i_distance }}</p>
+              <p>{{ index_help.plagiarism }}</p>
+              <p>{{ index_help.meta_genome }}</p>
+              <p>{{ index_help.meta_language }}</p>
+              <p>{{ index_help.cell_geometry }}</p>
+              <p>{{ index_help.substance_align }}</p>
+              <p>{{ index_help.relation_domain }}</p>
+              <p>{{ index_help.db_language }}</p>
+              <p>{{ index_help.spectroscope }}</p>
+              <p>{{ index_help.cell_twins }}</p>
+              <p>{{ index_help.limit_note }}</p>
+            </div>
+          </details>
+        </div>
+        <div id="ikurve-ingest-root">
+        <div id="ikurve-ingest-lock-banner" class="ikurve-ingest-lock-banner hidden" role="status">
+          Analyse-Modus aktiv. Eingabe eingefroren. Für einen neuen Scan klicken Sie auf „Neuer Vergleich“.
+        </div>
+        <form id="ikurve-form" class="tool-form tool-form-stack">
+          <div class="ikurve-grid">
+            <div class="ikurve-side">
+              <h3>Seite A</h3>
+              <fieldset class="ikurve-source-toggle">
+                <legend>Quelle A</legend>
+                <label><input type="radio" name="ikurve-source-a" value="text" checked> Freitext</label>
+                <label><input type="radio" name="ikurve-source-a" value="gpm" id="ikurve-source-a-gpm"> .gpm-Datei</label>
+              </fieldset>
+              <div id="ikurve-gpm-drop-a" class="ikurve-gpm-drop hidden" data-side="a">
+                <input type="file" class="ikurve-gpm-file-input" accept=".gpm,application/octet-stream" data-side="a" hidden>
+                <span class="ikurve-gpm-drop-label">.gpm hier ablegen oder klicken</span>
+                <span class="ikurve-gpm-drop-status muted" id="ikurve-gpm-status-a">Noch keine Datei</span>
+              </div>
+              <p class="muted ikurve-gpm-shared-status hidden" id="ikurve-gpm-shared-hint-a"></p>
+              <div class="ikurve-ingest-row ikurve-ingest-text-a">
+                <label class="full-width">Ingest
+                  <input type="text" id="ikurve-ingest-a" class="ikurve-ingest-input" spellcheck="false" autocomplete="off" placeholder="Plaintext einfügen …">
+                </label>
+                <button type="button" class="btn btn-secondary btn-small" id="ikurve-paste-a">Zwischenablage</button>
+                <button type="button" class="btn btn-secondary btn-small" id="ikurve-file-btn-a">Textdatei …</button>
+                <input type="file" id="ikurve-file-a" accept=".txt,.md,.csv,.json,.log,text/*" hidden>
+              </div>
+            </div>
+            <div class="ikurve-side">
+              <h3>Seite B</h3>
+              <fieldset class="ikurve-source-toggle">
+                <legend>Quelle B</legend>
+                <label><input type="radio" name="ikurve-source-b" value="text" checked> Freitext</label>
+                <label><input type="radio" name="ikurve-source-b" value="gpm" id="ikurve-source-b-gpm"> .gpm-Datei</label>
+              </fieldset>
+              <div id="ikurve-gpm-drop-b" class="ikurve-gpm-drop hidden" data-side="b">
+                <input type="file" class="ikurve-gpm-file-input" accept=".gpm,application/octet-stream" data-side="b" hidden>
+                <span class="ikurve-gpm-drop-label">.gpm hier ablegen oder klicken</span>
+                <span class="ikurve-gpm-drop-status muted" id="ikurve-gpm-status-b">Noch keine Datei</span>
+              </div>
+              <p class="muted ikurve-gpm-shared-status hidden" id="ikurve-gpm-shared-hint-b"></p>
+              <div class="ikurve-ingest-row ikurve-ingest-text-b">
+                <label class="full-width">Ingest
+                  <input type="text" id="ikurve-ingest-b" class="ikurve-ingest-input" spellcheck="false" autocomplete="off" placeholder="Vergleichstext …">
+                </label>
+                <button type="button" class="btn btn-secondary btn-small" id="ikurve-paste-b">Zwischenablage</button>
+                <button type="button" class="btn btn-secondary btn-small" id="ikurve-file-btn-b">Textdatei …</button>
+                <input type="file" id="ikurve-file-b" accept=".txt,.md,.csv,.json,.log,text/*" hidden>
+              </div>
+            </div>
+          </div>
+          <p class="muted tip-below-form" id="ikurve-gpm-workspace-status">Optional: .gpm pro Seite per Drag-and-Drop — oder im Tab GPM Datei kompilieren/lesen.</p>
+          <label class="ikurve-audit-mode-label">DB-Sprachaudit
+            <select id="ikurve-db-audit-mode" class="ikurve-audit-mode-select">
+              <option value="de_en" selected>de ↔ en (schnell)</option>
+              <option value="all_db">Alle DB-Sprachen</option>
+              <option value="off">Aus</option>
+            </select>
+          </label>
+          <div class="ikurve-form-actions">
+            <button type="submit" class="btn" id="ikurve-compare-btn">I-Kurven vergleichen</button>
+            <button type="button" class="btn btn-secondary ikurve-reset-btn hidden" id="ikurve-reset-btn">Neuer Vergleich</button>
+          </div>
+        </form>
+        </div>
+        <div id="ikurve-matrix-root" class="ikurve-matrix-root hidden" aria-live="polite">
+          <div class="ikurve-grid">
+            <div class="ikurve-side ikurve-matrix-side">
+              <h3>Matrix A</h3>
+              <div id="ikurve-geometric-matrix-a" class="geometric-matrix" aria-label="Geometrische Matrix Seite A" tabindex="0"></div>
+              <div class="ikurve-matrix-toolbar">
+                <button type="button" class="btn btn-secondary btn-small" id="ikurve-spectro-btn-a">Selektion analysieren</button>
+                <span class="muted ikurve-spectro-legend">Teal Substanz · Amber Struktur · Kreuzfeuer beides</span>
+              </div>
+              <div id="ikurve-spectro-result-a" class="ikurve-spectro-result hidden" aria-live="polite"></div>
+            </div>
+            <div class="ikurve-side ikurve-matrix-side">
+              <h3>Matrix B</h3>
+              <div id="ikurve-geometric-matrix-b" class="geometric-matrix" aria-label="Geometrische Matrix Seite B" tabindex="0"></div>
+              <div class="ikurve-matrix-toolbar">
+                <button type="button" class="btn btn-secondary btn-small" id="ikurve-spectro-btn-b">Selektion analysieren</button>
+                <span class="muted ikurve-spectro-legend">Teal Substanz · Amber Struktur · Kreuzfeuer beides</span>
+              </div>
+              <div id="ikurve-spectro-result-b" class="ikurve-spectro-result hidden" aria-live="polite"></div>
+            </div>
+          </div>
+        </div>
+        <div id="ikurve-result" class="result hidden"></div>
+      </div>
+    </section>
+
+    <!-- Legacy-Hash: #verschluesseln → GPM Cipher-Bereich -->
+    <section id="tab-verschluesseln" class="tab-panel" hidden aria-hidden="true"></section>
+
+    <!-- .GPM DATEI -->
+    <section id="tab-gpm" class="tab-panel" hidden>
+      <div class="card">
+        <h2>Das .gpm-Format (v7 — verlustfrei)</h2>
+        <p class="lead">Eine <strong>.gpm</strong>-Datei speichert Text als Mathematik: jedes Wort einmal mit S, jede Wiederholung als Verweis, technische Zellen mit I_Satz, Satzzeichen und Leerzeichen in einer eigenen Schicht. Der Originaltext lässt sich bytegenau rekonstruieren.</p>
+        <div class="gpm-anatomy">
+          <div class="gpm-segment">
+            <h3>Genom</h3>
+            <p>Alle verschiedenen Wörter des Textes — mit Original, normalisierter Form und Substanz S.</p>
+          </div>
+          <div class="gpm-segment">
+            <h3>Wort-Geometrie</h3>
+            <p>Die Abfolge der Wörter im Text: Word-ID, Schreibweise (Groß/Klein/Mischfall) und Index I pro Token.</p>
+          </div>
+          <div class="gpm-segment">
+            <h3>Zell-Geometrie</h3>
+            <p>Fraktale Segmente (≤50 Token): Skelett der Wort-Kategorien und I_Satz pro Zelle — Kette statt monolithischer Body.</p>
+          </div>
+          <div class="gpm-segment">
+            <h3>Separator-Layer</h3>
+            <p>Alles zwischen den Wörtern: Leerzeichen, Zeilenumbrüche, Satzzeichen, Ziffern, Symbole, Emoji — kompakt codiert.</p>
+          </div>
+          <div class="gpm-segment">
+            <h3>Integrität</h3>
+            <p>Datei-Header, Längenprüfung beim Lesen und CRC32 am Ende.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="tool-page-head">
+          {% with title='Editor — Text kompilieren', guide=tab_guide.gpm %}
+          {% include 'partials/tool_page_head.html' %}
+          {% endwith %}
+          <details class="tool-help-details">
+            <summary>Editor &amp; GPC-Hinweise</summary>
+            <div class="tool-help-details-body">
+              <p>Tippen, einfügen oder Datei hineinziehen (.txt oder .gpm). Nach dem Lesen einer .gpm landet der rekonstruierte Text automatisch im Editor.</p>
+              <p>{{ cipher_help.gpm_encrypt }}</p>
+            </div>
+          </details>
+        </div>
+        <form id="gpm-compile-form" class="tool-form tool-form-stack">
+          <div class="editor-shell">
+            <div class="editor-chrome" aria-hidden="true">
+              <div class="editor-chrome-left">
+                <span class="editor-dot editor-dot-red"></span>
+                <span class="editor-dot editor-dot-yellow"></span>
+                <span class="editor-dot editor-dot-green"></span>
+                <span class="editor-chrome-title">Quelltext</span>
+              </div>
+              <span class="editor-chrome-stats" id="gpm-editor-stats">0 Zeichen · 0 Token</span>
+            </div>
+            <div id="gpm-editor-dropzone" class="editor-dropzone">
+              <textarea id="gpm-source-text" class="code-editor" rows="18" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="Text hier eingeben …&#10;&#10;.txt oder .gpm per Drag-and-Drop · .gpm lädt den rekonstruierten Text"></textarea>
+              <div id="gpm-geometric-viewport" class="geometric-viewport hidden" aria-label="Spektroskopie-Viewport (nur Anzeige)" tabindex="-1"></div>
+              <div class="dropzone-hint" aria-hidden="true">
+                <span class="dropzone-hint-icon">↓</span>
+                <span>Datei ablegen</span>
+              </div>
+            </div>
+            <div class="editor-statusbar">
+              <span class="editor-status-hint">UTF-8 · Satzzeichen bleiben in .gpm erhalten</span>
+            </div>
+            <div class="editor-toolbar">
+              <div class="editor-toolbar-group editor-toolbar-primary">
+                <button type="submit" class="btn btn-editor-primary">In .gpm kompilieren</button>
+                <button type="button" class="btn btn-secondary" id="gpm-spectro-analyze-btn">Selektion analysieren</button>
+              </div>
+              <div class="editor-toolbar-group editor-toolbar-secondary">
+                <button type="button" class="btn btn-secondary" id="gpm-load-gpm-btn">GPM-Datei …</button>
+                <button type="button" class="btn btn-secondary" id="gpm-load-text-btn">Textdatei …</button>
+                <button type="button" class="btn btn-secondary btn-ghost" id="gpm-clear-btn">Leeren</button>
+              </div>
+            </div>
+          </div>
+          <input type="file" id="gpm-gpm-file" accept=".gpm,application/octet-stream" hidden>
+          <input type="file" id="gpm-text-file" accept=".txt,.md,.csv,.json,.log,text/*" hidden>
+          <fieldset class="gpm-encrypt-fieldset" id="gpm-encrypt-fieldset">
+            <legend>Verschlüsselung beim Speichern</legend>
+            <label class="gpm-encrypt-toggle">
+              <input type="checkbox" id="gpm-encrypt-enable">
+              Als verschlüsselte .gpm speichern — ohne Schlüssel nicht lesbar (Magic GPC)
+            </label>
+            <div id="gpm-encrypt-panel" class="gpm-encrypt-panel hidden">
+              <fieldset class="cipher-mode-fieldset gpm-cipher-modes">
+                <legend>Cipher-Modus</legend>
+                {% with radio_name='gpm-cipher-mode', compact=true %}{% include 'partials/cipher_mode_grid.html' %}{% endwith %}
+              </fieldset>
+              <label class="full-width"><span id="gpm-cipher-key-caption">Schlüssel</span>
+                <input type="text" id="gpm-cipher-key" spellcheck="false" placeholder="z. B. GEHEIM" autocomplete="off">
+              </label>
+              <p class="muted cipher-hardcore-hint hidden" id="gpm-cipher-hardcore-hint">{{ cipher_help.hardcore_hint }}</p>
+            </div>
+          </fieldset>
+        </form>
+        <div id="gpm-compile-result" class="result hidden"></div>
+        <div id="gpm-spectro-result" class="result hidden"></div>
+      </div>
+
+      <div class="card" id="gpm-cipher-section">
+        <div class="tool-page-head">
+          {% with title='S(I)-Verschlüsselung — Primzahlen & Wörter', lead=cipher_help.intro, guide=tab_guide.cipher %}
+          {% include 'partials/tool_page_head.html' %}
+          {% endwith %}
+          <details class="tool-help-details">
+            <summary>Modi &amp; Grenzen</summary>
+            <div class="tool-help-details-body">
+              <p>{{ cipher_help.modes }}</p>
+              <p>{{ cipher_help.i_shadow }}</p>
+              <p>{{ cipher_help.limit_note }}</p>
+            </div>
+          </details>
+        </div>
+        <form id="cipher-form" class="tool-form tool-form-stack">
+          <fieldset class="cipher-mode-fieldset">
+            <legend>Modus</legend>
+            {% with radio_name='cipher-mode', compact=false %}{% include 'partials/cipher_mode_grid.html' %}{% endwith %}
+          </fieldset>
+          <label class="full-width">Klartext / Chiffretext
+            <textarea id="cipher-text" rows="6" spellcheck="false" placeholder="Text zum Ver- oder Entschlüsseln …"></textarea>
+          </label>
+          <label class="full-width" id="cipher-key-label"><span id="cipher-key-caption">Schlüssel (Wort)</span>
+            <input type="text" id="cipher-key" spellcheck="false" placeholder="z. B. GEHEIM" autocomplete="off">
+          </label>
+          <p class="muted cipher-hardcore-hint hidden" id="cipher-hardcore-hint">{{ cipher_help.hardcore_hint }}</p>
+          <div class="cipher-actions">
+            <label class="cipher-direction"><input type="radio" name="cipher-direction" value="encrypt" checked> Verschlüsseln</label>
+            <label class="cipher-direction"><input type="radio" name="cipher-direction" value="decrypt"> Entschlüsseln</label>
+          </div>
+          <div id="cipher-security-preview" class="cipher-security-preview" aria-live="polite"></div>
+          <button type="submit" class="btn" id="cipher-submit-btn">Verschlüsseln</button>
+        </form>
+        <div id="cipher-result" class="result hidden"></div>
+      </div>
+
+      <div class="card">
+        <h2>Lesen — Analyse</h2>
+        <p class="muted">Genom, Geometrie-Vorschau und zeichengenaue Rekonstruktion. Verschlüsselte Dateien (GPC) benötigen den Schlüssel.</p>
+        <form id="gpm-read-form" class="tool-form tool-form-stack">
+          <div id="gpm-read-dropzone" class="file-dropzone">
+            <input type="file" id="gpm-read-file" accept=".gpm,application/octet-stream" aria-label=".gpm-Datei wählen">
+            <span class="file-dropzone-hint">.gpm hierher ziehen oder klicken zum Auswählen</span>
+            <span class="file-dropzone-name muted hidden" id="gpm-read-file-name"></span>
+          </div>
+          <div id="gpm-decrypt-panel" class="gpm-decrypt-panel hidden">
+            <p class="gpm-decrypt-lead"><strong>Verschlüsselte Datei</strong> — Schlüssel zum Entschlüsseln:</p>
+            <label class="full-width">Schlüssel
+              <input type="text" id="gpm-read-cipher-key" spellcheck="false" placeholder="Wie beim Kompilieren · Hardcore: kommagetrennt" autocomplete="off">
+            </label>
+            <p class="muted" id="gpm-read-cipher-mode-hint"></p>
+          </div>
+          <button type="submit" class="btn btn-secondary">Datei analysieren</button>
+        </form>
+        <div id="gpm-read-result" class="result hidden"></div>
+      </div>
+
+      <div class="card">
+        <h2>Suche — Ganzzahl-Matching</h2>
+        <p class="muted">{{ match_help.substance_mode }}</p>
+        <p class="muted">{{ match_help.gcd_mode }}</p>
+        <p class="muted">{{ match_help.lcm_mode }}</p>
+        <p class="muted">{{ match_help.lcm_example }}</p>
+        <form id="gpm-search-form" class="tool-form">
+          <label>Suchwort
+            <input type="text" id="gpm-search-query" placeholder="z.B. Straße oder MUT" autocomplete="off">
+          </label>
+          <label id="gpm-search-query2-wrap" class="gpm-search-query2 hidden">
+            Wort 2 (kgV)
+            <input type="text" id="gpm-search-query2" placeholder="z.B. WUT" autocomplete="off">
+          </label>
+          <label>Modus
+            <select id="gpm-search-mode">
+              <option value="substance">Substanz-Match (exakt)</option>
+              <option value="gcd">ggT-Filter (gemeinsame Buchstaben)</option>
+              <option value="lcm">kgV-Filter (Vereinigung, 2 Wörter)</option>
+            </select>
+          </label>
+          <button type="submit" class="btn">In geladener .gpm suchen</button>
+        </form>
+        <p class="muted tip-below-form">Zuerst kompilieren oder eine .gpm-Datei lesen — die Datei bleibt im Speicher für Suche.</p>
+        <div id="gpm-search-result" class="result hidden"></div>
+      </div>
+    </section>
+
+    <!-- DATENBANK -->
+    <section id="tab-datenbank" class="tab-panel" hidden>
+      <div class="card">
+        <div class="tool-page-head">
+          {% with title='Wort-Datenbank', lead='Gespeicherte Einträge nach Sprache — Web-Encodieren ohne Sprachangabe erscheint als Random / unsortiert.', guide=tab_guide.datenbank %}
+          {% include 'partials/tool_page_head.html' %}
+          {% endwith %}
+        </div>
+        <p>Gespeicherte Einträge: <strong id="db-total-count">{{ total_words }}</strong></p>
+        <div id="db-lang-stats">
+        {% if lang_stats %}
+        <ul class="stats">
+          {% for label, cnt in lang_stats %}
+          <li>{{ label }}: {{ cnt }}</li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="muted" id="db-empty-hint">Noch leer — Wörter im Tab Encodieren speichern oder <code>python scrape.py --source kevina</code></p>
+        {% endif %}
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p class="footer-meta">
+      <span>© 2026 Francesco Schauer</span>
+      <span class="footer-sep" aria-hidden="true">·</span>
+      <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener">CC BY-NC-SA 4.0</a>
+      <span class="footer-sep" aria-hidden="true">·</span>
+      <span class="footer-build">{{ app_version }}</span>
+    </p>
+  </footer>
+
+  <script src="{{ url_for('static', filename='geometric_editor.js') }}?v={{ static_version }}"></script>
+  <script src="{{ url_for('static', filename='ikurve_lab.js') }}?v={{ static_version }}"></script>
+  <script src="{{ url_for('static', filename='app.js') }}?v={{ static_version }}"></script>
+</body>
+</html>

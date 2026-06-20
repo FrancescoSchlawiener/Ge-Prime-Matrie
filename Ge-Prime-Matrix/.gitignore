@@ -1,0 +1,49 @@
+# Umgebung (nur .env.example committen)
+.env
+.env.*
+!.env.example
+
+# SQLite / DB (Runtime — nicht versionieren)
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+data/*.db
+gpm_words.db
+
+# Server / lokale Python-Auflösung
+data/.server.lock
+.python-path
+
+# IDE — setup.bat/find_python.py schreibt settings.json lokal neu
+.vscode/settings.json
+
+# Scraper-Logs
+scrapers/logs/*.log
+scrapers/logs/skipped_*.tsv
+
+# Tests / Build-Artefakte
+test_result*.txt
+test_out.txt
+*.log
+debug-*.log
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Virtualenv
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

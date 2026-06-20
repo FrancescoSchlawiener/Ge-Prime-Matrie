@@ -1,0 +1,22 @@
+<div class="cipher-mode-grid">
+  <label class="cipher-mode-option">
+    <input type="radio" name="{{ radio_name }}" value="word" checked>
+    <span class="cipher-mode-title">{% if compact %}Wort{% else %}Wort-Schlüssel{% endif %}</span>
+    <span class="cipher-security cipher-security-low"{% if not compact %} data-score="32"{% endif %}>{% if compact %}niedrig{% else %}Sicherheit: niedrig{% endif %}</span>
+  </label>
+  <label class="cipher-mode-option">
+    <input type="radio" name="{{ radio_name }}" value="prime">
+    <span class="cipher-mode-title">Primzahl</span>
+    <span class="cipher-security cipher-security-low"{% if not compact %} data-score="40"{% endif %}>{% if compact %}niedrig{% else %}Sicherheit: niedrig{% endif %}</span>
+  </label>
+  <label class="cipher-mode-option">
+    <input type="radio" name="{{ radio_name }}" value="si">
+    <span class="cipher-mode-title">{% if compact %}S + I{% else %}S + I getrennt{% endif %}</span>
+    <span class="cipher-security cipher-security-mid"{% if not compact %} data-score="55"{% endif %}>{% if compact %}mittel{% else %}Sicherheit: mittel{% endif %}</span>
+  </label>
+  <label class="cipher-mode-option">
+    <input type="radio" name="{{ radio_name }}" value="hardcore">
+    <span class="cipher-mode-title">{% if compact %}Hardcore{% else %}Hardcore (Wechsel){% endif %}</span>
+    <span class="cipher-security cipher-security-high"{% if not compact %} data-score="72"{% endif %}>{% if compact %}hoch{% else %}Sicherheit: hoch{% endif %}</span>
+  </label>
+</div>
