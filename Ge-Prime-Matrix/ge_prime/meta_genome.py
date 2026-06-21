@@ -117,12 +117,14 @@ def compare_profiles(profile_a: Counter, profile_b: Counter) -> dict:
     log_gcd = 0.0
     log_a = 0.0
     log_b = 0.0
+    log_lcm = 0.0
     shared_prime_entries: list[dict] = []
 
     for prime in keys:
         a = profile_a.get(prime, 0)
         b = profile_b.get(prime, 0)
         shared = min(a, b)
+        combined = max(a, b)
         if shared:
             shared_profile[prime] = shared
             log_gcd += shared * math.log(prime)
@@ -133,6 +135,8 @@ def compare_profiles(profile_a: Counter, profile_b: Counter) -> dict:
             log_a += a * math.log(prime)
         if b:
             log_b += b * math.log(prime)
+        if combined:
+            log_lcm += combined * math.log(prime)
 
     zero_reason: str | None = None
     if not profile_a:
@@ -142,12 +146,10 @@ def compare_profiles(profile_a: Counter, profile_b: Counter) -> dict:
     elif log_gcd <= 0:
         zero_reason = "no_shared_primes"
 
-    if log_a <= 0 or log_b <= 0 or log_gcd <= 0:
+    if log_gcd <= 0 or log_lcm <= 0:
         similarity = 0.0
-    elif log_a <= log_b:
-        similarity = math.exp(log_gcd - log_a)
     else:
-        similarity = math.exp(log_gcd - log_b)
+        similarity = log_gcd / log_lcm
     similarity = round(min(1.0, max(0.0, similarity)), 6)
 
     emit_metric_debug(
@@ -156,6 +158,7 @@ def compare_profiles(profile_a: Counter, profile_b: Counter) -> dict:
             "log_gcd": log_gcd,
             "log_a": log_a,
             "log_b": log_b,
+            "log_lcm": log_lcm,
             "shared_prime_count": len(shared_prime_entries),
             "shared_prime_entries": shared_prime_entries,
             "zero_reason": zero_reason,
@@ -180,6 +183,7 @@ def compare_profiles(profile_a: Counter, profile_b: Counter) -> dict:
         "log_gcd": round(log_gcd, 6),
         "log_a": round(log_a, 6),
         "log_b": round(log_b, 6),
+        "log_lcm": round(log_lcm, 6),
         "shared_prime_count": len(shared_prime_entries),
         "shared_prime_entries": shared_prime_entries,
         "zero_reason": zero_reason,
@@ -436,6 +440,7 @@ def compare_meta_genomes(meta_a: dict, meta_b: dict, *, relation_comparison: dic
             "log_gcd": cmp.get("log_gcd", 0.0),
             "log_a": cmp.get("log_a", 0.0),
             "log_b": cmp.get("log_b", 0.0),
+            "log_lcm": cmp.get("log_lcm", 0.0),
             "shared_prime_count": cmp.get("shared_prime_count", 0),
             "shared_prime_entries": cmp.get("shared_prime_entries", []),
             "zero_reason": cmp.get("zero_reason"),

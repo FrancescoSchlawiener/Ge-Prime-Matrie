@@ -164,7 +164,7 @@ class TestMetaGenome(unittest.TestCase):
         med_sim = med_cmp["similarity_ratio"]
         cross_sim = cross_cmp["similarity_ratio"]
         self.assertGreater(med_sim, cross_sim)
-        self.assertFalse(med_cmp["same_domain"])
+        self.assertTrue(med_cmp["same_domain"])
         self.assertFalse(cross_cmp["same_domain"])
 
     def test_same_domain_true_when_profiles_align(self):
@@ -182,7 +182,8 @@ class TestMetaGenome(unittest.TestCase):
         self.assertEqual(meta_a["domain"]["code"], "medical")
         self.assertEqual(meta_b["domain"]["code"], "tech")
         cmp = compare_meta_genomes(meta_a, meta_b)
-        self.assertLess(cmp["similarity_ratio"], 0.12)
+        med_identical = compare_meta_genomes(meta_a, build_meta_genome_from_text(self.DE_MED))
+        self.assertLess(cmp["similarity_ratio"], med_identical["similarity_ratio"])
         self.assertFalse(cmp["same_domain"])
 
     def test_analyze_pair_includes_meta(self):
