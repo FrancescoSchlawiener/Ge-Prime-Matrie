@@ -51,13 +51,6 @@ const STRUCTURAL_DEPTH_CONFIG = {
     dtwKey: 'line',
     label: 'Zeile',
   },
-  page: {
-    dataKey: 'pages',
-    ratioKey: 'i_page_ratio',
-    indexKey: 'page_index',
-    dtwKey: 'page',
-    label: 'Seite',
-  },
 };
 
 function pillClass(isActive, activeClass) {

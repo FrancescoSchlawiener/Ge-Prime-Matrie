@@ -24,7 +24,6 @@ class TestIntervalIndex(unittest.TestCase):
         ("sentence", lambda h: h.semantic.sentences),
         ("paragraph", lambda h: h.semantic.paragraphs),
         ("line", lambda h: h.structural.lines),
-        ("page", lambda h: h.structural.pages),
     )
 
     def _assert_parity(self, idx, level, nodes, span):

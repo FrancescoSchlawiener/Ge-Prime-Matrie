@@ -17,7 +17,6 @@ from ge_prime.hierarchy import (
     compare_level_sequences,
     cross_analysis,
     extract_line_curve,
-    extract_page_curve,
     extract_paragraph_curve,
     extract_phrase_curve,
     extract_sentence_curve,
@@ -582,11 +581,9 @@ def analyze_pair(
         "phrases": extract_phrase_curve(document_b),
     }
     structural_a = {
-        "pages": extract_page_curve(document_a),
         "lines": extract_line_curve(document_a),
     }
     structural_b = {
-        "pages": extract_page_curve(document_b),
         "lines": extract_line_curve(document_b),
     }
     hierarchy_comparison = {
@@ -612,11 +609,6 @@ def analyze_pair(
                 structural_a["lines"],
                 structural_b["lines"],
                 ratio_key="i_zeile_ratio",
-            ),
-            "page": compare_level_sequences(
-                structural_a["pages"],
-                structural_b["pages"],
-                ratio_key="i_page_ratio",
             ),
         },
     }

@@ -256,6 +256,11 @@ class TestWebThreadSafety(unittest.TestCase):
             self.assertIn("sentence", hc)
             self.assertIn("geometry_score", hc["phrase"])
             self.assertIn("geometry_score", hc["paragraph"])
+            struct_hc = data["hierarchy_comparison"]["structural"]
+            self.assertIn("line", struct_hc)
+            self.assertNotIn("page", struct_hc)
+            self.assertNotIn("pages", data.get("structural_a", {}))
+            self.assertIn("lines", data["structural_a"])
             self.assertIn("sparkline_points", data["curve_a"])
             self.assertIn("points", data["curve_a"])
             self.assertIn("point_count", data["curve_a"])

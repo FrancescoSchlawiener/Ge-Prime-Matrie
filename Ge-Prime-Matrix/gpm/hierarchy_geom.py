@@ -126,6 +126,7 @@ def gap_has_line_break(gap: str) -> bool:
 
 
 def gap_starts_page(gap: str) -> bool:
+    """Formfeed (\\f) — nur für Export/PDF-Seitenumbrüche, nicht Standard-Hierarchie."""
     return "\f" in gap
 
 
@@ -193,6 +194,7 @@ def split_line_spans(token_count: int, gaps: list[str]) -> list[TokenSpan]:
 
 
 def split_page_spans(line_spans: list[TokenSpan], gaps: list[str]) -> list[TokenSpan]:
+    """Token-Spans pro Druckseite (\\f). Nur für Export/PDF — nicht in build_document_hierarchy."""
     if not line_spans:
         return [TokenSpan(0, 0)]
     pages: list[TokenSpan] = []
@@ -424,6 +426,7 @@ def _line_nodes(document: GpmDocument, explicit_map: dict[int, str]) -> list[Hie
 
 
 def _page_nodes(lines: list[HierarchyNode], document: GpmDocument) -> list[HierarchyNode]:
+    """Intern — siehe build_page_nodes_for_export()."""
     line_spans = [TokenSpan(l.token_start, l.token_count) for l in lines]
     pages: list[HierarchyNode] = []
     for p_idx, span in enumerate(split_page_spans(line_spans, document.gaps)):
@@ -451,6 +454,13 @@ def _page_nodes(lines: list[HierarchyNode], document: GpmDocument) -> list[Hiera
     return pages
 
 
+def build_page_nodes_for_export(document: GpmDocument) -> list[HierarchyNode]:
+    """Page-Nodes aus Zeilen + Formfeed-Gaps — nur Export/PDF, nicht I-Kurve oder Standard-Hierarchie."""
+    explicit_map = dict(document.explicit)
+    lines = _line_nodes(document, explicit_map)
+    return _page_nodes(lines, document)
+
+
 def build_semantic_encodable_segments(document: GpmDocument) -> list[CellGeometry]:
     """Encodable Phrase/Satz-Overflow-Segmente für v6 semantic body."""
     explicit_map = dict(document.explicit)
@@ -473,7 +483,6 @@ def build_document_hierarchy(document: GpmDocument) -> DocumentHierarchy:
     sentences = _sentence_nodes(document, phrases)
     paragraphs = _paragraph_nodes(document, sentences)
     lines = _line_nodes(document, explicit_map)
-    pages = _page_nodes(lines, document)
     encodable = build_semantic_encodable_segments(document)
     return DocumentHierarchy(
         semantic=SemanticTree(
@@ -482,7 +491,7 @@ def build_document_hierarchy(document: GpmDocument) -> DocumentHierarchy:
             paragraphs=paragraphs,
             encodable_segments=encodable,
         ),
-        structural=StructuralTree(lines=lines, pages=pages),
+        structural=StructuralTree(lines=lines, pages=[]),
     )
 
 

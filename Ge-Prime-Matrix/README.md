@@ -87,6 +87,8 @@ Implementierung: [`ge_prime/diff.py`](Ge-Prime-Matrix/ge_prime/diff.py).
 - **Spektroskopie** — Text markieren in I-Kurve (A/B) oder GPM-Editor: Teal/Amber/Kreuzfeuer
 - **Plagiats-Signale** kombinieren (I-Kurve + Meta-ggT → Kombi-Score)
 
+**Hierarchie-Ebenen (I-Kurve-Tab):** Wort, Sinn (Phrase/Satz/Absatz), Raum (Zeile). Formfeed-Seitenumbrüche (`\f`) sind keine Laufzeit-Ebene — nur für Export/PDF (`build_page_nodes_for_export`).
+
 **Sprache & DB-Abdeckung (I-Kurve-Tab):**
 
 | Anzeige | Bedeutung |

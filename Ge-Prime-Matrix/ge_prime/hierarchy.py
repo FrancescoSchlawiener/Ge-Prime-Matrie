@@ -104,8 +104,14 @@ def extract_line_curve(document: GpmDocument) -> list[dict]:
 
 
 def extract_page_curve(document: GpmDocument) -> list[dict]:
-    h = get_hierarchy(document)
-    return _curve_from_nodes(h.structural.pages, ratio_key="i_page_ratio", index_key="page_index")
+    """Export/PDF-Hilfe — nicht Teil von analyze_pair oder Standard-Hierarchie."""
+    from gpm.hierarchy_geom import build_page_nodes_for_export
+
+    return _curve_from_nodes(
+        build_page_nodes_for_export(document),
+        ratio_key="i_page_ratio",
+        index_key="page_index",
+    )
 
 
 def _node_distance(a: dict, b: dict, *, ratio_key: str) -> float:
