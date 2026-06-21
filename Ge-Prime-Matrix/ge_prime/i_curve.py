@@ -2,7 +2,7 @@
 
 Pro Body-Token: i_ratio = I/N, delta_ratio zwischen aufeinanderfolgenden Token.
 ``analyze_pair`` kombiniert Kurvenvergleich mit Meta-Genom (Sprache, Domäne,
-Plagiats-Heuristik). Token-Obergrenze pro Textseite: ``MAX_I_CURVE_TOKENS`` in ``ge_prime.config``.
+Struktur-Kreuzvalidierung). Token-Obergrenze pro Textseite: ``MAX_I_CURVE_TOKENS`` in ``ge_prime.config``.
 """
 
 from __future__ import annotations
@@ -26,7 +26,9 @@ from ge_prime.hierarchy import (
 )
 from ge_prime.relation_profile import serialize_relation_comparison_api
 from ge_prime.meta_genome import enrich_pair_analysis
+from ge_prime.structure_validation import build_validation_pipeline
 from ge_prime.substance_align import compare_substance_sequences, extract_substance_curve
+from ge_prime.substance_index import build_substance_index
 from gpm.cell_geom import build_document_cells
 from gpm.compiler import compile_text
 from gpm.int_codec import perm_space_size
@@ -291,6 +293,8 @@ def _prepare_document_for_analysis(document: GpmDocument) -> None:
         document.cells = build_document_cells(document)
     get_hierarchy(document)
     get_interval_index(document)
+    if document.substance_index is None:
+        document.substance_index = build_substance_index(document)
 
 
 def _aligned_similarity(seq_a: list[float], seq_b: list[float]) -> float:
@@ -380,7 +384,7 @@ def compare_i_curves(
     substance_a: list[dict] | None = None,
     substance_b: list[dict] | None = None,
 ) -> dict:
-    """Vergleicht zwei I-Kurven inkl. Literal-Match, Hybrid-Geometrie und Plagiats-Heuristik."""
+    """Vergleicht zwei I-Kurven inkl. Literal-Match und Hybrid-Geometrie (DTW)."""
     len_a = len(curve_a)
     len_b = len(curve_b)
     aligned = len_a == len_b
@@ -438,7 +442,7 @@ def compare_i_curves(
         and WORD_MAE_ELASTIC_THRESHOLD <= mae_score < WORD_MAE_RIGID_THRESHOLD
     )
 
-    suspicious_parallel = (
+    structural_waveform_parallel = (
         aligned
         and dtw_score >= GEOMETRY_PARALLEL_THRESHOLD
         and literal_match_ratio < LITERAL_LOW_THRESHOLD
@@ -448,14 +452,14 @@ def compare_i_curves(
         interpretation = "Keine Token zum Vergleich."
     elif aligned and literal_match_ratio >= 0.999 and geometry_score >= 0.999:
         interpretation = "Identische Token-Folge und I-Kurven."
-    elif suspicious_parallel:
+    elif structural_waveform_parallel:
         interpretation = (
-            "Strukturell verdächtig parallel: ähnliche I-Kurven bei unterschiedlichen Wörtern."
+            "Strukturelle Wellenform-Parallelität bei divergentem Literal-Vektor."
         )
     elif geometry_score >= 0.5:
-        interpretation = "Teilweise ähnliche Satzgeometrie — weiter prüfen."
+        interpretation = "Partielle I-Kurven-Überlappung — moderate Geometrie-Ähnlichkeit."
     else:
-        interpretation = "Unabhängige I-Kurven — keine auffällige Parallelität."
+        interpretation = "Unabhängige I-Kurven — Isomorphie-Index unter Schwellwert."
 
     return {
         "geometry_score": round(geometry_score, 6),
@@ -468,7 +472,7 @@ def compare_i_curves(
         "best_offset": best_offset,
         "length_a": len_a,
         "length_b": len_b,
-        "suspicious_parallel": suspicious_parallel,
+        "structural_waveform_parallel": structural_waveform_parallel,
         "fester_offset_erkannt": fester_offset_erkannt,
         "elastische_streckung": elastische_streckung,
         "hybride_modifikation": hybride_modifikation,
@@ -546,16 +550,17 @@ def analyze_pair(
         and comparison["literal_match_ratio"] < LITERAL_LOW_THRESHOLD
     )
     comparison["structural_cell_twins"] = structural_cell_twins
-    if structural_cell_twins and not comparison.get("suspicious_parallel"):
+    if structural_cell_twins and not comparison.get("structural_waveform_parallel"):
         comparison["interpretation"] = (
-            "Strukturelle Zell-Zwillinge: gleicher Satzbau (Skelett + I_Satz), "
-            "andere Wörter — typisch für Synonym-Ersatz oder strukturelle Kopie."
+            "Strukturelle Zell-Zwillinge: gleiches Skelett + I_Satz, divergenter Literal-Vektor."
         )
     elif structural_cell_twins:
         comparison["interpretation"] = (
-            "Strukturelle Zell-Zwillinge und parallele Wort-I-Kurven — "
-            "starke Übereinstimmung in Satzbau-Schablone."
+            "Zell-Zwillinge und parallele Wort-Wellenform — hohe Satzbau-Isomorphie."
         )
+
+    cross_a = cross_analysis(document_a)
+    cross_b = cross_analysis(document_b)
 
     meta = enrich_pair_analysis(
         document_a,
@@ -563,6 +568,8 @@ def analyze_pair(
         comparison,
         repo,
         db_audit_mode=db_audit_mode,
+        cross_a=cross_a,
+        cross_b=cross_b,
     )
 
     comparison["identical_text"] = (
@@ -612,8 +619,15 @@ def analyze_pair(
             ),
         },
     }
-    cross_a = cross_analysis(document_a)
-    cross_b = cross_analysis(document_b)
+    validation_pipeline = build_validation_pipeline(
+        document_a=document_a,
+        document_b=document_b,
+        comparison=comparison,
+        hierarchy_comparison=hierarchy_comparison,
+        cross_a=cross_a,
+        cross_b=cross_b,
+        structure_assessment=meta["structure_assessment"],
+    )
 
     return {
         "curve_a": curve_a,
@@ -635,7 +649,8 @@ def analyze_pair(
             document_a,
             document_b,
         ),
-        "plagiarism_assessment": meta["plagiarism_assessment"],
+        "structure_assessment": meta["structure_assessment"],
+        "validation_pipeline": validation_pipeline,
         "semantic_a": semantic_a,
         "semantic_b": semantic_b,
         "structural_a": structural_a,

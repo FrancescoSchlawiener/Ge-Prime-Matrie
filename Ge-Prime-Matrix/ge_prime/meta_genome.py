@@ -1,7 +1,7 @@
 """Meta-Genom — Dokumenten-Vektor V aus Header-Genomen.
 
 Aus Häufigkeiten der Header-Substanzen entsteht V = ∏ S^count.
-Sprache/Domäne: ``ge_prime.linguistics``; Plagiats-Signale mit I-Kurve.
+Sprache/Domäne: ``ge_prime.linguistics``; Struktur-Matrix mit I-Kurve (Kreuzvalidierung).
 """
 
 from __future__ import annotations
@@ -21,6 +21,10 @@ from ge_prime.relation_profile import (
     compare_relation_profiles,
     relation_twins,
 )
+from ge_prime.structure_validation import (
+    classify_structure_pattern,
+    compare_enjambement_phases,
+)
 from gpm.compiler import compile_text
 from gpm.model import GpmDocument
 from pipeline.normalize import apply_case
@@ -39,8 +43,8 @@ def _language_pool_sizes(repo: WordRepository | None) -> dict[str, int]:
     if _POOL_SIZES_CACHE is None:
         _POOL_SIZES_CACHE = repo.count_words_by_language()
     return _POOL_SIZES_CACHE
-META_PLAGIARISM_GENOME_THRESHOLD = 0.18
-COMBINED_PLAGIARISM_THRESHOLD = 0.55
+META_GENOME_STRONG_THRESHOLD = 0.18
+COMBINED_ISOMORPHISM_THRESHOLD = 0.55
 DB_LANGUAGE_COVERAGE_THRESHOLD = 0.5
 MIXED_LANGUAGE_RATIO_THRESHOLD = 0.30
 TOP_WORDS_LIMIT = 15
@@ -399,15 +403,17 @@ def compare_meta_genomes(meta_a: dict, meta_b: dict, *, relation_comparison: dic
     }
 
 
-def assess_parallel_signals(
+def assess_structure_matrix(
     *,
     icurve_comparison: dict,
     meta_a: dict,
     meta_b: dict,
     meta_comparison: dict,
     relation_comparison: dict,
+    cross_a: dict | None = None,
+    cross_b: dict | None = None,
 ) -> dict:
-    """Fusionierte Plagiats-/Parallel-Signale über alle Ebenen."""
+    """Fusionierte Struktur-Matrix über isolierte Metrik-Achsen — keine Plagiat-Urteile."""
     word_geo = icurve_comparison.get("geometry_score", 0.0)
     literal = icurve_comparison.get("literal_match_ratio", 0.0)
     meta_sim = meta_comparison.get("similarity_ratio", 0.0)
@@ -431,14 +437,14 @@ def assess_parallel_signals(
         and lang_a.get("code") not in (None, "unknown")
     )
 
-    word_parallel = bool(icurve_comparison.get("suspicious_parallel"))
+    word_parallel = bool(icurve_comparison.get("structural_waveform_parallel"))
     fester_offset = bool(icurve_comparison.get("fester_offset_erkannt"))
     elastische_streckung = bool(icurve_comparison.get("elastische_streckung"))
     hybride_modifikation = bool(icurve_comparison.get("hybride_modifikation"))
     cell_twins = bool(icurve_comparison.get("structural_cell_twins"))
     substance_parallel = bool(subst_cmp.get("substance_parallel"))
     relation_twins_flag = relation_twins(relation_comparison, literal_match_ratio=literal)
-    meta_genome_strong = meta_sim >= META_PLAGIARISM_GENOME_THRESHOLD
+    meta_genome_strong = meta_sim >= META_GENOME_STRONG_THRESHOLD
     db_confirmed = (
         language_consistent
         and db_a.get("available")
@@ -506,18 +512,18 @@ def assess_parallel_signals(
         signals.append("db_language_confirmed")
     if mixed_language_suspect:
         signals.append("mixed_language_suspect")
-    if combined >= COMBINED_PLAGIARISM_THRESHOLD and literal < 0.6:
-        signals.append("combined_plagiarism_risk")
+    if combined >= COMBINED_ISOMORPHISM_THRESHOLD and literal < 0.6:
+        signals.append("structural_isomorphism_elevated")
 
     bullets: list[str] = []
     if word_parallel:
-        bullets.append(f"Wort-I parallel ({word_geo:.0%})")
+        bullets.append(f"Wort-Wellenform parallel (DTW {word_geo:.0%})")
     if fester_offset:
-        bullets.append("Starre Kopie (MAE+DTW hoch)")
+        bullets.append("Starre Offset-Geometrie (MAE+DTW hoch)")
     if elastische_streckung:
-        bullets.append("Elastische Streckung (nur DTW hoch)")
+        bullets.append("Elastische Streckung (DTW hoch, MAE niedrig)")
     if hybride_modifikation:
-        bullets.append("Teilweise Paraphrase (DTW hoch, MAE mittel)")
+        bullets.append("Hybride Modifikation (DTW hoch, MAE mittel)")
     if cell_twins:
         bullets.append(f"Zell-DTW hoch ({cell_score:.0%})")
     if substance_parallel:
@@ -538,13 +544,35 @@ def assess_parallel_signals(
     if mixed_language_suspect:
         bullets.append("Mischsignal in der DB-Matrix (≥30 % — Richtwert)")
     if not bullets:
-        bullets.append("Kein starkes kombiniertes Parallel-Signal")
+        bullets.append("Keine auffällige Achsen-Überlappung")
+
+    enj_phase = compare_enjambement_phases(cross_a, cross_b)
+    classification = classify_structure_pattern(
+        word_geo=word_geo,
+        substance_score=subst_score,
+        literal=literal,
+        combined=combined,
+        relation_score=rel_score,
+        enjambement_phase=enj_phase,
+        structural_waveform_parallel=word_parallel,
+    )
+    if classification == "style_symmetry":
+        bullets.append("Stil-Symmetrie (Enjambement/Relation, moderate Wort-Substanz-Achsen)")
+    elif classification == "partial_isomorphism":
+        bullets.append(f"Partielle strukturelle Isomorphie ({combined:.0%})")
+    elif classification == "literal_identity":
+        bullets.append("Literal-Identität (Token + I-Kurve)")
+    elif classification == "independent":
+        bullets.append("Unabhängige Matrizen — niedriger Isomorphie-Index")
 
     interpretation = " · ".join(bullets)
 
     return {
+        "isomorphism_index": round(combined, 6),
+        "isomorphism_threshold": COMBINED_ISOMORPHISM_THRESHOLD,
+        "classification": classification,
         "combined_score": round(combined, 6),
-        "combined_threshold": COMBINED_PLAGIARISM_THRESHOLD,
+        "combined_threshold": COMBINED_ISOMORPHISM_THRESHOLD,
         "geometry_score": word_geo,
         "cell_score": cell_score,
         "substance_score": subst_score,
@@ -564,7 +592,6 @@ def assess_parallel_signals(
         "signals": signals,
         "interpretation": interpretation,
         "interpretation_bullets": bullets,
-        "highlight": combined >= COMBINED_PLAGIARISM_THRESHOLD and literal < 0.6,
         "word_parallel": word_parallel,
         "fester_offset_erkannt": fester_offset,
         "elastische_streckung": elastische_streckung,
@@ -578,78 +605,6 @@ def assess_parallel_signals(
     }
 
 
-def assess_plagiarism_meta(
-    *,
-    icurve_comparison: dict,
-    meta_a: dict,
-    meta_b: dict,
-    meta_comparison: dict,
-) -> dict:
-    geo = icurve_comparison.get("geometry_score", 0.0)
-    literal = icurve_comparison.get("literal_match_ratio", 0.0)
-    meta_sim = meta_comparison.get("similarity_ratio", 0.0)
-    aligned = icurve_comparison.get("aligned", False)
-
-    lang_a = meta_a.get("language", {})
-    lang_b = meta_b.get("language", {})
-    language_consistent = (
-        lang_a.get("code") == lang_b.get("code")
-        and lang_a.get("code") not in (None, "unknown")
-    )
-
-    if aligned:
-        combined = 0.45 * geo + 0.35 * meta_sim + 0.20 * literal
-    else:
-        combined = 0.50 * geo + 0.50 * meta_sim
-
-    signals: list[str] = []
-    if icurve_comparison.get("suspicious_parallel"):
-        signals.append("i_kurve_strukturell_parallel")
-    if meta_comparison.get("same_domain"):
-        signals.append("meta_genom_gleiche_domäne")
-    if meta_sim >= META_PLAGIARISM_GENOME_THRESHOLD:
-        signals.append("meta_genom_starker_ggt")
-    if geo >= 0.6 and meta_sim >= META_PLAGIARISM_GENOME_THRESHOLD:
-        signals.append("geometrie_und_genom")
-    if combined >= COMBINED_PLAGIARISM_THRESHOLD and literal < 0.6 and aligned:
-        signals.append("plagiats_heuristik_kombiniert")
-
-    if combined >= COMBINED_PLAGIARISM_THRESHOLD and literal < 0.5:
-        interpretation = (
-            "Kombiniertes Signal: ähnliche I-Kurven-Geometrie und überlappendes Meta-Genom "
-            "trotz unterschiedlicher Wörter — strukturelle Parallele prüfen."
-        )
-    elif icurve_comparison.get("suspicious_parallel"):
-        interpretation = icurve_comparison.get("interpretation", "")
-    elif meta_sim >= META_PLAGIARISM_GENOME_THRESHOLD and not aligned:
-        interpretation = (
-            "Meta-Genom-ggT hoch — ähnliche Buchstaben-/Fachvokabular-Menge, "
-            "aber unterschiedliche Token-Länge (I-Kurve nicht punktweise ausgerichtet)."
-        )
-    elif meta_comparison.get("same_domain") and geo >= 0.5:
-        interpretation = "Gleiche Domäne und teilweise ähnliche Satzgeometrie — weiter manuell prüfen."
-    elif literal >= 0.99 and geo >= 0.99:
-        interpretation = "Nahezu identische Texte (Literal + I-Kurve + Meta-Genom)."
-    else:
-        interpretation = "Kein starkes kombiniertes Plagiats-Signal — I-Kurve und Meta-Genom weitgehend unabhängig."
-
-    return {
-        "combined_score": round(combined, 6),
-        "combined_threshold": COMBINED_PLAGIARISM_THRESHOLD,
-        "geometry_score": geo,
-        "meta_genome_similarity": meta_sim,
-        "literal_match_ratio": literal,
-        "language_a": lang_a.get("label", "?"),
-        "language_b": lang_b.get("label", "?"),
-        "language_consistent": language_consistent,
-        "domain_a": meta_a.get("domain", {}).get("label", "?"),
-        "domain_b": meta_b.get("domain", {}).get("label", "?"),
-        "signals": signals,
-        "interpretation": interpretation,
-        "highlight": combined >= COMBINED_PLAGIARISM_THRESHOLD and literal < 0.6,
-    }
-
-
 def enrich_pair_analysis(
     document_a: GpmDocument,
     document_b: GpmDocument,
@@ -657,6 +612,8 @@ def enrich_pair_analysis(
     repo: WordRepository | None = None,
     *,
     db_audit_mode: str = "de_en",
+    cross_a: dict | None = None,
+    cross_b: dict | None = None,
 ) -> dict:
     meta_a = build_meta_genome(document_a, repo, db_audit_mode=db_audit_mode)
     meta_b = build_meta_genome(document_b, repo, db_audit_mode=db_audit_mode)
@@ -668,18 +625,20 @@ def enrich_pair_analysis(
         relation_comparison,
         literal_match_ratio=icurve_comparison.get("literal_match_ratio", 0.0),
     )
-    plagiarism = assess_parallel_signals(
+    structure = assess_structure_matrix(
         icurve_comparison=icurve_comparison,
         meta_a=meta_a,
         meta_b=meta_b,
         meta_comparison=meta_comparison,
         relation_comparison=relation_comparison,
+        cross_a=cross_a,
+        cross_b=cross_b,
     )
-    plagiarism["db_audit_mode"] = db_audit_mode
+    structure["db_audit_mode"] = db_audit_mode
     return {
         "meta_a": meta_a,
         "meta_b": meta_b,
         "meta_comparison": meta_comparison,
         "relation_comparison": relation_comparison,
-        "plagiarism_assessment": plagiarism,
+        "structure_assessment": structure,
     }

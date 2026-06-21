@@ -1208,11 +1208,11 @@ function renderWordGeometryBadges(c, p) {
 function renderSignalOverview(p, c, cellCmp, substCmp, relCmp) {
   const segments = [
     { label: 'Wort-Geometrie (DTW)', score: c.geometry_score ?? 0 },
-    { label: 'Substanz ggT/kgV', score: substCmp.geometry_score ?? p.substance_score ?? 0 },
-    { label: 'Zelle', score: cellCmp.geometry_score ?? 0 },
-    { label: 'Relation', score: relCmp.relation_score ?? p.relation_score ?? 0 },
-    { label: 'Meta', score: p.meta_genome_similarity ?? 0 },
-    { label: 'Literal', score: c.literal_match_ratio ?? 0 },
+    { label: 'Substanz-ggT (Log)', score: substCmp.geometry_score ?? p.substance_score ?? 0 },
+    { label: 'Zelle / Zeile', score: cellCmp.geometry_score ?? p.cell_score ?? 0 },
+    { label: 'Relation (Topologie)', score: relCmp.relation_score ?? p.relation_score ?? 0 },
+    { label: 'Meta-ggT', score: p.meta_genome_similarity ?? 0 },
+    { label: 'Literal (Byte)', score: c.literal_match_ratio ?? 0 },
   ];
   return `<div class="ikurve-signal-overview" role="group" aria-label="Signal-Übersicht">
     ${segments.map((seg) => `
@@ -1335,15 +1335,37 @@ function renderCellTwinsBanner(c) {
   </div>`;
 }
 
-function renderPlagiarismAssessment(p, c) {
+function renderValidationPipeline(pipeline) {
+  if (!pipeline || !Array.isArray(pipeline.steps)) return '';
+  const labels = {
+    nfc_tokenization: 'NFC-Normalisierung & Token-Parsing',
+    bitmask_prefilter: 'Bitmasken-Vorfilter (_masks_overlap)',
+    geometry_curves: 'Geometrische I-Kurven',
+    enjambement_phase: 'Enjambement-Phasenanalyse',
+    db_matrix_audit: 'Sprach-Datenbank-Matrix',
+  };
+  const rows = pipeline.steps.map((step) => {
+    const status = step.status || 'ok';
+    const cls = status === 'warn' ? 'ikurve-pipe-warn' : status === 'skip' ? 'ikurve-pipe-skip' : 'ikurve-pipe-ok';
+    return `<li class="ikurve-pipe-step ${cls}"><span class="ikurve-pipe-id">${escapeHtml(labels[step.id] || step.id)}</span> <span class="muted">(${escapeHtml(status)})</span></li>`;
+  }).join('');
+  const clsLabel = pipeline.classification ? `<p class="muted">Klassifikation: <strong>${escapeHtml(pipeline.classification)}</strong> · Isomorphie-Index ${fmtPct(pipeline.isomorphism_index ?? 0)}</p>` : '';
+  return `<div class="ikurve-validation-pipeline">
+    <h4>Validierungs-Pipeline (5 Schritte)</h4>
+    <ol class="ikurve-pipe-list">${rows}</ol>
+    ${clsLabel}
+  </div>`;
+}
+
+function renderStructureAssessment(p, c) {
   if (!p) return '';
   const signals = (p.signals || []).map((s) => `<li>${escapeHtml(s)}</li>`).join('');
   const bullets = (p.interpretation_bullets || []).map((b) => `<li>${escapeHtml(b)}</li>`).join('');
-  const cls = p.highlight ? 'ikurve-alert ikurve-alert-warn meta-plag-highlight' : 'ikurve-alert';
   const wordScore = c?.geometry_score ?? p.geometry_score ?? 0;
   const substScore = p.substance_score ?? 0;
-  return `<div class="${cls} ikurve-plag-assessment">
-    <h4 class="ikurve-plag-head">Plagiats-Assessment (v37)</h4>
+  const isoIndex = p.isomorphism_index ?? p.combined_score ?? 0;
+  return `<div class="ikurve-alert ikurve-plag-assessment">
+    <h4 class="ikurve-plag-head">Struktur-Matrix (Kreuzvalidierung)</h4>
     ${renderWordGeometryBadges(c, p)}
     <div class="ikurve-plag-score-bars">
       <div class="ikurve-plag-score-row ${scoreBarClass(wordScore)}">
@@ -1360,12 +1382,12 @@ function renderPlagiarismAssessment(p, c) {
     ${bullets ? `<ul class="ikurve-interpret-bullets">${bullets}</ul>` : `<p><strong>${escapeHtml(p.interpretation)}</strong></p>`}
     <div class="compare-match-grid ikurve-metrics meta-metrics">
       <div class="ikurve-metric-card">
-        <div class="compare-gcd-label">Kombi-Score</div>
-        <div class="compare-gcd-value">${fmtPct(p.combined_score)}</div>
+        <div class="compare-gcd-label">Isomorphie-Index</div>
+        <div class="compare-gcd-value">${fmtPct(isoIndex)}</div>
       </div>
       <div class="ikurve-metric-card">
-        <div class="compare-gcd-label">Substanz</div>
-        <div class="compare-gcd-value">${fmtPct(p.substance_score ?? 0)}</div>
+        <div class="compare-gcd-label">Zelle / Zeile</div>
+        <div class="compare-gcd-value">${fmtPct(p.cell_score ?? 0)}</div>
       </div>
       <div class="ikurve-metric-card">
         <div class="compare-gcd-label">Relation</div>
@@ -1376,9 +1398,12 @@ function renderPlagiarismAssessment(p, c) {
         <div class="compare-gcd-value">${fmtPct(p.meta_genome_similarity)}</div>
       </div>
     </div>
-    ${p.highlight ? '<p class="ikurve-flag">Kombiniertes Plagiats-Signal</p>' : ''}
     ${signals ? `<ul class="compare-notes">${signals}</ul>` : ''}
   </div>`;
+}
+
+function renderPlagiarismAssessment(p, c) {
+  return renderStructureAssessment(p, c);
 }
 
 const ICURVE_FETCH_TIMEOUT_MS = 120000;

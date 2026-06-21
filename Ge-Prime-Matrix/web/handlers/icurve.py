@@ -84,30 +84,30 @@ def _level_payload(level_data: dict[str, list[dict]]) -> dict[str, dict]:
     return {key: _points_payload(values) for key, values in level_data.items()}
 
 
-def _icurve_notes(comparison: dict, plagiarism: dict | None = None) -> list[str]:
+def _icurve_notes(comparison: dict, structure: dict | None = None) -> list[str]:
     notes = [
         INDEX_HELP["limit_note"],
         INDEX_HELP["source_note"],
         INDEX_HELP["meta_genome"],
         INDEX_HELP["meta_language"],
     ]
-    if plagiarism and plagiarism.get("highlight"):
-        notes.append(INDEX_HELP["meta_plagiarism"])
-    elif plagiarism and plagiarism.get("substance_parallel"):
+    if structure and structure.get("classification") == "partial_isomorphism":
+        notes.append(INDEX_HELP["structure_isomorphism"])
+    elif structure and structure.get("substance_parallel"):
         notes.append(INDEX_HELP["substance_align"])
-    elif plagiarism and plagiarism.get("relation_twins"):
+    elif structure and structure.get("relation_twins"):
         notes.append(INDEX_HELP["relation_domain"])
     elif comparison.get("structural_cell_twins"):
         notes.append(INDEX_HELP["cell_twins"])
-    elif comparison.get("suspicious_parallel"):
-        notes.append(INDEX_HELP["plagiarism"])
+    elif comparison.get("structural_waveform_parallel"):
+        notes.append(INDEX_HELP["waveform_parallel"])
         notes.append(INDEX_HELP["example"])
     elif comparison.get("geometry_score", 0) >= 0.99 and comparison.get("literal_match_ratio", 0) >= 0.99:
         notes.append("Beide Texte liefern nahezu identische I-Kurven und Token-Folge.")
-    if plagiarism and plagiarism.get("signals"):
+    if structure and structure.get("signals"):
         notes.append(
-            f"Meta-Genom: {plagiarism.get('domain_a')} / {plagiarism.get('domain_b')} — "
-            f"ggT-Ähnlichkeit {plagiarism.get('meta_genome_similarity', 0):.3f}."
+            f"Meta-Genom: {structure.get('domain_a')} / {structure.get('domain_b')} — "
+            f"ggT-Ähnlichkeit {structure.get('meta_genome_similarity', 0):.3f}."
         )
     return notes
 
@@ -132,7 +132,7 @@ def register(app: Flask, repo) -> None:
             )
             comparison = result["comparison"]
             cell_cmp = comparison.get("cell_geometry") or {}
-            comparison["notes"] = _icurve_notes(comparison, result.get("plagiarism_assessment"))
+            comparison["notes"] = _icurve_notes(comparison, result.get("structure_assessment"))
             cells_a = _serialize_cell_points(result["cell_geometry_a"])
             cells_b = _serialize_cell_points(result["cell_geometry_b"])
             cell_payload_a = _points_payload(cells_a)
@@ -194,7 +194,8 @@ def register(app: Flask, repo) -> None:
                     },
                     "meta_comparison": result["meta_comparison"],
                     "relation_comparison": result["relation_comparison"],
-                    "plagiarism_assessment": result["plagiarism_assessment"],
+                    "structure_assessment": result["structure_assessment"],
+                    "validation_pipeline": result.get("validation_pipeline"),
                     "semantic_a": _level_payload(result.get("semantic_a", {})),
                     "semantic_b": _level_payload(result.get("semantic_b", {})),
                     "structural_a": _level_payload(result.get("structural_a", {})),

@@ -186,13 +186,13 @@ class TestMetaGenomeIntegration(unittest.TestCase):
 
     def test_analyze_pair_wires_language_and_domain(self):
         result = analyze_pair(text_a=self.DE_MED, text_b=self.DE_MED)
-        for key in ("meta_a", "meta_b", "meta_comparison", "plagiarism_assessment"):
+        for key in ("meta_a", "meta_b", "meta_comparison", "structure_assessment"):
             self.assertIn(key, result)
         self.assertEqual(result["meta_a"]["language"]["code"], "de")
         self.assertEqual(result["meta_a"]["domain"]["code"], "medical")
         self.assertFalse(result["meta_a"]["domain"]["fallback"])
         self.assertIn("same_domain", result["meta_comparison"])
-        self.assertIn("interpretation", result["plagiarism_assessment"])
+        self.assertIn("interpretation", result["structure_assessment"])
 
     def test_analyze_pair_db_tier_hybrid(self):
         from db.repository import WordRepository

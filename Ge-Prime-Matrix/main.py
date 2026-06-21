@@ -84,7 +84,7 @@ def demo_i_curve():
         print(
             f"  Geometrie={c['geometry_score']:.3f}, "
             f"Literal={c['literal_match_ratio']:.3f}, "
-            f"verdächtig={c['suspicious_parallel']}"
+            f"Wellenform-parallel={c['structural_waveform_parallel']}"
         )
         print(f"  {c['interpretation']}\n")
 

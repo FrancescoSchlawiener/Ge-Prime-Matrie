@@ -247,9 +247,10 @@ class TestWebThreadSafety(unittest.TestCase):
             self.assertIn("token_char_map", data["viewport_a"])
             self.assertIn("structural_lines", data["viewport_a"])
             self.assertIn("reconstructed_text", data["viewport_a"])
-            self.assertIn("substance_score", data["plagiarism_assessment"])
+            self.assertIn("substance_score", data["structure_assessment"])
             self.assertTrue(c["fester_offset_erkannt"])
-            self.assertEqual(data["plagiarism_assessment"].get("db_audit_mode"), "de_en")
+            self.assertEqual(data["structure_assessment"].get("db_audit_mode"), "de_en")
+            self.assertIn("validation_pipeline", data)
             hc = data["hierarchy_comparison"]["semantic"]
             self.assertIn("phrase", hc)
             self.assertIn("paragraph", hc)
@@ -318,7 +319,7 @@ class TestWebThreadSafety(unittest.TestCase):
             )
             self.assertEqual(off.status_code, 200)
             off_data = off.get_json()
-            self.assertEqual(off_data["plagiarism_assessment"]["db_audit_mode"], "off")
+            self.assertEqual(off_data["structure_assessment"]["db_audit_mode"], "off")
             lang = off_data["meta_a"]["language"]
             if lang.get("code") in ("de", "en"):
                 self.assertFalse(lang["db_coverage"]["available"])
@@ -440,7 +441,8 @@ class TestWebThreadSafety(unittest.TestCase):
             data = resp.get_json()
             self.assertIn("meta_a", data)
             self.assertIn("meta_comparison", data)
-            self.assertIn("plagiarism_assessment", data)
+            self.assertIn("structure_assessment", data)
+            self.assertNotIn("plagiarism_assessment", data)
             lang = data["meta_a"]["language"]
             dom = data["meta_a"]["domain"]
             self.assertIn("code", lang)

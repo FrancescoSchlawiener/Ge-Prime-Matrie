@@ -8,7 +8,7 @@ sys.path.insert(0, str(ROOT))
 from ge_prime.core import PRIME_MAP
 from ge_prime.meta_genome import (
     MIXED_LANGUAGE_RATIO_THRESHOLD,
-    assess_parallel_signals,
+    assess_structure_matrix,
     build_meta_genome_from_text,
     compare_meta_genomes,
     db_token_language_audit,
@@ -111,14 +111,14 @@ class TestDbLanguageAudit(unittest.TestCase):
         ratio_high = audit_high["other_lang_count"] / audit_high["unique_tokens"]
         self.assertGreaterEqual(ratio_high, MIXED_LANGUAGE_RATIO_THRESHOLD)
 
-        plag = assess_parallel_signals(
+        struct = assess_structure_matrix(
             icurve_comparison={"geometry_score": 0.0, "literal_match_ratio": 0.0, "aligned": True},
             meta_a={"language": {"code": "de", "label": "Deutsch", "db_coverage": audit_high}},
             meta_b={"language": {"code": "de", "label": "Deutsch", "db_coverage": audit_high}},
             meta_comparison={"similarity_ratio": 0.0},
             relation_comparison={"relation_score": 0.0},
         )
-        self.assertTrue(plag["mixed_language_suspect"])
+        self.assertTrue(struct["mixed_language_suspect"])
 
 
 class TestMetaGenome(unittest.TestCase):
@@ -188,8 +188,9 @@ class TestMetaGenome(unittest.TestCase):
         result = analyze_pair(text_a=self.DE_TEXT, text_b=self.DE_MED)
         self.assertIn("meta_a", result)
         self.assertIn("meta_comparison", result)
-        self.assertIn("plagiarism_assessment", result)
-        self.assertIn("combined_score", result["plagiarism_assessment"])
+        self.assertIn("structure_assessment", result)
+        self.assertIn("isomorphism_index", result["structure_assessment"])
+        self.assertIn("classification", result["structure_assessment"])
 
     def test_compare_meta_genomes_large_profile_without_int_limit(self):
         chunk = "Patient Diagnose Therapie Symptom Operation Klinik Arzt Behandlung "
@@ -203,7 +204,7 @@ class TestMetaGenome(unittest.TestCase):
         result = analyze_pair(text_a=text_icurve, text_b=text_icurve)
         self.assertIn("meta_comparison", result)
 
-    def test_enrich_pair_analysis_plagiarism_fields(self):
+    def test_enrich_pair_analysis_structure_fields(self):
         doc_a, _, _ = compile_text(self.DE_TEXT)
         doc_b, _, _ = compile_text(self.DE_MED)
         from ge_prime.i_curve import compare_i_curves, extract_i_curve, extract_substance_curve
@@ -215,8 +216,9 @@ class TestMetaGenome(unittest.TestCase):
             substance_b=extract_substance_curve(doc_b),
         )
         enriched = enrich_pair_analysis(doc_a, doc_b, cmp)
-        self.assertIn("interpretation", enriched["plagiarism_assessment"])
-        self.assertIn("signals", enriched["plagiarism_assessment"])
+        self.assertIn("interpretation", enriched["structure_assessment"])
+        self.assertIn("signals", enriched["structure_assessment"])
+        self.assertNotIn("highlight", enriched["structure_assessment"])
         self.assertIn("relation_comparison", enriched)
         self.assertIn("relation_score", enriched["meta_comparison"])
 

@@ -5,7 +5,7 @@ Web-App und Bibliothek zur **Substanz-Codierung** von Wörtern und Texten: jedes
 Darauf aufbauend:
 
 - **`.gpm` v5** — verlustfreies Binärformat mit Zell-Geometrie (I_Satz) und v4-Genom/Separator
-- **I-Kurve & Meta-Genom** — Stil-Analyse, Sprache/Domäne, Plagiats-Heuristik
+- **I-Kurve & Meta-Genom** — Stil-Analyse, Sprache/Domäne, Struktur-Kreuzvalidierung
 - **S(I)-Verschlüsselung** — symmetrische Obfuskation mit Wort-/Primzahl-Schlüsseln
 - **GPC** — verschlüsselte `.gpm`-Hülle für den Editor (ohne Schlüssel kein lesbares Genom)
 
@@ -77,7 +77,7 @@ Implementierung: [`ge_prime/diff.py`](Ge-Prime-Matrix/ge_prime/diff.py).
 | **delta_ratio** | Sprung zwischen aufeinanderfolgenden Token |
 | **Geometrie-Score** | Mittel aus Ratio- und Delta-Ähnlichkeit zweier Kurven |
 | **Literal-Match** | Anteil gleicher Wörter an gleicher Position (Kontrast) |
-| **suspicious_parallel** | Hohe Geometrie + niedriger Literal-Match bei gleicher Länge |
+| **structural_waveform_parallel** | Hohe Wort-DTW-Geometrie + niedriger Literal-Match bei gleicher Länge |
 
 **Meta-Genom:** Aus dem Header-Genom wird ein Dokumenten-Vektor **V = ∏ S^Häufigkeit** gebildet (effizient als Primzahl-Profil). Damit lassen sich ohne Öffnen der Datei:
 
@@ -85,7 +85,19 @@ Implementierung: [`ge_prime/diff.py`](Ge-Prime-Matrix/ge_prime/diff.py).
 - **Domäne** clustern (ggT von V₁ und V₂ — Medizin vs. Recht als Demo-Referenzen)
 - **DB-Sprachaudit** — unique Token gegen die Wort-Datenbank (auch bei „Unklar“ über de/en-Scores)
 - **Spektroskopie** — Text markieren in I-Kurve (A/B) oder GPM-Editor: Teal/Amber/Kreuzfeuer
-- **Plagiats-Signale** kombinieren (I-Kurve + Meta-ggT → Kombi-Score)
+- **Isomorphie-Index** — gewichtete Fusion isolierter Metrik-Achsen (Wort-DTW, Substanz, Zelle, Relation, Meta, Literal)
+
+**Metriken-Architektur (Kreuzvalidierung):**
+
+| Achse | Methode |
+|-------|---------|
+| Wort-Geometrie | DTW linear (Wellenform-Vergleich) |
+| Substanz | Primzahl-GGT/KGV-Matrix |
+| Zelle / Zeile | Topologische Kantenverteilung, Index-Symmetrie |
+| Relation | Graphen-Isomorphie (Phrase/Satz-Bigramme) |
+| Meta & Literal | Meta-ggT + Byte-Literal-Vektor |
+
+**Validierungs-Pipeline (5 Schritte):** NFC-Tokenisierung → Bitmasken-Vorfilter → I-Kurven → Enjambement-Phase → DB-Matrix-Audit. API: `validation_pipeline`, `structure_assessment`.
 
 **Hierarchie-Ebenen (I-Kurve-Tab):** Wort, Sinn (Phrase/Satz/Absatz), Raum (Zeile). Formfeed-Seitenumbrüche (`\f`) sind keine Laufzeit-Ebene — nur für Export/PDF (`build_page_nodes_for_export`).
 
@@ -105,7 +117,7 @@ Audit-Modi im Formular: **de ↔ en** (Standard), **Alle DB-Sprachen**, **Aus**.
 Implementierung: [`ge_prime/i_curve.py`](Ge-Prime-Matrix/ge_prime/i_curve.py), [`ge_prime/meta_genome.py`](Ge-Prime-Matrix/ge_prime/meta_genome.py).
 API: **POST `/api/i-curve`** (Freitext oder `.gpm` pro Seite, max. 10.000 Token).
 
-> **Abgrenzung:** Heuristische Demo — kein Ersatz für juristische Plagiatsgutachten oder NLP-Klassifikatoren.
+> **Abgrenzung:** Reine mathematische Struktur-Kreuzvalidierung — keine semantische Plagiat-Bewertung.
 
 ### S(I)-Verschlüsselung
 
@@ -335,7 +347,7 @@ URL nach Start: **http://127.0.0.1:5000**
 | **Encodieren** | Bis zu 50 Wörter → DB (Random/unsortiert) |
 | **Decodieren** | S + I → normalisiertes Wort |
 | **Wortpaar** | Vergleichen (ggT/kgV) und Differenz (Teilmenge, Anagramm) — gemeinsame Wortfelder |
-| **I-Kurve** | Index-Vektoren, Meta-Genom, Sprache/Domäne, DB-Sprachaudit, Plagiats-Heuristik |
+| **I-Kurve** | Index-Vektoren, Meta-Genom, Sprache/Domäne, DB-Sprachaudit, Struktur-Kreuzvalidierung |
 | **GPM Datei** | Editor, S(I)-Verschlüsselung, kompilieren, lesen, rekonstruieren, Substanz-/ggT-/kgV-Suche; optional **GPC** beim Kompilieren |
 | **Datenbank** | Statistik nach Sprache |
 
@@ -363,11 +375,11 @@ Alle API-Antworten: `Cache-Control: no-store`.
 | POST | `/api/decode` | `{ "substance", "perm_index" }` | S,I → Wort + Schritte |
 | POST | `/api/compare` | `{ "word1", "word2" }` | ggT + kgV-Vergleich |
 | POST | `/api/diff` | `{ "word1", "word2" }` | Arithmetische Differenz, Teilmenge, Anagramm |
-| POST | `/api/i-curve` | Freitext oder `.gpm` pro Seite (multipart `file_a`/`file_b` oder JSON), optional `db_audit_mode`: `de_en` (Standard), `all_db`, `off` | I-Kurven, Meta-Genom, DB-Audit, Plagiats-Heuristik |
+| POST | `/api/i-curve` | Freitext oder `.gpm` pro Seite (multipart `file_a`/`file_b` oder JSON), optional `db_audit_mode`: `de_en` (Standard), `all_db`, `off` | I-Kurven, Meta-Genom, DB-Audit, Struktur-Kreuzvalidierung |
 | POST | `/api/cipher/encrypt` | `{ "text", "mode", "keys" }` | S(I)-Verschlüsselung (word/prime/si/hardcore) |
 | POST | `/api/cipher/decrypt` | `{ "ciphertext", "keys" }` | Entschlüsselung (Modus im Paket) |
 
-**`/api/i-curve` — Antwort (Auszug):** `curve_a`, `curve_b` (`sparkline_points`, `point_count`, Vorschau-Tabellen), `comparison`, `meta_a` / `meta_b` (`language` inkl. `db_coverage`, Domäne, Top-Wörter), `meta_comparison`, `plagiarism_assessment` (`db_coverage_a`/`b`, `db_audit_mode`).
+**`/api/i-curve` — Antwort (Auszug):** `curve_a`, `curve_b` (`sparkline_points`, `point_count`, Vorschau-Tabellen), `comparison`, `meta_a` / `meta_b` (`language` inkl. `db_coverage`, Domäne, Top-Wörter), `meta_comparison`, `structure_assessment` (`isomorphism_index`, `classification`, `db_coverage_a`/`b`, `db_audit_mode`), `validation_pipeline`.
 
 ### .gpm
 
@@ -438,7 +450,8 @@ Ge-Prime-Matrix/
 | `ge_prime/compare.py` | ggT, kgV, Ähnlichkeit zweier Substanzen |
 | `ge_prime/diff.py` | S_rest, Teilmenge, Anagramm |
 | `ge_prime/i_curve.py` | I-Kurve extrahieren, Paarvergleich, `analyze_pair` |
-| `ge_prime/meta_genome.py` | Dokumenten-Vektor V, Sprache/Domäne, Plagiats-Kombi |
+| `ge_prime/meta_genome.py` | Dokumenten-Vektor V, Sprache/Domäne, Struktur-Matrix |
+| `ge_prime/structure_validation.py` | 5-Schritt-Kreuzvalidierung, Enjambement-Phasen, Klassifikation |
 | `ge_prime/cipher.py` | S(I)-Verschlüsselung (word/prime/si/hardcore) |
 | `ge_prime/config.py` | APP_VERSION, REQUIRED_API_ROUTES, ROOT, db_path |
 | `ge_prime/linguistics/` | Sprach-/Domänenerkennung (Hybrid, DB-Tier) |
@@ -567,7 +580,7 @@ Abdeckung (Auswahl):
 |-----------|--------|
 | `test_letters.py`, `test_normalize_case.py` | Buchstaben, ß, Umlaute, Groß-/Kleinschreibung |
 | `test_gpm.py`, `test_int_codec.py`, `test_separator_codec.py` | GPM v4 Roundtrip, S/I-Stufen, Separator, `_` |
-| `test_i_curve.py`, `test_meta_genome.py` | I-Kurve, Meta-Genom, Plagiats-Heuristik |
+| `test_i_curve.py`, `test_meta_genome.py` | I-Kurve, Meta-Genom, Struktur-Kreuzvalidierung |
 | `test_cipher.py` | S(I)-Verschlüsselung aller Modi |
 | `test_compare.py`, `test_diff.py` | ggT/kgV, arithmetische Differenz |
 | `test_web.py`, `test_static_ui.py` | API-Routen, Tab-Markup, Hilfetexte |

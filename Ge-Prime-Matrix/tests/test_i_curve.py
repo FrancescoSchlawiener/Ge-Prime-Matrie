@@ -147,7 +147,7 @@ class TestICurve(unittest.TestCase):
         result = analyze_pair(text_a=text, text_b=text)
         self.assertIn("substance_geometry", result["comparison"])
         self.assertIn("relation_comparison", result)
-        self.assertIn("substance_score", result["plagiarism_assessment"])
+        self.assertIn("substance_score", result["structure_assessment"])
 
     def test_analyze_pair_structural_without_page_level(self):
         text = "Erste Zeile.\nZweite.\n\fDritte seite."
@@ -158,6 +158,16 @@ class TestICurve(unittest.TestCase):
         self.assertIn("line", struct_hc)
         self.assertNotIn("page", struct_hc)
         self.assertAlmostEqual(struct_hc["line"]["geometry_score"], 1.0, places=3)
+
+    def test_analyze_pair_includes_validation_pipeline(self):
+        text = "Der schnelle braune Fuchs springt."
+        result = analyze_pair(text_a=text, text_b=text)
+        pipeline = result["validation_pipeline"]
+        self.assertIn("steps", pipeline)
+        self.assertEqual(len(pipeline["steps"]), 5)
+        step_ids = [s["id"] for s in pipeline["steps"]]
+        self.assertIn("nfc_tokenization", step_ids)
+        self.assertIn("db_matrix_audit", step_ids)
 
     def test_downsample_curve_points(self):
         points = [{"position": i, "i_ratio": i / 3000} for i in range(3000)]

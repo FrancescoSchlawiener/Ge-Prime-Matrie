@@ -167,9 +167,9 @@ INDEX_HELP = {
         "Die I-Distanz misst Sprünge zwischen aufeinanderfolgenden Token (delta_ratio) — "
         "typische Satzstrukturen erzeugen ähnliche Sprungmuster im fraktalen Entscheidungsbaum."
     ),
-    "plagiarism": (
+    "waveform_parallel": (
         "Bei Synonym-Ersatz ändern sich Wörter und Substanz S; die I-Kurven über die Token-Positionen "
-        "können dennoch strukturell parallel bleiben — ein Schatten der kopierten Satzgeometrie."
+        "können dennoch strukturell parallel bleiben — eine Wellenform-Isomorphie auf Wort-Ebene."
     ),
     "example": (
         "Vergleiche zwei Texte mit gleicher Satzstruktur aber anderen Wörtern: "
@@ -177,7 +177,7 @@ INDEX_HELP = {
     ),
     "limit_note": (
         "Es wird die Token-Geometrie verglichen, nicht Zeichen-für-Zeichen. "
-        "Die Heuristik ersetzt kein juristisches Plagiatsgutachten."
+        "Reine mathematische Struktur-Kreuzvalidierung — keine semantische Plagiat-Bewertung."
     ),
     "icurve_token_max": f"{MAX_I_CURVE_TOKENS:,}".replace(",", "."),
     "source_note": (
@@ -193,9 +193,9 @@ INDEX_HELP = {
         "Deutsch: zusätzliches ß-Signal. Bei niedriger Konfidenz: „Unklar“ — "
         "der DB-Sprachaudit nutzt dann die de/en-Score-Tendenz."
     ),
-    "meta_plagiarism": (
-        "Kombinierte Plagiats-Heuristik: I-Kurven-Geometrie plus Meta-Genom-ggT — "
-        "starke Signale bei paralleler Satzstruktur und ähnlichem Fachvokabular."
+    "structure_isomorphism": (
+        "Isomorphie-Index: gewichtete Fusion isolierter Metrik-Achsen (Wort-DTW, Substanz, Zelle, Relation, Meta) — "
+        "partielle strukturelle Überlappung, kein Urteil über Textherkunft."
     ),
     "cell_geometry": (
         "Zell-Geometrie (I_Satz): technische Segmente (≤50 Token, Gap-Split bei .!?) — "

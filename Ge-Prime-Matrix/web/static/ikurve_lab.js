@@ -114,17 +114,19 @@ function shouldShowEnjambement(cross) {
     || profile === 'enjambement_noise';
 }
 
-function renderEnjambementBadge(crossA, crossB) {
-  if (!shouldShowEnjambement(crossA) && !shouldShowEnjambement(crossB)) return '';
-  const countA = crossA?.rhythm_break_count ?? 0;
-  const countB = crossB?.rhythm_break_count ?? 0;
-  const profileA = escapeHtml(crossA?.enjambement_profile || '—');
-  const profileB = escapeHtml(crossB?.enjambement_profile || '—');
+function renderEnjambementBadge(crossA, crossB, pipeline) {
+  const phase = pipeline?.enjambement_phase;
+  if (!shouldShowEnjambement(crossA) && !shouldShowEnjambement(crossB) && !phase?.phase_shift_detected) return '';
+  const countA = phase?.rhythm_break_count_a ?? crossA?.rhythm_break_count ?? 0;
+  const countB = phase?.rhythm_break_count_b ?? crossB?.rhythm_break_count ?? 0;
+  const delta = phase?.rhythm_break_delta ?? Math.abs(countA - countB);
+  const profileA = escapeHtml(phase?.enjambement_profile_a ?? crossA?.enjambement_profile ?? '—');
+  const profileB = escapeHtml(phase?.enjambement_profile_b ?? crossB?.enjambement_profile ?? '—');
   const ratioA = crossA?.line_aligned_ratio != null ? fmtPct(crossA.line_aligned_ratio) : '—';
   const ratioB = crossB?.line_aligned_ratio != null ? fmtPct(crossB.line_aligned_ratio) : '—';
   return `<div class="ikurve-badge ikurve-badge-purple" role="status">
     <strong>Rhythmischer Zeilenbruch (Enjambement)</strong>
-    <p>Satz- und Zeilenkanten asynchron. Brüche: A: ${fmtNum(countA)} | B: ${fmtNum(countB)}</p>
+    <p>Satz- und Zeilenkanten asynchron. Brüche: A: ${fmtNum(countA)} | B: ${fmtNum(countB)} · Δ ${fmtNum(delta)}</p>
     <p class="muted">Profil A: ${profileA} · B: ${profileB} · Zeilen-Ausrichtung A: ${ratioA} · B: ${ratioB}</p>
   </div>`;
 }
@@ -480,12 +482,13 @@ function renderAtomicForensicsMetrics(data) {
 
 function renderIcurveZone1(data) {
   const c = data.comparison;
-  const p = data.plagiarism_assessment || {};
+  const p = data.structure_assessment || {};
   const cellCmp = data.cell_comparison || c.cell_geometry || {};
   const substCmp = data.substance_comparison || c.substance_geometry || {};
   const relCmp = data.relation_comparison || {};
-  const alertClass = c.suspicious_parallel ? 'ikurve-alert ikurve-alert-warn' : 'ikurve-alert';
-  const showInterpretation = !c.structural_cell_twins || c.suspicious_parallel;
+  const pipeline = data.validation_pipeline || {};
+  const alertClass = c.structural_waveform_parallel ? 'ikurve-alert ikurve-alert-warn' : 'ikurve-alert';
+  const showInterpretation = !c.structural_cell_twins || c.structural_waveform_parallel;
   const audit = p.db_speech_audit || data.meta_a?.language?.db_speech_audit;
   let speechAuditHtml = '';
   if (audit) {
@@ -509,16 +512,17 @@ function renderIcurveZone1(data) {
     }
   }
   return `<details class="ikurve-zone word-panel" data-ikurve-zone="1" open>
-    <summary>Forensische Signale</summary>
+    <summary>Struktur-Kreuzvalidierung</summary>
     <div class="word-panel-body ikurve-zone-body">
+      ${renderValidationPipeline(pipeline)}
       ${renderSignalOverview(p, c, cellCmp, substCmp, relCmp)}
-      ${renderPlagiarismAssessment(p, c)}
-      ${renderEnjambementBadge(data.cross_analysis_a, data.cross_analysis_b)}
+      ${renderStructureAssessment(p, c)}
+      ${renderEnjambementBadge(data.cross_analysis_a, data.cross_analysis_b, pipeline)}
       ${renderSubstanceTwinsBanner(p)}
       ${renderRelationTwinsBanner(p)}
       ${renderCellTwinsBanner(c)}
       ${showInterpretation ? `<p class="${alertClass}"><strong>${escapeHtml(c.interpretation)}</strong></p>` : ''}
-      ${c.suspicious_parallel ? '<p class="ikurve-flag">Strukturell verdächtig parallel (Wort-Ebene)</p>' : ''}
+      ${c.structural_waveform_parallel ? '<p class="ikurve-flag">Strukturelle Wellenform-Parallelität (Wort-Ebene)</p>' : ''}
       ${speechAuditHtml}
     </div>
   </details>`;
@@ -580,7 +584,7 @@ function renderIcurveZone2(data, viewState) {
 
 function renderIcurveZone3(data, viewState) {
   const c = data.comparison;
-  const p = data.plagiarism_assessment || {};
+  const p = data.structure_assessment || {};
   const cellCmp = data.cell_comparison || c.cell_geometry || {};
   const relCmp = data.relation_comparison || {};
   const mc = data.meta_comparison || {};

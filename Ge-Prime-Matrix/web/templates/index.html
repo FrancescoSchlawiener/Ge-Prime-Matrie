@@ -51,7 +51,7 @@
           <dt>Wortpaar</dt>
           <dd>Vergleichen: ggT und kgV zweier Wörter. Differenz: S_rest = S₁ ÷ ggT — Teilmenge und Anagramm.</dd>
           <dt>I-Kurve</dt>
-          <dd>Index-Vektoren über den Textverlauf — I-Distanz, Meta-Genom (Sprache/Domäne via ggT), Kurvenvergleich und kombinierte Plagiats-Heuristik.</dd>
+          <dd>Index-Vektoren über den Textverlauf — I-Distanz, Meta-Genom (Sprache/Domäne via ggT), Kurvenvergleich und mathematische Struktur-Kreuzvalidierung.</dd>
           <dt>GPM Datei</dt>
           <dd>Ganzen Text in <strong>.gpm</strong> kompilieren — optional <strong>verschlüsselt (GPC)</strong>. Editor, S(I)-Verschlüsselung, Lesen, Substanz-/ggT-/kgV-Suche.</dd>
           <dt>Datenbank</dt>
@@ -104,11 +104,11 @@
         <ul>
           <li><strong>Geometrie-Score</strong> — Ähnlichkeit zweier Kurven (Ratio + Delta).</li>
           <li><strong>Literal-Match</strong> — Anteil gleicher Wörter an gleicher Position (Kontrast zur Geometrie).</li>
-          <li><strong>suspicious_parallel</strong> — hohe Geometrie, niedriger Literal-Match, gleiche Token-Anzahl.</li>
+          <li><strong>structural_waveform_parallel</strong> — hohe Wort-DTW-Geometrie, niedriger Literal-Match, gleiche Token-Anzahl.</li>
           <li><strong>Meta-Genom V</strong> — Produkt aller Header-Substanzen gewichtet mit Häufigkeit; ggT(V₁, V₂) für Domänen-Überlappung.</li>
           <li><strong>Sprache / Domäne</strong> — Referenz-Genome (de/en, Medizin/Recht als Demo).</li>
         </ul>
-        <p class="muted">Heuristische Demo — kein Ersatz für juristische Plagiatsgutachten. Max. {{ index_help.icurve_token_max }} Token pro Seite.</p>
+        <p class="muted">Mathematische Struktur-Kreuzvalidierung — keine semantische Plagiat-Bewertung. Max. {{ index_help.icurve_token_max }} Token pro Seite.</p>
       </div>
 
       <div class="card">
@@ -250,7 +250,7 @@
             <summary>Details zu I-Kurve & Meta-Genom</summary>
             <div class="tool-help-details-body">
               <p>{{ index_help.i_distance }}</p>
-              <p>{{ index_help.plagiarism }}</p>
+              <p>{{ index_help.waveform_parallel }}</p>
               <p>{{ index_help.meta_genome }}</p>
               <p>{{ index_help.meta_language }}</p>
               <p>{{ index_help.cell_geometry }}</p>
