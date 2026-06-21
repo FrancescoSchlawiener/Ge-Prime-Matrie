@@ -15,6 +15,7 @@ from ge_prime.linguistics.domain import classify_domain
 from ge_prime.language_detect import build_meta_genome_db_audit, merge_db_speech_audit
 from ge_prime.linguistics.language import classify_language
 from ge_prime.linguistics.profiles import build_prime_profile, resolve_linguistics_repo
+from ge_prime.metric_debug import emit_metric_debug
 from ge_prime.relation_profile import (
     SAME_DOMAIN_RELATIONAL_THRESHOLD,
     build_relation_profile,
@@ -116,6 +117,7 @@ def compare_profiles(profile_a: Counter, profile_b: Counter) -> dict:
     log_gcd = 0.0
     log_a = 0.0
     log_b = 0.0
+    shared_prime_entries: list[dict] = []
 
     for prime in keys:
         a = profile_a.get(prime, 0)
@@ -124,10 +126,21 @@ def compare_profiles(profile_a: Counter, profile_b: Counter) -> dict:
         if shared:
             shared_profile[prime] = shared
             log_gcd += shared * math.log(prime)
+            shared_prime_entries.append(
+                {"prime": prime, "exp_a": a, "exp_b": b, "shared": shared}
+            )
         if a:
             log_a += a * math.log(prime)
         if b:
             log_b += b * math.log(prime)
+
+    zero_reason: str | None = None
+    if not profile_a:
+        zero_reason = "empty_profile_a"
+    elif not profile_b:
+        zero_reason = "empty_profile_b"
+    elif log_gcd <= 0:
+        zero_reason = "no_shared_primes"
 
     if log_a <= 0 or log_b <= 0 or log_gcd <= 0:
         similarity = 0.0
@@ -136,6 +149,19 @@ def compare_profiles(profile_a: Counter, profile_b: Counter) -> dict:
     else:
         similarity = math.exp(log_gcd - log_b)
     similarity = round(min(1.0, max(0.0, similarity)), 6)
+
+    emit_metric_debug(
+        "meta_ggt_intersections",
+        {
+            "log_gcd": log_gcd,
+            "log_a": log_a,
+            "log_b": log_b,
+            "shared_prime_count": len(shared_prime_entries),
+            "shared_prime_entries": shared_prime_entries,
+            "zero_reason": zero_reason,
+            "similarity_before_round": similarity,
+        },
+    )
 
     gcd_digits = _profile_log10_digits(shared_profile)
     if gcd_digits <= MAX_SAFE_VECTOR_DIGITS and shared_profile:
@@ -151,6 +177,12 @@ def compare_profiles(profile_a: Counter, profile_b: Counter) -> dict:
         "ggt_kgv_similarity": similarity,
         "shared_letters": _profile_shared_letters(shared_profile),
         "shared_profile": shared_profile,
+        "log_gcd": round(log_gcd, 6),
+        "log_a": round(log_a, 6),
+        "log_b": round(log_b, 6),
+        "shared_prime_count": len(shared_prime_entries),
+        "shared_prime_entries": shared_prime_entries,
+        "zero_reason": zero_reason,
     }
 
 
@@ -400,6 +432,14 @@ def compare_meta_genomes(meta_a: dict, meta_b: dict, *, relation_comparison: dic
             {"prime": p, "letter": CHAR_MAP.get(p, "?"), "exponent": shared_profile[p]}
             for p in sorted(shared_profile.keys(), reverse=True)[:8]
         ],
+        "meta_ggt_diagnostics": {
+            "log_gcd": cmp.get("log_gcd", 0.0),
+            "log_a": cmp.get("log_a", 0.0),
+            "log_b": cmp.get("log_b", 0.0),
+            "shared_prime_count": cmp.get("shared_prime_count", 0),
+            "shared_prime_entries": cmp.get("shared_prime_entries", []),
+            "zero_reason": cmp.get("zero_reason"),
+        },
     }
 
 

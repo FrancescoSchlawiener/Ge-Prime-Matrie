@@ -11,6 +11,7 @@ from ge_prime.meta_genome import (
     assess_structure_matrix,
     build_meta_genome_from_text,
     compare_meta_genomes,
+    compare_profiles,
     db_token_language_audit,
     enrich_pair_analysis,
 )
@@ -221,6 +222,29 @@ class TestMetaGenome(unittest.TestCase):
         self.assertNotIn("highlight", enriched["structure_assessment"])
         self.assertIn("relation_comparison", enriched)
         self.assertIn("relation_score", enriched["meta_comparison"])
+
+    def test_compare_profiles_exposes_ggt_diagnostics(self):
+        doc_a, _, _ = compile_text(self.DE_MED)
+        doc_b, _, _ = compile_text(self.DE_MED)
+        profile_a = build_prime_profile(doc_a)
+        profile_b = build_prime_profile(doc_b)
+        cmp = compare_profiles(profile_a, profile_b)
+        self.assertIn("log_gcd", cmp)
+        self.assertIn("log_a", cmp)
+        self.assertIn("log_b", cmp)
+        self.assertIn("shared_prime_entries", cmp)
+        self.assertGreater(cmp["shared_prime_count"], 0)
+        self.assertIsNone(cmp["zero_reason"])
+        self.assertGreaterEqual(cmp["similarity_ratio"], 0.99)
+
+    def test_compare_meta_genomes_includes_meta_ggt_diagnostics(self):
+        meta_a = build_meta_genome_from_text(self.DE_MED)
+        meta_b = build_meta_genome_from_text("Patient mit Symptom und Diagnose in Klinik")
+        cmp = compare_meta_genomes(meta_a, meta_b)
+        diag = cmp["meta_ggt_diagnostics"]
+        self.assertIn("log_gcd", diag)
+        self.assertIn("shared_prime_entries", diag)
+        self.assertGreater(diag["shared_prime_count"], 0)
 
 
 if __name__ == "__main__":

@@ -193,7 +193,83 @@ function setIcurveChartScale(chartScale) {
     ...window.ikurveViewState,
     chartScale: chartScale === 'shorter' ? 'shorter' : 'union',
   };
-  patchIcurveLabView();
+  patchIcurveChartScale();
+}
+
+function captureIcurveSparklineScroll(root) {
+  if (!root) return null;
+  const scrollEl = root.querySelector('.ikurve-sparkline-scroll');
+  if (!scrollEl) return null;
+  const maxScroll = Math.max(0, scrollEl.scrollWidth - scrollEl.clientWidth);
+  const ratio = maxScroll > 0 ? scrollEl.scrollLeft / maxScroll : 0;
+  const cells = root.querySelectorAll('.ikurve-chart-cell');
+  let cellIndex = -1;
+  cells.forEach((cell, idx) => {
+    if (cell.contains(scrollEl)) cellIndex = idx;
+  });
+  return { ratio, cellIndex, scrollLeft: scrollEl.scrollLeft };
+}
+
+function restoreIcurveSparklineScroll(root, state) {
+  if (!root || !state) return;
+  const apply = () => {
+    const scrollEls = root.querySelectorAll('.ikurve-sparkline-scroll');
+    if (!scrollEls.length) return;
+    let target = scrollEls[0];
+    if (state.cellIndex >= 0) {
+      const cells = root.querySelectorAll('.ikurve-chart-cell');
+      const cell = cells[state.cellIndex];
+      if (cell) {
+        const nested = cell.querySelector('.ikurve-sparkline-scroll');
+        if (nested) target = nested;
+      }
+    }
+    const maxScroll = Math.max(0, target.scrollWidth - target.clientWidth);
+    target.scrollLeft = maxScroll > 0
+      ? Math.round(state.ratio * maxScroll)
+      : state.scrollLeft;
+  };
+  requestAnimationFrame(() => requestAnimationFrame(apply));
+}
+
+function updateIcurveChartScaleButtons(root, chartScale) {
+  if (!root) return;
+  root.querySelectorAll('[data-ikurve-chart-scale]').forEach((btn) => {
+    const active = btn.dataset.ikurveChartScale === chartScale;
+    btn.classList.toggle('ikurve-chart-scale-active', active);
+    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+}
+
+function renderIcurveChartsContainerHtml(analysis, state) {
+  return [
+    renderZone2Charts(analysis, state),
+    renderZone2Dtw(analysis, state),
+    renderSparklineDownsampleHint(analysis, state),
+  ].join('');
+}
+
+function patchIcurveChartsContainer(analysis, state) {
+  const root = document.getElementById('ikurve-result');
+  const container = root?.querySelector('.ikurve-charts-container');
+  if (!container) return false;
+  const scrollState = captureIcurveSparklineScroll(root);
+  container.innerHTML = renderIcurveChartsContainerHtml(analysis, state);
+  restoreIcurveSparklineScroll(root, scrollState);
+  return true;
+}
+
+function patchIcurveChartScale() {
+  const analysis = window.currentAnalysis;
+  const state = window.ikurveViewState;
+  if (!analysis || !state) return;
+  const root = document.getElementById('ikurve-result');
+  if (!root?.querySelector('.ikurve-charts-container')) {
+    patchIcurveLabView();
+    return;
+  }
+  updateIcurveChartScaleButtons(root, state.chartScale || 'union');
+  patchIcurveChartsContainer(analysis, state);
 }
 
 function replaceIcurveZone(zoneId, html) {
@@ -219,8 +295,10 @@ function patchIcurveLabView() {
     renderIcurveLab(analysis, state);
     return;
   }
+  const scrollState = captureIcurveSparklineScroll(root);
   replaceIcurveZone('2', renderIcurveZone2(analysis, state));
   replaceIcurveZone('3', renderIcurveZone3(analysis, state));
+  restoreIcurveSparklineScroll(root, scrollState);
 }
 
 function renderForeignTokenAuditCompact(metaA, metaB, p) {
@@ -574,9 +652,7 @@ function renderIcurveZone2(data, viewState) {
         ${scaleButtons}
       </div>
       <div class="ikurve-charts-container" aria-live="polite" aria-atomic="true">
-        ${renderZone2Charts(data, viewState)}
-        ${renderZone2Dtw(data, viewState)}
-        ${renderSparklineDownsampleHint(data, viewState)}
+        ${renderIcurveChartsContainerHtml(data, viewState)}
       </div>
     </div>
   </details>`;

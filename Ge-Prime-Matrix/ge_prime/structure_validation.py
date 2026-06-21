@@ -131,6 +131,7 @@ def build_validation_pipeline(
     cross_a: dict,
     cross_b: dict,
     structure_assessment: dict,
+    meta_comparison: dict | None = None,
 ) -> dict:
     """Chronologische 5-Schritt-Kreuzvalidierung für API/UI."""
     prefilter = pair_relevance_prefilter(document_a, document_b)
@@ -160,6 +161,9 @@ def build_validation_pipeline(
             "word_geometry_dtw": comparison.get("geometry_score_dtw"),
             "word_geometry_mae": comparison.get("geometry_score_mae"),
             "literal_match_ratio": comparison.get("literal_match_ratio"),
+            "literal_diagnostics": comparison.get("literal_diagnostics"),
+            "meta_ggt_similarity": (meta_comparison or {}).get("similarity_ratio"),
+            "meta_ggt_diagnostics": (meta_comparison or {}).get("meta_ggt_diagnostics"),
             "cell_geometry": (comparison.get("cell_geometry") or {}).get("geometry_score"),
             "substance_geometry": (comparison.get("substance_geometry") or {}).get("geometry_score"),
             "hierarchy_line_dtw": (struct_hc.get("line") or {}).get("geometry_score"),

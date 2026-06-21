@@ -1347,7 +1347,17 @@ function renderValidationPipeline(pipeline) {
   const rows = pipeline.steps.map((step) => {
     const status = step.status || 'ok';
     const cls = status === 'warn' ? 'ikurve-pipe-warn' : status === 'skip' ? 'ikurve-pipe-skip' : 'ikurve-pipe-ok';
-    return `<li class="ikurve-pipe-step ${cls}"><span class="ikurve-pipe-id">${escapeHtml(labels[step.id] || step.id)}</span> <span class="muted">(${escapeHtml(status)})</span></li>`;
+    let detailHtml = '';
+    if (step.id === 'geometry_curves' && step.detail) {
+      const lit = step.detail.literal_diagnostics;
+      const meta = step.detail.meta_ggt_diagnostics;
+      if (lit || meta) {
+        const litJson = lit ? escapeHtml(JSON.stringify(lit)) : '';
+        const metaJson = meta ? escapeHtml(JSON.stringify(meta)) : '';
+        detailHtml = `<details class="ikurve-pipe-detail"><summary class="muted">Metrik-Rohdaten</summary>${lit ? `<pre class="ikurve-pipe-pre">Literal: ${litJson}</pre>` : ''}${meta ? `<pre class="ikurve-pipe-pre">Meta-ggT: ${metaJson}</pre>` : ''}</details>`;
+      }
+    }
+    return `<li class="ikurve-pipe-step ${cls}"><span class="ikurve-pipe-id">${escapeHtml(labels[step.id] || step.id)}</span> <span class="muted">(${escapeHtml(status)})</span>${detailHtml}</li>`;
   }).join('');
   const clsLabel = pipeline.classification ? `<p class="muted">Klassifikation: <strong>${escapeHtml(pipeline.classification)}</strong> · Isomorphie-Index ${fmtPct(pipeline.isomorphism_index ?? 0)}</p>` : '';
   return `<div class="ikurve-validation-pipeline">

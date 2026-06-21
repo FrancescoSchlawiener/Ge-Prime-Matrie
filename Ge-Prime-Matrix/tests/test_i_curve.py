@@ -130,6 +130,11 @@ class TestICurve(unittest.TestCase):
         result = analyze_pair(text_a=base, text_b=inserted)
         word_cmp = result["comparison"]
         self.assertFalse(word_cmp["aligned"])
+        self.assertGreater(word_cmp["literal_match_ratio"], 0.0)
+        diag = word_cmp["literal_diagnostics"]
+        self.assertGreater(diag["window_ratio"], 0.0)
+        self.assertGreater(diag["byte_ratio"], 0.0)
+        self.assertIn("primary_method", diag)
         self.assertIn("geometry_score_dtw", word_cmp)
         self.assertIn("word_geometry", word_cmp)
         self.assertEqual(word_cmp["word_geometry"]["method"], "dtw_primary")
@@ -168,6 +173,21 @@ class TestICurve(unittest.TestCase):
         step_ids = [s["id"] for s in pipeline["steps"]]
         self.assertIn("nfc_tokenization", step_ids)
         self.assertIn("db_matrix_audit", step_ids)
+        geom_step = next(s for s in pipeline["steps"] if s["id"] == "geometry_curves")
+        self.assertIn("literal_diagnostics", geom_step["detail"])
+        self.assertIn("meta_ggt_diagnostics", geom_step["detail"])
+
+    def test_misaligned_literal_metrics_nonzero_for_shared_german(self):
+        text_a = "Der Mond ist aufgegangen und leuchtet überall."
+        text_b = "Der Mond leuchtet still und freundlich auf die Erde nieder."
+        result = analyze_pair(text_a=text_a, text_b=text_b)
+        cmp = result["comparison"]
+        self.assertFalse(cmp["aligned"])
+        self.assertGreater(cmp["literal_match_ratio"], 0.0)
+        diag = cmp["literal_diagnostics"]
+        self.assertGreater(diag["window_ratio"], 0.0)
+        self.assertGreater(diag["byte_ratio"], 0.0)
+        self.assertGreater(diag["byte_intersection_total"], 0)
 
     def test_downsample_curve_points(self):
         points = [{"position": i, "i_ratio": i / 3000} for i in range(3000)]
