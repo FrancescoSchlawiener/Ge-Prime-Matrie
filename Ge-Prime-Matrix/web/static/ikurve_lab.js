@@ -91,11 +91,23 @@ function curvePoints(obj) {
   return obj.points || [];
 }
 
+function resolveSparklinePoints(obj) {
+  if (!obj) return { points: [], usedPreviewFallback: false };
+  if (Array.isArray(obj)) {
+    return { points: downsampleSparklinePoints(obj), usedPreviewFallback: false };
+  }
+  if (obj.sparkline_points?.length) {
+    return { points: obj.sparkline_points, usedPreviewFallback: false };
+  }
+  const preview = curvePoints(obj);
+  if (preview.length) {
+    return { points: downsampleSparklinePoints(preview), usedPreviewFallback: true };
+  }
+  return { points: [], usedPreviewFallback: false };
+}
+
 function sparklinePoints(obj) {
-  if (!obj) return [];
-  if (Array.isArray(obj)) return downsampleSparklinePoints(obj);
-  if (obj.sparkline_points?.length) return obj.sparkline_points;
-  return [];
+  return resolveSparklinePoints(obj).points;
 }
 
 function isSparklineDownsampled(obj) {
@@ -139,16 +151,22 @@ function renderMiniSvgPolyline(pointsA, pointsB, { valueKey = 'i_satz_ratio', in
   const height = 28;
   const pad = 2;
   const maxIndex = Math.max(a.at(-1)?.[indexKey] ?? 0, b.at(-1)?.[indexKey] ?? 0, 1);
-  const toPoly = (pts, cls) => {
+  const toShape = (pts, cls) => {
     if (!pts.length) return '';
+    if (pts.length === 1) {
+      const p = pts[0];
+      const x = pad + ((p[indexKey] ?? 0) / maxIndex) * (width - 2 * pad);
+      const y = height - pad - (p[valueKey] ?? 0) * (height - 2 * pad);
+      return `<circle class="${cls}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" fill="currentColor"/>`;
+    }
     const poly = pts.map((p) => {
-      const x = pad + (p[indexKey] / maxIndex) * (width - 2 * pad);
+      const x = pad + ((p[indexKey] ?? 0) / maxIndex) * (width - 2 * pad);
       const y = height - pad - (p[valueKey] ?? 0) * (height - 2 * pad);
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     }).join(' ');
     return `<polyline class="${cls}" fill="none" stroke="currentColor" stroke-width="1.2" points="${poly}"/>`;
   };
-  return `<svg class="ikurve-mini-sparkline" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true">${toPoly(a, 'ikurve-line-a')}${toPoly(b, 'ikurve-line-b')}</svg>`;
+  return `<svg class="ikurve-mini-sparkline" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true">${toShape(a, 'ikurve-line-a')}${toShape(b, 'ikurve-line-b')}</svg>`;
 }
 
 function renderSparklineDownsampleHint(data, viewState) {
@@ -179,13 +197,13 @@ function setIcurveMode(mode) {
     depth: IKURVE_MODE_DEFAULTS[mode] ?? null,
     chartScale: prev.chartScale || 'union',
   };
-  patchIcurveLabView();
+  patchIcurveLayerView();
 }
 
 function setIcurveDepth(depth) {
   if (window.ikurveViewState.mode === 'atomic') return;
   window.ikurveViewState.depth = depth;
-  patchIcurveLabView();
+  patchIcurveLayerView();
 }
 
 function setIcurveChartScale(chartScale) {
@@ -241,12 +259,80 @@ function updateIcurveChartScaleButtons(root, chartScale) {
   });
 }
 
+function updateIcurveModeButtons(root, mode) {
+  if (!root) return;
+  root.querySelectorAll('[data-ikurve-mode]').forEach((btn) => {
+    const active = btn.dataset.ikurveMode === mode;
+    btn.classList.toggle('ikurve-layer-active', active);
+    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+}
+
+function renderIcurveDepthPillsHtml(mode, depth) {
+  if (mode === 'semantic') {
+    return Object.entries(SEMANTIC_DEPTH_CONFIG).map(([key, cfg]) => {
+      const active = key === depth;
+      const activeClass = pillClass(active, 'ikurve-depth-active');
+      const pressed = active ? ' aria-pressed="true"' : ' aria-pressed="false"';
+      return `<button type="button" class="ikurve-depth-btn${activeClass}" data-ikurve-depth="${key}"${pressed}>${escapeHtml(cfg.label)}</button>`;
+    }).join('');
+  }
+  if (mode === 'structural') {
+    return Object.entries(STRUCTURAL_DEPTH_CONFIG).map(([key, cfg]) => {
+      const active = key === depth;
+      const activeClass = pillClass(active, 'ikurve-depth-active');
+      const pressed = active ? ' aria-pressed="true"' : ' aria-pressed="false"';
+      return `<button type="button" class="ikurve-depth-btn${activeClass}" data-ikurve-depth="${key}"${pressed}>${escapeHtml(cfg.label)}</button>`;
+    }).join('');
+  }
+  return '';
+}
+
+function updateIcurveDepthPills(root, mode, depth) {
+  if (!root) return;
+  const wrap = root.querySelector('.ikurve-depth-pills');
+  if (!wrap) return;
+  const showDepth = mode === 'semantic' || mode === 'structural';
+  wrap.classList.toggle('hidden', !showDepth);
+  wrap.innerHTML = renderIcurveDepthPillsHtml(mode, depth);
+}
+
+function renderZone2LayerModeHint(viewState) {
+  if (viewState.mode === 'atomic') return '';
+  return '<p class="ikurve-sparkline-hint muted">Sinn/Raum: ein Kurvenpaar pro Ebene (Atomic zeigt Wort + Substanz).</p>';
+}
+
+function renderZone2SparklineFallbackHint(payloadA, payloadB) {
+  const a = resolveSparklinePoints(payloadA);
+  const b = resolveSparklinePoints(payloadB);
+  if (!a.usedPreviewFallback && !b.usedPreviewFallback) return '';
+  return '<p class="ikurve-sparkline-hint muted">Kurven aus Preview-Daten (sparkline_points fehlte) — volle Ketten in Zone 3.</p>';
+}
+
 function renderIcurveChartsContainerHtml(analysis, state) {
   return [
     renderZone2Charts(analysis, state),
     renderZone2Dtw(analysis, state),
     renderSparklineDownsampleHint(analysis, state),
+    renderZone2LayerModeHint(state),
   ].join('');
+}
+
+function patchIcurveLayerView() {
+  const analysis = window.currentAnalysis;
+  const state = window.ikurveViewState;
+  if (!analysis || !state) return;
+  const root = document.getElementById('ikurve-result');
+  if (!root?.querySelector('.ikurve-charts-container')) {
+    patchIcurveLabView();
+    return;
+  }
+  const scrollState = captureIcurveSparklineScroll(root);
+  updateIcurveModeButtons(root, state.mode);
+  updateIcurveDepthPills(root, state.mode, state.depth);
+  patchIcurveChartsContainer(analysis, state);
+  replaceIcurveZone('3', renderIcurveZone3(analysis, state));
+  restoreIcurveSparklineScroll(root, scrollState);
 }
 
 function patchIcurveChartsContainer(analysis, state) {
@@ -411,9 +497,11 @@ function buildHierarchyTableRows(data, depth, mode) {
     : STRUCTURAL_DEPTH_CONFIG[depth];
   if (!config) return [];
   const prefix = mode === 'semantic' ? 'semantic' : 'structural';
-  const ptsA = curvePoints(data[`${prefix}_a`]?.[config.dataKey]);
-  const ptsB = curvePoints(data[`${prefix}_b`]?.[config.dataKey]);
-  const limit = Math.min(30, Math.max(curvePointCount(ptsA), curvePointCount(ptsB)));
+  const payloadA = data[`${prefix}_a`]?.[config.dataKey];
+  const payloadB = data[`${prefix}_b`]?.[config.dataKey];
+  const ptsA = curvePoints(payloadA);
+  const ptsB = curvePoints(payloadB);
+  const limit = Math.min(30, Math.max(curvePointCount(payloadA), curvePointCount(payloadB)));
   const rows = [];
   for (let i = 0; i < limit; i += 1) {
     const a = ptsA[i];
@@ -449,6 +537,9 @@ function renderZone2Charts(data, viewState) {
         indexKey: 'position',
         labelA: 'Kurve A (i_ratio)',
         labelB: 'Kurve B (i_ratio)',
+        pointCountA: curvePointCount(data.curve_a),
+        pointCountB: curvePointCount(data.curve_b),
+        levelLabel: 'Token',
         ...scaleOpts,
       },
     );
@@ -462,6 +553,9 @@ function renderZone2Charts(data, viewState) {
         indexKey: 'position',
         labelA: 'Substanz A (ggT/kgV)',
         labelB: 'Substanz B (ggT/kgV)',
+        pointCountA: curvePointCount(data.substance_a),
+        pointCountB: curvePointCount(data.substance_b),
+        levelLabel: 'Substanz',
         ...scaleOpts,
       },
     );
@@ -469,26 +563,42 @@ function renderZone2Charts(data, viewState) {
   }
   if (mode === 'semantic') {
     const cfg = SEMANTIC_DEPTH_CONFIG[depth] || SEMANTIC_DEPTH_CONFIG.sentence;
-    const ptsA = sparklinePoints(data.semantic_a?.[cfg.dataKey]);
-    const ptsB = sparklinePoints(data.semantic_b?.[cfg.dataKey]);
-    return renderPairedSparklines(ptsA, ptsB, 'ikurve-line-a', 'ikurve-line-b', {
+    const payloadA = data.semantic_a?.[cfg.dataKey];
+    const payloadB = data.semantic_b?.[cfg.dataKey];
+    const ptsA = sparklinePoints(payloadA);
+    const ptsB = sparklinePoints(payloadB);
+    return [
+      renderPairedSparklines(ptsA, ptsB, 'ikurve-line-a', 'ikurve-line-b', {
+        valueKey: cfg.ratioKey,
+        indexKey: cfg.indexKey,
+        labelA: `Kurve A (${cfg.label}-Rhythmus)`,
+        labelB: `Kurve B (${cfg.label}-Rhythmus)`,
+        pointCountA: curvePointCount(payloadA),
+        pointCountB: curvePointCount(payloadB),
+        levelLabel: cfg.label,
+        ...scaleOpts,
+      }),
+      renderZone2SparklineFallbackHint(payloadA, payloadB),
+    ].join('');
+  }
+  const cfg = STRUCTURAL_DEPTH_CONFIG[depth] || STRUCTURAL_DEPTH_CONFIG.line;
+  const payloadA = data.structural_a?.[cfg.dataKey];
+  const payloadB = data.structural_b?.[cfg.dataKey];
+  const ptsA = sparklinePoints(payloadA);
+  const ptsB = sparklinePoints(payloadB);
+  return [
+    renderPairedSparklines(ptsA, ptsB, 'ikurve-line-a', 'ikurve-line-b', {
       valueKey: cfg.ratioKey,
       indexKey: cfg.indexKey,
       labelA: `Kurve A (${cfg.label}-Rhythmus)`,
       labelB: `Kurve B (${cfg.label}-Rhythmus)`,
+      pointCountA: curvePointCount(payloadA),
+      pointCountB: curvePointCount(payloadB),
+      levelLabel: cfg.label,
       ...scaleOpts,
-    });
-  }
-  const cfg = STRUCTURAL_DEPTH_CONFIG[depth] || STRUCTURAL_DEPTH_CONFIG.line;
-  const ptsA = sparklinePoints(data.structural_a?.[cfg.dataKey]);
-  const ptsB = sparklinePoints(data.structural_b?.[cfg.dataKey]);
-  return renderPairedSparklines(ptsA, ptsB, 'ikurve-line-a', 'ikurve-line-b', {
-    valueKey: cfg.ratioKey,
-    indexKey: cfg.indexKey,
-    labelA: `Kurve A (${cfg.label}-Rhythmus)`,
-    labelB: `Kurve B (${cfg.label}-Rhythmus)`,
-    ...scaleOpts,
-  });
+    }),
+    renderZone2SparklineFallbackHint(payloadA, payloadB),
+  ].join('');
 }
 
 function renderZone2Dtw(data, viewState) {

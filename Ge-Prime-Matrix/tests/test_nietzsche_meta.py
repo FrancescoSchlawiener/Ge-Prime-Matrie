@@ -38,6 +38,16 @@ class TestNietzscheMeta(unittest.TestCase):
         meta_sim = result["meta_comparison"]["similarity_ratio"]
         self.assertGreater(meta_sim, 0.85, msg=f"expected high Meta-ggT, got {meta_sim}")
 
+    def test_tanzlied_vs_schlaflied_sentence_sparklines(self):
+        result = analyze_pair(text_a=TANZLIED, text_b=SCHLAFLIED, db_audit_mode="off")
+        for side in ("semantic_a", "semantic_b"):
+            sent = result[side]["sentences"]
+            self.assertIsInstance(sent, list)
+            self.assertGreater(len(sent), 0, msg=side)
+        hc = result["hierarchy_comparison"]["semantic"]["sentence"]
+        self.assertFalse(hc.get("dtw_failed", True))
+        self.assertIn("geometry_score", hc)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1092,15 +1092,24 @@ function renderIcurveSparkline(points, strokeClass, { valueKey = 'i_ratio', inde
   const width = svgWidth;
   const height = 90;
   const pad = 6;
-  const maxX = maxIndex ?? Math.max(points[points.length - 1][indexKey], 1);
+  const maxX = maxIndex ?? Math.max(points[points.length - 1][indexKey] ?? 0, 1);
+  const toXY = (p) => {
+    const x = pad + ((p[indexKey] ?? 0) / maxX) * (width - 2 * pad);
+    const val = Math.max(p[valueKey] ?? 0, 0);
+    const y = height - pad - val * (height - 2 * pad);
+    return { x, y };
+  };
+  const widthAttr = svgWidth > 480 ? ` width="${svgWidth}"` : '';
+  if (points.length === 1) {
+    const { x, y } = toXY(points[0]);
+    return `<svg class="ikurve-sparkline ${strokeClass}"${widthAttr} viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="currentColor"/></svg>`;
+  }
   const poly = points
     .map((p) => {
-      const x = pad + (p[indexKey] / maxX) * (width - 2 * pad);
-      const y = height - pad - p[valueKey] * (height - 2 * pad);
+      const { x, y } = toXY(p);
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     })
     .join(' ');
-  const widthAttr = svgWidth > 480 ? ` width="${svgWidth}"` : '';
   return `<svg class="ikurve-sparkline ${strokeClass}"${widthAttr} viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true"><polyline fill="none" stroke="currentColor" stroke-width="1.5" points="${poly}"/></svg>`;
 }
 
@@ -1111,12 +1120,23 @@ function renderPairedSparklines(pointsA, pointsB, strokeA, strokeB, opts = {}) {
     labelA = 'Kurve A',
     labelB = 'Kurve B',
     chartScale = 'union',
+    pointCountA = null,
+    pointCountB = null,
+    levelLabel = 'Knoten',
   } = opts;
   const baseWidth = 480;
   const endA = sparklineExtent(pointsA, indexKey);
   const endB = sparklineExtent(pointsB, indexKey);
 
-  const chartCell = (label, points, stroke, maxIndex, svgWidth, scrollable) => {
+  const emptyCell = (label, pointCount) => {
+    const count = pointCount ?? 0;
+    return `<div class="ikurve-chart-cell"><span class="ikurve-chart-label">${escapeHtml(label)}</span><p class="muted">Keine ${escapeHtml(levelLabel)}-Knoten (${fmtNum(count)}).</p></div>`;
+  };
+
+  const chartCell = (label, points, stroke, maxIndex, svgWidth, scrollable, pointCount) => {
+    if (!points?.length) {
+      return emptyCell(label, pointCount);
+    }
     const svg = renderIcurveSparkline(points, stroke, { valueKey, indexKey, maxIndex, svgWidth });
     const scrollWrap = scrollable
       ? `<div class="ikurve-sparkline-scroll" tabindex="0" aria-label="Längere Kurve — horizontal scrollen">${svg}</div>`
@@ -1134,16 +1154,16 @@ function renderPairedSparklines(pointsA, pointsB, strokeA, strokeB, opts = {}) {
     const longEnd = Math.max(endA, endB);
     const longWidth = Math.max(baseWidth, Math.ceil(baseWidth * (longEnd / shortEnd)));
     if (endA < endB) {
-      cellA = chartCell(labelA, pointsA, strokeA, endA, baseWidth, false);
-      cellB = chartCell(labelB, pointsB, strokeB, endB, longWidth, true);
+      cellA = chartCell(labelA, pointsA, strokeA, endA, baseWidth, false, pointCountA);
+      cellB = chartCell(labelB, pointsB, strokeB, endB, longWidth, true, pointCountB);
     } else {
-      cellA = chartCell(labelA, pointsA, strokeA, endA, longWidth, true);
-      cellB = chartCell(labelB, pointsB, strokeB, endB, baseWidth, false);
+      cellA = chartCell(labelA, pointsA, strokeA, endA, longWidth, true, pointCountA);
+      cellB = chartCell(labelB, pointsB, strokeB, endB, baseWidth, false, pointCountB);
     }
   } else {
     const maxIndex = Math.max(endA, endB, 1);
-    cellA = chartCell(labelA, pointsA, strokeA, maxIndex, baseWidth, false);
-    cellB = chartCell(labelB, pointsB, strokeB, maxIndex, baseWidth, false);
+    cellA = chartCell(labelA, pointsA, strokeA, maxIndex, baseWidth, false, pointCountA);
+    cellB = chartCell(labelB, pointsB, strokeB, maxIndex, baseWidth, false, pointCountB);
   }
 
   return `<div class="ikurve-charts"><div class="ikurve-chart-pair">${cellA}${cellB}</div></div>`;

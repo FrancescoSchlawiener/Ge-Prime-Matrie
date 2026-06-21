@@ -304,6 +304,46 @@ class TestWebThreadSafety(unittest.TestCase):
             self.assertFalse(hc.get("dtw_failed", True))
             self.assertIn("geometry_score", hc)
 
+    def test_icurve_api_hierarchy_sparklines_prose(self):
+        text_a = (
+            "Erster Satz im ersten Absatz.\n"
+            "Zweiter Satz im ersten Absatz.\n\n"
+            "Erster Satz im zweiten Absatz.\n"
+            "Zweiter Satz im zweiten Absatz."
+        )
+        text_b = (
+            "Anderer erster Satz.\n"
+            "Noch ein Satz.\n\n"
+            "Dritter Absatz beginnt.\n"
+            "Mit zweiter Zeile."
+        )
+        with app.test_client() as client:
+            resp = client.post(
+                "/api/i-curve",
+                json={"text_a": text_a, "text_b": text_b, "source_a": "text", "source_b": "text"},
+            )
+            self.assertEqual(resp.status_code, 200)
+            data = resp.get_json()
+            for side in ("semantic_a", "semantic_b"):
+                sem = data[side]
+                for key in ("sentences", "paragraphs"):
+                    block = sem[key]
+                    self.assertGreater(block["point_count"], 0, msg=f"{side}.{key}")
+                    self.assertGreater(len(block["sparkline_points"]), 0, msg=f"{side}.{key}")
+                    self.assertGreater(len(block["points"]), 0, msg=f"{side}.{key}")
+            for side in ("structural_a", "structural_b"):
+                lines = data[side]["lines"]
+                self.assertGreater(lines["point_count"], 0, msg=f"{side}.lines")
+                self.assertGreater(len(lines["sparkline_points"]), 0, msg=f"{side}.lines")
+            hc = data["hierarchy_comparison"]
+            for level in ("sentence", "paragraph"):
+                cmp = hc["semantic"][level]
+                self.assertFalse(cmp.get("dtw_failed", True), msg=f"semantic.{level}")
+                self.assertIn("geometry_score", cmp)
+            line_cmp = hc["structural"]["line"]
+            self.assertFalse(line_cmp.get("dtw_failed", True))
+            self.assertIn("geometry_score", line_cmp)
+
     def test_icurve_api_db_audit_mode(self):
         text = "Der schnelle braune Fuchs springt."
         with app.test_client() as client:
