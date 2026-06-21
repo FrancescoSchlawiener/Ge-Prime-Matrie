@@ -898,10 +898,32 @@ main {
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
-  height: 90px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--surface-2);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.ikurve-sparkline-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.ikurve-sparkline-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ikurve-sparkline-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
+.ikurve-sparkline-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+.ikurve-sparkline-scroll::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .ikurve-sparkline-scroll .ikurve-sparkline,

@@ -1091,27 +1091,26 @@ function sparklineExtent(points, indexKey) {
   return resolveSparklineEnd(points, indexKey, null);
 }
 
-function computePairedChartLayout(endA, endB, chartScale) {
+function computePairedChartLayout(endA, endB, chartScale, spanA = 0, spanB = 0) {
+  const safeMax = (end) => Math.max(end, 1);
   const unionLayout = (maxIndex) => ({
-    a: { maxIndex, scrollable: false, widthRatio: 1 },
-    b: { maxIndex, scrollable: false, widthRatio: 1 },
+    a: { maxIndex: safeMax(maxIndex), scrollable: false, widthRatio: 1 },
+    b: { maxIndex: safeMax(maxIndex), scrollable: false, widthRatio: 1 },
   });
-  if (endA <= 0 && endB <= 0) {
+  if (spanA <= 0 && spanB <= 0) {
     return unionLayout(1);
   }
-  if (chartScale === 'shorter' && endA > 0 && endB > 0 && endA !== endB) {
-    const shortEnd = Math.min(endA, endB);
-    const longEnd = Math.max(endA, endB);
-    const widthRatio = longEnd / shortEnd;
-    if (endA < endB) {
+  if (chartScale === 'shorter' && spanA > 0 && spanB > 0 && spanA !== spanB) {
+    const widthRatio = Math.max(spanA, spanB) / Math.min(spanA, spanB);
+    if (spanA < spanB) {
       return {
-        a: { maxIndex: endA, scrollable: false, widthRatio: 1 },
-        b: { maxIndex: endB, scrollable: true, widthRatio },
+        a: { maxIndex: safeMax(endA), scrollable: false, widthRatio: 1 },
+        b: { maxIndex: safeMax(endB), scrollable: true, widthRatio },
       };
     }
     return {
-      a: { maxIndex: endA, scrollable: true, widthRatio },
-      b: { maxIndex: endB, scrollable: false, widthRatio: 1 },
+      a: { maxIndex: safeMax(endA), scrollable: true, widthRatio },
+      b: { maxIndex: safeMax(endB), scrollable: false, widthRatio: 1 },
     };
   }
   return unionLayout(Math.max(endA, endB, 1));
@@ -1124,7 +1123,8 @@ function renderIcurveSparkline(points, strokeClass, { valueKey = 'i_ratio', inde
   const viewBoxW = SPARKLINE_VIEWBOX_W * widthRatio;
   const height = 90;
   const pad = 6;
-  const maxX = maxIndex ?? Math.max(points[points.length - 1][indexKey] ?? 0, 1);
+  const lastIndex = points[points.length - 1][indexKey] ?? 0;
+  const maxX = Math.max(maxIndex != null ? maxIndex : lastIndex, 1);
   const toXY = (p) => {
     const x = pad + ((p[indexKey] ?? 0) / maxX) * (viewBoxW - 2 * pad);
     const val = Math.max(p[valueKey] ?? 0, 0);
@@ -1136,8 +1136,9 @@ function renderIcurveSparkline(points, strokeClass, { valueKey = 'i_ratio', inde
     ? ` style="width:${(widthRatio * 100).toFixed(4)}%;min-width:100%;"`
     : '';
   if (points.length === 1) {
-    const { x, y } = toXY(points[0]);
-    return `<svg class="ikurve-sparkline${extendedClass} ${strokeClass}"${styleAttr} viewBox="0 0 ${viewBoxW} ${height}" preserveAspectRatio="none" aria-hidden="true"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="currentColor"/></svg>`;
+    const val = Math.max(points[0][valueKey] ?? 0, 0);
+    const y = height - pad - val * (height - 2 * pad);
+    return `<svg class="ikurve-sparkline${extendedClass} ${strokeClass}"${styleAttr} viewBox="0 0 ${viewBoxW} ${height}" preserveAspectRatio="none" aria-hidden="true"><line x1="${pad}" y1="${y.toFixed(1)}" x2="${(viewBoxW - pad).toFixed(1)}" y2="${y.toFixed(1)}" stroke="currentColor" stroke-width="1.5"/></svg>`;
   }
   const poly = points
     .map((p) => {
@@ -1162,7 +1163,9 @@ function renderPairedSparklines(pointsA, pointsB, strokeA, strokeB, opts = {}) {
   } = opts;
   const endA = resolveSparklineEnd(pointsA, indexKey, pointCountA);
   const endB = resolveSparklineEnd(pointsB, indexKey, pointCountB);
-  const layout = computePairedChartLayout(endA, endB, chartScale);
+  const spanA = pointCountA ?? pointsA?.length ?? 0;
+  const spanB = pointCountB ?? pointsB?.length ?? 0;
+  const layout = computePairedChartLayout(endA, endB, chartScale, spanA, spanB);
 
   const emptyCell = (side, label, pointCount) => {
     const count = pointCount ?? 0;
