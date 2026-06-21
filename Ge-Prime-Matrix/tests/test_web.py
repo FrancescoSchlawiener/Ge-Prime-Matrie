@@ -344,6 +344,32 @@ class TestWebThreadSafety(unittest.TestCase):
             self.assertFalse(line_cmp.get("dtw_failed", True))
             self.assertIn("geometry_score", line_cmp)
 
+    def test_icurve_api_asymmetric_sentence_counts(self):
+        text_a = ". ".join(f"Satz nummer {i} mit etwas Text" for i in range(1, 6)) + "."
+        text_b = ". ".join(f"Kurzer Satz {i}" for i in range(1, 21)) + "."
+        with app.test_client() as client:
+            resp = client.post(
+                "/api/i-curve",
+                json={"text_a": text_a, "text_b": text_b, "source_a": "text", "source_b": "text"},
+            )
+            self.assertEqual(resp.status_code, 200)
+            data = resp.get_json()
+            sent_a = data["semantic_a"]["sentences"]
+            sent_b = data["semantic_b"]["sentences"]
+            self.assertGreater(sent_a["point_count"], 0)
+            self.assertGreater(sent_b["point_count"], 0)
+            self.assertNotEqual(sent_a["point_count"], sent_b["point_count"])
+            self.assertGreater(len(sent_a["sparkline_points"]), 0)
+            self.assertGreater(len(sent_b["sparkline_points"]), 0)
+            self.assertEqual(
+                sent_a["sparkline_points"][-1]["sentence_index"],
+                sent_a["point_count"] - 1,
+            )
+            self.assertEqual(
+                sent_b["sparkline_points"][-1]["sentence_index"],
+                sent_b["point_count"] - 1,
+            )
+
     def test_icurve_api_db_audit_mode(self):
         text = "Der schnelle braune Fuchs springt."
         with app.test_client() as client:

@@ -216,36 +216,33 @@ function setIcurveChartScale(chartScale) {
 
 function captureIcurveSparklineScroll(root) {
   if (!root) return null;
-  const scrollEl = root.querySelector('.ikurve-sparkline-scroll');
-  if (!scrollEl) return null;
-  const maxScroll = Math.max(0, scrollEl.scrollWidth - scrollEl.clientWidth);
-  const ratio = maxScroll > 0 ? scrollEl.scrollLeft / maxScroll : 0;
-  const cells = root.querySelectorAll('.ikurve-chart-cell');
-  let cellIndex = -1;
-  cells.forEach((cell, idx) => {
-    if (cell.contains(scrollEl)) cellIndex = idx;
+  const scrollEls = root.querySelectorAll('[data-ikurve-scroll="long"]');
+  if (!scrollEls.length) return null;
+  const scrolls = [];
+  scrollEls.forEach((scrollEl) => {
+    const side = scrollEl.dataset.ikurveSide || 'a';
+    const pair = scrollEl.dataset.ikurvePair || '0';
+    const key = `${pair}-${side}`;
+    const maxScroll = Math.max(0, scrollEl.scrollWidth - scrollEl.clientWidth);
+    const ratio = maxScroll > 0 ? scrollEl.scrollLeft / maxScroll : 0;
+    scrolls.push({ key, ratio, scrollLeft: scrollEl.scrollLeft });
   });
-  return { ratio, cellIndex, scrollLeft: scrollEl.scrollLeft };
+  return { scrolls };
 }
 
 function restoreIcurveSparklineScroll(root, state) {
-  if (!root || !state) return;
+  if (!root || !state?.scrolls?.length) return;
   const apply = () => {
-    const scrollEls = root.querySelectorAll('.ikurve-sparkline-scroll');
-    if (!scrollEls.length) return;
-    let target = scrollEls[0];
-    if (state.cellIndex >= 0) {
-      const cells = root.querySelectorAll('.ikurve-chart-cell');
-      const cell = cells[state.cellIndex];
-      if (cell) {
-        const nested = cell.querySelector('.ikurve-sparkline-scroll');
-        if (nested) target = nested;
-      }
-    }
-    const maxScroll = Math.max(0, target.scrollWidth - target.clientWidth);
-    target.scrollLeft = maxScroll > 0
-      ? Math.round(state.ratio * maxScroll)
-      : state.scrollLeft;
+    state.scrolls.forEach(({ key, ratio, scrollLeft }) => {
+      const [pair, side] = key.split('-');
+      const selector = `[data-ikurve-scroll="long"][data-ikurve-pair="${pair}"][data-ikurve-side="${side}"]`;
+      const target = root.querySelector(selector);
+      if (!target) return;
+      const maxScroll = Math.max(0, target.scrollWidth - target.clientWidth);
+      target.scrollLeft = maxScroll > 0
+        ? Math.round(ratio * maxScroll)
+        : scrollLeft;
+    });
   };
   requestAnimationFrame(() => requestAnimationFrame(apply));
 }
@@ -540,6 +537,7 @@ function renderZone2Charts(data, viewState) {
         pointCountA: curvePointCount(data.curve_a),
         pointCountB: curvePointCount(data.curve_b),
         levelLabel: 'Token',
+        pairIndex: 0,
         ...scaleOpts,
       },
     );
@@ -556,6 +554,7 @@ function renderZone2Charts(data, viewState) {
         pointCountA: curvePointCount(data.substance_a),
         pointCountB: curvePointCount(data.substance_b),
         levelLabel: 'Substanz',
+        pairIndex: 1,
         ...scaleOpts,
       },
     );
