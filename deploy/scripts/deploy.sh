@@ -33,6 +33,8 @@ docker compose -f deploy/docker-compose.yml up -d --build
 docker exec gpm python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:5000/api/health').read()[:120])"
 REMOTE
 
+"${ROOT}/deploy/scripts/verify-gpm.sh" "https://schlawiener.space/GPM"
+
 echo "==> Deploy complete."
 echo "    https://schlawiener.space/"
 echo "    https://schlawiener.space/GPM/"

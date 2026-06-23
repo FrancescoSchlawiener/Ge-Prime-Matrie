@@ -132,10 +132,10 @@ function renderEnjambementBadge(crossA, crossB, pipeline) {
   const countA = phase?.rhythm_break_count_a ?? crossA?.rhythm_break_count ?? 0;
   const countB = phase?.rhythm_break_count_b ?? crossB?.rhythm_break_count ?? 0;
   const delta = phase?.rhythm_break_delta ?? Math.abs(countA - countB);
-  const profileA = escapeHtml(phase?.enjambement_profile_a ?? crossA?.enjambement_profile ?? ', ');
-  const profileB = escapeHtml(phase?.enjambement_profile_b ?? crossB?.enjambement_profile ?? ', ');
-  const ratioA = crossA?.line_aligned_ratio != null ? fmtPct(crossA.line_aligned_ratio) : ', ';
-  const ratioB = crossB?.line_aligned_ratio != null ? fmtPct(crossB.line_aligned_ratio) : ', ';
+  const profileA = escapeHtml(phase?.enjambement_profile_a ?? crossA?.enjambement_profile ?? '—');
+  const profileB = escapeHtml(phase?.enjambement_profile_b ?? crossB?.enjambement_profile ?? '—');
+  const ratioA = crossA?.line_aligned_ratio != null ? fmtPct(crossA.line_aligned_ratio) : '—';
+  const ratioB = crossB?.line_aligned_ratio != null ? fmtPct(crossB.line_aligned_ratio) : '—';
   return `<div class="ikurve-badge ikurve-badge-purple" role="status">
     <strong>Rhythmischer Zeilenbruch (Enjambement)</strong>
     <p>Satz- und Zeilenkanten asynchron. Brüche: A: ${fmtNum(countA)} | B: ${fmtNum(countB)} · Δ ${fmtNum(delta)}</p>
@@ -397,7 +397,7 @@ function renderForeignTokenAuditCompact(metaA, metaB, p) {
   if (!tokens.length) {
     const dbA = metaA?.language?.db_coverage || p?.db_coverage_a || {};
     const dbB = metaB?.language?.db_coverage || p?.db_coverage_b || {};
-    tokens = [...(dbA.foreign_tokens || [])...(dbB.foreign_tokens || [])];
+    tokens = [...(dbA.foreign_tokens || []), ...(dbB.foreign_tokens || [])];
   }
   const seen = new Set();
   const unique = [];
@@ -429,12 +429,12 @@ function buildWordTokenRows(data) {
     const b = data.curve_b.points[i];
     rows.push([
       i,
-      a ? a.word : ', ',
-      a ? a.perm_index : ', ',
-      a ? a.i_ratio : ', ',
-      b ? b.word : ', ',
-      b ? b.perm_index : ', ',
-      b ? b.i_ratio : ', ',
+      a ? a.word : '—',
+      a ? a.perm_index : '—',
+      a ? a.i_ratio : '—',
+      b ? b.word : '—',
+      b ? b.perm_index : '—',
+      b ? b.i_ratio : '—',
     ]);
   }
   return rows;
@@ -451,16 +451,16 @@ function buildSubstRows(data) {
     const b = data.substance_b?.points?.[i];
     rows.push([
       i,
-      a ? a.normalized : ', ',
-      a ? a.substance : ', ',
-      a ? a.ggt : ', ',
-      a ? a.kgv : ', ',
-      a ? (a.ggt_kgv_ratio ?? a.s_ratio) : ', ',
-      b ? b.normalized : ', ',
-      b ? b.substance : ', ',
-      b ? b.ggt : ', ',
-      b ? b.kgv : ', ',
-      b ? (b.ggt_kgv_ratio ?? b.s_ratio) : ', ',
+      a ? a.normalized : '—',
+      a ? a.substance : '—',
+      a ? a.ggt : '—',
+      a ? a.kgv : '—',
+      a ? (a.ggt_kgv_ratio ?? a.s_ratio) : '—',
+      b ? b.normalized : '—',
+      b ? b.substance : '—',
+      b ? b.ggt : '—',
+      b ? b.kgv : '—',
+      b ? (b.ggt_kgv_ratio ?? b.s_ratio) : '—',
     ]);
   }
   return rows;
@@ -477,12 +477,12 @@ function buildCellRows(data) {
     const b = data.cell_geometry_b?.points?.[i];
     rows.push([
       i,
-      a ? `[${(a.skeleton || []).join(',')}]` : ', ',
-      a ? a.i_satz_ratio : ', ',
-      a ? a.token_count : ', ',
-      b ? `[${(b.skeleton || []).join(',')}]` : ', ',
-      b ? b.i_satz_ratio : ', ',
-      b ? b.token_count : ', ',
+      a ? `[${(a.skeleton || []).join(',')}]` : '—',
+      a ? a.i_satz_ratio : '—',
+      a ? a.token_count : '—',
+      b ? `[${(b.skeleton || []).join(',')}]` : '—',
+      b ? b.i_satz_ratio : '—',
+      b ? b.token_count : '—',
     ]);
   }
   return rows;
@@ -505,16 +505,16 @@ function buildHierarchyTableRows(data, depth, mode) {
     const b = ptsB[i];
     rows.push([
       i,
-      a ? a.token_start : ', ',
-      a ? a.token_count : ', ',
-      a ? a[config.ratioKey] : ', ',
-      a ? a.s_level : ', ',
-      a ? (a.ggt_kgv_ratio ?? ', ') : ', ',
-      b ? b.token_start : ', ',
-      b ? b.token_count : ', ',
-      b ? b[config.ratioKey] : ', ',
-      b ? b.s_level : ', ',
-      b ? (b.ggt_kgv_ratio ?? ', ') : ', ',
+      a ? a.token_start : '—',
+      a ? a.token_count : '—',
+      a ? a[config.ratioKey] : '—',
+      a ? a.s_level : '—',
+      a ? (a.ggt_kgv_ratio ?? '—') : '—',
+      b ? b.token_start : '—',
+      b ? b.token_count : '—',
+      b ? b[config.ratioKey] : '—',
+      b ? b.s_level : '—',
+      b ? (b.ggt_kgv_ratio ?? '—') : '—',
     ]);
   }
   return rows;
@@ -537,7 +537,8 @@ function renderZone2Charts(data, viewState) {
         pointCountA: curvePointCount(data.curve_a),
         pointCountB: curvePointCount(data.curve_b),
         levelLabel: 'Token',
-        pairIndex: 0...scaleOpts,
+        pairIndex: 0,
+        ...scaleOpts,
       },
     );
     const substCharts = renderPairedSparklines(
@@ -553,7 +554,8 @@ function renderZone2Charts(data, viewState) {
         pointCountA: curvePointCount(data.substance_a),
         pointCountB: curvePointCount(data.substance_b),
         levelLabel: 'Substanz',
-        pairIndex: 1...scaleOpts,
+        pairIndex: 1,
+        ...scaleOpts,
       },
     );
     return `${wordCharts}${substCharts}`;
@@ -572,7 +574,8 @@ function renderZone2Charts(data, viewState) {
         labelB: `Kurve B (${cfg.label}-Rhythmus)`,
         pointCountA: curvePointCount(payloadA),
         pointCountB: curvePointCount(payloadB),
-        levelLabel: cfg.label...scaleOpts,
+        levelLabel: cfg.label,
+        ...scaleOpts,
       }),
       renderZone2SparklineFallbackHint(payloadA, payloadB),
     ].join('');
@@ -590,7 +593,8 @@ function renderZone2Charts(data, viewState) {
       labelB: `Kurve B (${cfg.label}-Rhythmus)`,
       pointCountA: curvePointCount(payloadA),
       pointCountB: curvePointCount(payloadB),
-      levelLabel: cfg.label...scaleOpts,
+      levelLabel: cfg.label,
+      ...scaleOpts,
     }),
     renderZone2SparklineFallbackHint(payloadA, payloadB),
   ].join('');
@@ -800,13 +804,13 @@ function renderIcurveZone3(data, viewState) {
     const cfg = SEMANTIC_DEPTH_CONFIG[depth] || SEMANTIC_DEPTH_CONFIG.sentence;
     const rows = buildHierarchyTableRows(data, depth, 'semantic');
     if (rows.length) {
-      tableHtml = `<h4 class="ikurve-layer-head">Sinn, ${escapeHtml(cfg.label)}</h4>${renderGpmTable(['Idx', 'start A', 'cnt A', cfg.ratioKey, 'S A', 'ggT/kgV A', 'start B', 'cnt B', cfg.ratioKey, 'S B', 'ggT/kgV B'], rows)}`;
+      tableHtml = `<h4 class="ikurve-layer-head">Sinn — ${escapeHtml(cfg.label)}</h4>${renderGpmTable(['Idx', 'start A', 'cnt A', cfg.ratioKey, 'S A', 'ggT/kgV A', 'start B', 'cnt B', cfg.ratioKey, 'S B', 'ggT/kgV B'], rows)}`;
     }
   } else {
     const cfg = STRUCTURAL_DEPTH_CONFIG[depth] || STRUCTURAL_DEPTH_CONFIG.line;
     const rows = buildHierarchyTableRows(data, depth, 'structural');
     if (rows.length) {
-      tableHtml = `<h4 class="ikurve-layer-head">Raum, ${escapeHtml(cfg.label)}</h4>${renderGpmTable(['Idx', 'start A', 'cnt A', cfg.ratioKey, 'S A', 'ggT/kgV A', 'start B', 'cnt B', cfg.ratioKey, 'S B', 'ggT/kgV B'], rows)}`;
+      tableHtml = `<h4 class="ikurve-layer-head">Raum — ${escapeHtml(cfg.label)}</h4>${renderGpmTable(['Idx', 'start A', 'cnt A', cfg.ratioKey, 'S A', 'ggT/kgV A', 'start B', 'cnt B', cfg.ratioKey, 'S B', 'ggT/kgV B'], rows)}`;
     }
   }
   if (!tableHtml) {
@@ -814,10 +818,10 @@ function renderIcurveZone3(data, viewState) {
   }
   const atomicMetrics = mode === 'atomic' ? renderAtomicForensicsMetrics(data) : '';
   const alignNote = !c.aligned
-    ? `<p class="muted">Token-Anzahl unterschiedlich, bestes Fenster ab Offset ${fmtNum(c.best_offset)}.</p>`
+    ? `<p class="muted">Token-Anzahl unterschiedlich — bestes Fenster ab Offset ${fmtNum(c.best_offset)}.</p>`
     : '';
   const cellNote = cellCmp.method === 'dtw' && (cellCmp.length_a !== cellCmp.length_b)
-    ? '<p class="muted">Zell-Ketten durch Segmentierung verschoben, Vergleich via DTW.</p>'
+    ? '<p class="muted">Zell-Ketten durch Segmentierung verschoben — Vergleich via DTW.</p>'
     : '';
   return `<details class="ikurve-zone word-panel" data-ikurve-zone="3">
     <summary>Arithmetische Detail-Ketten</summary>
@@ -844,12 +848,12 @@ function renderIcurveLab(data, viewState) {
   const el = document.getElementById('ikurve-result');
   if (!el) return;
   if (!analysis) {
-    showError(el, 'Keine Analysedaten, bitte erneut vergleichen.');
+    showError(el, 'Keine Analysedaten — bitte erneut vergleichen.');
     return;
   }
   if (typeof showResult !== 'function') {
     el.classList.remove('hidden');
-    el.innerHTML = '<p class="error">UI nicht vollständig geladen, Seite mit Strg+F5 neu laden.</p>';
+    el.innerHTML = '<p class="error">UI nicht vollständig geladen — Seite mit Strg+F5 neu laden.</p>';
     return;
   }
   try {

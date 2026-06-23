@@ -4,7 +4,7 @@ function appUrl(path) {
 }
 
 function fmtLetters(obj) {
-  if (!obj || Object.keys(obj).length === 0) return ', ';
+  if (!obj || Object.keys(obj).length === 0) return '—';
   return Object.entries(obj).map(([c, n]) => c + (n > 1 ? '×' + n : '')).join(' ');
 }
 
@@ -1830,7 +1830,7 @@ function renderGpmStats(stats, cellGeo) {
   const meanRatio = cellGeo?.summary?.mean_i_satz_ratio;
   const cellStats = zellen != null
     ? `<div class="gpm-stat"><div class="gpm-stat-label">Zellen</div><div class="gpm-stat-value">${fmtNum(zellen)}</div></div>
-       <div class="gpm-stat"><div class="gpm-stat-label">Body-Modus</div><div class="gpm-stat-value">${escapeHtml(bodyMode || ', ')}</div></div>
+       <div class="gpm-stat"><div class="gpm-stat-label">Body-Modus</div><div class="gpm-stat-value">${escapeHtml(bodyMode || '—')}</div></div>
        ${meanRatio != null ? `<div class="gpm-stat"><div class="gpm-stat-label">Ø i_satz_ratio</div><div class="gpm-stat-value mono">${meanRatio}</div></div>` : ''}`
     : '';
   return `<div class="gpm-stats">
@@ -1844,7 +1844,7 @@ function renderGpmStats(stats, cellGeo) {
     ${cellStats}
     <div class="gpm-stat"><div class="gpm-stat-label">Eindeutige Wörter</div><div class="gpm-stat-value">${fmtNum(stats.unique_words)}</div></div>
     <div class="gpm-stat"><div class="gpm-stat-label">Token</div><div class="gpm-stat-value">${fmtNum(stats.total_tokens)}</div></div>
-    <div class="gpm-stat"><div class="gpm-stat-label">Größe vs. Text</div><div class="gpm-stat-value">${stats.compression_percent ?? ', '}%</div></div>
+    <div class="gpm-stat"><div class="gpm-stat-label">Größe vs. Text</div><div class="gpm-stat-value">${stats.compression_percent ?? '—'}%</div></div>
   </div>`;
 }
 
@@ -1954,7 +1954,7 @@ function showGpmReadAnalysis(data, el) {
     si_storage: a.si_storage,
     unique_words: a.unique_words,
     total_tokens: a.total_tokens,
-    compression_percent: ', ',
+    compression_percent: '—',
     zellen_anzahl: a.zellen_anzahl,
     body_mode: a.body_mode,
   };

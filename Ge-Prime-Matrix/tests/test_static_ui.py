@@ -1,4 +1,6 @@
 import re
+import shutil
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -6,6 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+from ge_prime.config import STATIC_ASSET_VERSION
 from web.app import app
 
 
@@ -234,10 +237,11 @@ class TestStaticUi(unittest.TestCase):
         self.assertIn("gpm-compile-form", html)
         self.assertIn("2026.06-gpm-v49", html)
         self.assertIn("Die Oberfläche", html)
-        self.assertIn("Das .gpm-Format (v7 — verlustfrei)", html)
+        self.assertIn("Das .gpm-Format (v7", html)
+        self.assertIn("verlustfrei", html)
         self.assertIn("Zell-Geometrie", html)
         self.assertIn("favicon.svg", html)
-        self.assertIn("?v=63", html)
+        self.assertIn(f"?v={STATIC_ASSET_VERSION}", html)
         self.assertIn("ikurve-geometric-matrix-a", html)
         self.assertIn("ikurve-ingest-root", html)
         self.assertIn("ikurve-ingest-lock-banner", html)
@@ -329,6 +333,42 @@ class TestStaticUi(unittest.TestCase):
                     self.assertIn("no-store", cache, path)
                 finally:
                     resp.close()
+
+    def test_static_js_syntax(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("node nicht installiert")
+        for name in ("app.js", "ikurve_lab.js", "geometric_editor.js"):
+            path = ROOT / "web" / "static" / name
+            proc = subprocess.run([node, "--check", str(path)], capture_output=True, text=True)
+            self.assertEqual(proc.returncode, 0, f"{name}: {proc.stderr}")
+
+    def test_url_prefix_serves_all_assets(self):
+        prefix = "/GPM"
+        headers = {"X-Forwarded-Prefix": prefix}
+        with app.test_client() as client:
+            home = client.get("/", headers=headers)
+            self.assertEqual(home.status_code, 200)
+            html = home.data.decode("utf-8")
+            self.assertIn(f'data-url-prefix="{prefix}"', html)
+            for asset in (
+                "static/style.css",
+                "static/app.js",
+                "static/ikurve_lab.js",
+                "static/geometric_editor.js",
+                "static/favicon.svg",
+            ):
+                self.assertIn(f"{prefix}/{asset}", html)
+            for path in (
+                "/static/app.js",
+                "/static/ikurve_lab.js",
+                "/static/geometric_editor.js",
+                "/static/style.css",
+                "/api/health",
+            ):
+                resp = client.get(path, headers=headers)
+                self.assertEqual(resp.status_code, 200, path)
+                resp.close()
 
 
 if __name__ == "__main__":
