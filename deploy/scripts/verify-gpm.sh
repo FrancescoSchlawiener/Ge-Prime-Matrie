@@ -41,8 +41,14 @@ done
 js=$(curl -sS "${BASE}/static/ikurve_lab.js")
 tmp=$(mktemp)
 printf '%s' "$js" > "$tmp"
-if ! node --check "$tmp" 2>/dev/null; then
-  echo "FAIL ikurve_lab.js syntax on live site"
+if command -v node >/dev/null 2>&1; then
+  if ! node --check "$tmp" 2>/dev/null; then
+    echo "FAIL ikurve_lab.js syntax on live site"
+    rm -f "$tmp"
+    exit 1
+  fi
+elif ! printf '%s' "$js" | grep -q 'function renderIcurveLab'; then
+  echo "FAIL ikurve_lab.js missing renderIcurveLab on live site"
   rm -f "$tmp"
   exit 1
 fi
