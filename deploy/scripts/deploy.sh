@@ -34,6 +34,7 @@ docker exec gpm python -c "import urllib.request; print(urllib.request.urlopen('
 REMOTE
 
 "${ROOT}/deploy/scripts/verify-gpm.sh" "https://schlawiener.space/GPM"
+"${ROOT}/deploy/scripts/verify-site.sh" "https://schlawiener.space"
 
 echo "==> Deploy complete."
 echo "    https://schlawiener.space/"

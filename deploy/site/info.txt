@@ -1,0 +1,47 @@
+schlawiener.space
+=================
+
+Francesco Schauer
+Einstieg: https://schlawiener.space/
+Profil:  https://schlawiener.space/profil.html
+
+Kurz
+----
+Persönliche Projektseite mit drei öffentlichen Web-Anwendungen:
+Codierung, Primzahl-Visualisierung und ein Katzen-Quiz.
+
+
+Projekte
+--------
+
+Ge-Prime-Matrix
+  URL:   https://schlawiener.space/GPM/
+  Was:   Wörter und Texte als Ganzzahlenpaar S(I). Substanz S aus
+         Primzahlprodukten, Index I aus Permutationsrang. Verlustfreie
+         .gpm-Dateien, I-Kurven, Meta-Genom, Editor.
+  Repo:  https://github.com/FrancescoSchlawiener/Ge-Prime-Matrie
+
+Protos Arché
+  URL:   https://schlawiener.space/protosarche/
+  Was:   Primzahlen als Struktur. Tetraktys, Prime Block, Prime Torus.
+         Interaktive Mathematik-Visualisierungen, deutsch und englisch.
+
+Catpocalypse
+  URL:   https://schlawiener.space/catpocalypse/
+  Was:   Apokalyptischer Katzen-Persönlichkeitstest. 12 Fragen,
+         vier Reiter, ein Ergebnis.
+
+
+Technik (Stand 2026)
+--------------------
+  Reverse Proxy: Traefik (Let's Encrypt)
+  GPM:           Docker, Python/Flask
+  Startseite:    statisches HTML/CSS (nginx-Container)
+  protosarche:   eigene Docker-Instanz
+  catpocalypse:  eigene Docker-Instanz
+
+
+Kontakt / Links
+---------------
+  GitHub: FrancescoSchlawiener
+  Lizenz GPM: CC BY-NC-SA 4.0 (siehe Repository)

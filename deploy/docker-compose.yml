@@ -21,7 +21,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik-public
-      - traefik.http.routers.site.rule=Host(`schlawiener.space`) && (Path(`/`) || Path(`/profil.html`) || Path(`/style.css`))
+      - traefik.http.routers.site.rule=Host(`schlawiener.space`) && (Path(`/`) || Path(`/profil.html`) || Path(`/style.css`) || Path(`/info.txt`))
       - traefik.http.routers.site.entrypoints=websecure
       - traefik.http.routers.site.tls.certresolver=letsencrypt
       - traefik.http.routers.site.priority=50
