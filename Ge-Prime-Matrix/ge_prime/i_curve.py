@@ -48,12 +48,12 @@ WORD_MAE_RIGID_THRESHOLD = 0.75
 WORD_MAE_ELASTIC_THRESHOLD = 0.45
 
 
-def normalize_skeleton(frequencies) -> tuple[int...]:
+def normalize_skeleton(frequencies) -> tuple[int, ...]:
     """Kanonsiche Skelett-Form für vergleichbare Identität."""
     return tuple(int(x) for x in frequencies)
 
 
-def skeleton_signature(cell: dict) -> tuple[tuple[int...], int, int]:
+def skeleton_signature(cell: dict) -> tuple[tuple[int, ...], int, int]:
     """(norm_skeleton, perm_index, perm_space), exakte Struktur-Zwillinge."""
     raw = cell.get("skeleton") or cell.get("frequencies") or []
     return (normalize_skeleton(raw), int(cell["perm_index"]), int(cell["perm_space"]))

@@ -1,58 +1,48 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# First-time VPS setup for schlawiener.space
+# First-time VPS setup for schlawiener.space (Traefik stack)
 # Run on the VPS as root: bash deploy/scripts/setup-vps.sh
 
 APP_DIR="${APP_DIR:-/opt/ge-prime-matrix}"
-SITE_DIR="${SITE_DIR:-/var/www/schlawiener}"
-REPO_URL="${REPO_URL:-https://github.com/francescoschlawiener/ge-prime-matrie.git}"
+REPO_URL="${REPO_URL:-https://github.com/FrancescoSchlawiener/Ge-Prime-Matrie.git}"
 BRANCH="${BRANCH:-cursor/hostinger-vps-live-pipe-95cf}"
 
-echo "==> Installing packages..."
-export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
-apt-get install -y -qq git curl ca-certificates nginx certbot python3-certbot-nginx
-
+echo "==> Checking Docker..."
 if ! command -v docker >/dev/null 2>&1; then
-  echo "==> Installing Docker..."
   curl -fsSL https://get.docker.com | sh
   systemctl enable docker
   systemctl start docker
 fi
 
-echo "==> Creating directories..."
-mkdir -p "$APP_DIR" "$SITE_DIR" /var/www/certbot
+if ! docker network inspect traefik-public >/dev/null 2>&1; then
+  echo "ERROR: traefik-public network missing. Start the Catpocalypse/Traefik stack first."
+  exit 1
+fi
 
+echo "==> Cloning or updating app..."
+mkdir -p "$APP_DIR"
 if [ ! -d "$APP_DIR/.git" ]; then
-  echo "==> Cloning repository..."
   git clone "$REPO_URL" "$APP_DIR"
 fi
 
 cd "$APP_DIR"
 git fetch origin
-git checkout "$BRANCH" 2>/dev/null || git checkout -b "$BRANCH" "origin/$BRANCH" 2>/dev/null || git checkout main
+git checkout "$BRANCH"
+git pull origin "$BRANCH" || true
 
-echo "==> Syncing static site..."
-rsync -a --delete deploy/site/ "$SITE_DIR/"
+echo "==> Moving catpocalypse from / to /catpocalypse/ (if needed)..."
+bash deploy/scripts/patch-catpocalypse-routing.sh || true
 
-echo "==> Installing nginx config..."
-cp deploy/nginx/schlawiener.space.conf /etc/nginx/sites-available/schlawiener.space
-ln -sf /etc/nginx/sites-available/schlawiener.space /etc/nginx/sites-enabled/schlawiener.space
-rm -f /etc/nginx/sites-enabled/default
-
-if [ ! -f /etc/letsencrypt/live/schlawiener.space/fullchain.pem ]; then
-  echo "==> Obtaining SSL certificate..."
-  nginx -t && systemctl reload nginx
-  certbot --nginx -d schlawiener.space -d www.schlawiener.space --non-interactive --agree-tos -m admin@schlawiener.space || true
-fi
-
-echo "==> Building and starting GPM..."
+echo "==> Building and starting site + GPM..."
 docker compose -f deploy/docker-compose.yml up -d --build
 
-nginx -t && systemctl reload nginx
+echo "==> Health check..."
+sleep 5
+docker exec gpm python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:5000/api/health').read()[:120])"
 
 echo "==> Done."
 echo "    Site:  https://schlawiener.space/"
 echo "    GPM:   https://schlawiener.space/GPM/"
-echo "    Check: curl -s http://127.0.0.1:5000/api/health"
+echo "    Proto: https://schlawiener.space/protosarche/"
+echo "    Cat:   https://schlawiener.space/catpocalypse/"
