@@ -44,6 +44,7 @@ services:
       - no-new-privileges:true
     environment:
       GE_PRIME_ENV: production
+      GE_PRIME_URL_PREFIX: /GPM
       PORT: "5000"
       HOST: "0.0.0.0"
       OPEN_BROWSER: "0"
@@ -59,7 +60,8 @@ services:
       - traefik.http.routers.gpm.entrypoints=websecure
       - traefik.http.routers.gpm.tls.certresolver=letsencrypt
       - traefik.http.routers.gpm.priority=100
-      - traefik.http.routers.gpm.middlewares=gpm-redirect-slash,gpm-stripprefix,secure-headers@file
+      - traefik.http.routers.gpm.middlewares=gpm-redirect-slash,gpm-stripprefix,gpm-prefix,secure-headers@file
+      - traefik.http.middlewares.gpm-prefix.headers.customrequestheaders.X-Forwarded-Prefix=/GPM
       - traefik.http.middlewares.gpm-redirect-slash.redirectregex.regex=^https?://([^/]+)/GPM$$
       - traefik.http.middlewares.gpm-redirect-slash.redirectregex.replacement=https://$${1}/GPM/
       - traefik.http.middlewares.gpm-redirect-slash.redirectregex.permanent=true

@@ -7,7 +7,7 @@
   <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}?v={{ static_version }}" type="image/svg+xml">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ static_version }}">
 </head>
-<body data-app-version="{{ app_version }}" data-tab-gpm="1">
+<body data-app-version="{{ app_version }}" data-tab-gpm="1" data-url-prefix="{{ url_prefix }}">
   <header>
     <h1>Ge-Prime-Matrix <span class="build-tag">{{ app_version }}</span></h1>
     <p class="tagline">Sprache als reine Mathematik, verlustfrei komprimieren und rekonstruieren</p>

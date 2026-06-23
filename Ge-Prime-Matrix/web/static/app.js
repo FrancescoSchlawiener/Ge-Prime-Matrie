@@ -1,3 +1,8 @@
+function appUrl(path) {
+  const prefix = (document.body && document.body.dataset.urlPrefix) || '';
+  return prefix + path;
+}
+
 function fmtLetters(obj) {
   if (!obj || Object.keys(obj).length === 0) return ', ';
   return Object.entries(obj).map(([c, n]) => c + (n > 1 ? '×' + n : '')).join(' ');
@@ -199,7 +204,7 @@ function wireEncodeSizeButtons(scope) {
     const target = scope.querySelector('#encode-batch-size-result');
     if (!lastEncodeWords || !lastEncodeWords.length) return;
     runSizeCompare(
-      '/api/size/encode-batch',
+      appUrl('/api/size/encode-batch'),
       {
         words: lastEncodeWords.map((w) => ({
           original: w.original,
@@ -220,7 +225,7 @@ function wireEncodeSizeButtons(scope) {
       if (!w) return;
       const target = btn.closest('.word-panel-body')?.querySelector('.size-result');
       runSizeCompare(
-        '/api/size/encode-word',
+        appUrl('/api/size/encode-word'),
         {
           original: w.original,
           normalized: w.normalized,
@@ -236,13 +241,13 @@ function wireEncodeSizeButtons(scope) {
 
 function wireDecodeSizeButton(scope, payload) {
   scope.querySelector('#decode-size-btn')?.addEventListener('click', (ev) => {
-    runSizeCompare('/api/size/decode', payload, scope.querySelector('#decode-size-result'), ev.currentTarget);
+    runSizeCompare(appUrl('/api/size/decode'), payload, scope.querySelector('#decode-size-result'), ev.currentTarget);
   });
 }
 
 function wireGpmSizeButton(scope, payload) {
   scope.querySelector('.btn-gpm-size')?.addEventListener('click', (ev) => {
-    runSizeCompare('/api/size/gpm', payload, scope.querySelector('.gpm-size-result'), ev.currentTarget);
+    runSizeCompare(appUrl('/api/size/gpm'), payload, scope.querySelector('.gpm-size-result'), ev.currentTarget);
   });
 }
 
@@ -419,7 +424,7 @@ async function refreshDbStats() {
   const statsEl = document.getElementById('db-lang-stats');
   if (!statsEl) return;
   try {
-    const res = await fetch('/api/db/stats');
+    const res = await fetch(appUrl('/api/db/stats'));
     if (!res.ok) {
       statsEl.innerHTML = '<p class="error">DB-Statistik nicht erreichbar, bitte <code>start.bat</code> neu starten.</p>';
       return;
@@ -458,7 +463,7 @@ document.getElementById('encode-form')?.addEventListener('submit', async (e) => 
   const el = document.getElementById('encode-result');
   showLoading(el, 'Encodiere…');
   try {
-    const res = await fetch('/api/encode', {
+    const res = await fetch(appUrl('/api/encode'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: document.getElementById('encode-text').value }),
@@ -535,7 +540,7 @@ document.getElementById('decode-form')?.addEventListener('submit', async (e) => 
   const el = document.getElementById('decode-result');
   showLoading(el, 'Decodiere…');
   try {
-    const res = await fetch('/api/decode', {
+    const res = await fetch(appUrl('/api/decode'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -585,7 +590,7 @@ document.getElementById('wortpaar-form')?.addEventListener('submit', async (e) =
   if (getPairMode() === 'compare') {
     showLoading(compareEl, 'Vergleiche…');
     try {
-      const res = await fetch('/api/compare', {
+      const res = await fetch(appUrl('/api/compare'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ word1, word2 }),
@@ -642,7 +647,7 @@ document.getElementById('wortpaar-form')?.addEventListener('submit', async (e) =
 
   showLoading(diffEl, 'Berechne Differenz…');
   try {
-    const res = await fetch('/api/diff', {
+    const res = await fetch(appUrl('/api/diff'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ word1, word2 }),
@@ -1504,7 +1509,7 @@ async function runIcurveAnalysis() {
     const timeoutId = setTimeout(() => controller.abort(), ICURVE_FETCH_TIMEOUT_MS);
     let res;
     try {
-      res = await fetch('/api/i-curve', {
+      res = await fetch(appUrl('/api/i-curve'), {
         method: 'POST',
         body,
         signal: controller.signal,
@@ -1675,7 +1680,7 @@ document.getElementById('cipher-form')?.addEventListener('submit', async (e) => 
   const keys = document.getElementById('cipher-key')?.value || '';
   const mode = getCipherMode();
   const direction = getCipherDirection();
-  const endpoint = direction === 'decrypt' ? '/api/cipher/decrypt' : '/api/cipher/encrypt';
+  const endpoint = direction === 'decrypt' ? appUrl('/api/cipher/decrypt') : appUrl('/api/cipher/encrypt');
   showLoading(el, direction === 'decrypt' ? 'Entschlüssele…' : 'Verschlüssele S(I)-Geometrie…');
   try {
     const body = direction === 'decrypt'
@@ -1916,7 +1921,7 @@ async function analyzeGpmFile(file, { cipherKeys = '' } = {}) {
   const form = new FormData();
   form.append('file', file);
   if (cipherKeys) form.append('cipher_keys', cipherKeys);
-  const res = await fetch('/api/gpm/read', { method: 'POST', body: form });
+  const res = await fetch(appUrl('/api/gpm/read'), { method: 'POST', body: form });
   const data = await res.json();
   if (!res.ok) {
     const err = new Error(data.error || 'Lesen fehlgeschlagen.');
@@ -2024,7 +2029,7 @@ document.getElementById('gpm-compile-form')?.addEventListener('submit', async (e
   }
   showLoading(el, encrypt ? 'Erzeuge verschlüsselte .gpm …' : 'Kompiliere .gpm …');
   try {
-    const res = await fetch('/api/gpm/compile', {
+    const res = await fetch(appUrl('/api/gpm/compile'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2134,7 +2139,7 @@ document.getElementById('gpm-search-form')?.addEventListener('submit', async (e)
   }
   showLoading(el, 'Suche …');
   try {
-    const res = await fetch('/api/gpm/search', {
+    const res = await fetch(appUrl('/api/gpm/search'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ file_base64: gpmPlainBase64, query, query2, mode }),
@@ -2276,7 +2281,7 @@ async function runSpectroscopeForEditor({
   const controller = new AbortController();
   gpmSpectroAbort = controller;
   try {
-    const res = await fetch('/api/spectroscope', {
+    const res = await fetch(appUrl('/api/spectroscope'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       signal: controller.signal,
@@ -2419,7 +2424,7 @@ async function runIcurveSpectroscope(side) {
   const controller = new AbortController();
   ikurveSpectroAbort = controller;
   try {
-    const res = await fetch('/api/spectroscope', {
+    const res = await fetch(appUrl('/api/spectroscope'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       signal: controller.signal,
@@ -2559,7 +2564,7 @@ async function checkServerHealth() {
   }
 
   try {
-    const res = await fetch('/api/health');
+    const res = await fetch(appUrl('/api/health'));
     if (!res.ok) {
       showBanner('Server veraltet, bitte start.bat neu starten (/api/health fehlt).');
       return;

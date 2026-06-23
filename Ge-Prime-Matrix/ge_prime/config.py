@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 APP_VERSION = "2026.06-gpm-v49"
-STATIC_ASSET_VERSION = 63
+STATIC_ASSET_VERSION = 64
 GPM_VERSION = 7
 MAX_CELL_TOKENS = 50
 MAX_I_CURVE_TOKENS = 10_000
