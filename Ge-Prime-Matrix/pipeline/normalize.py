@@ -18,27 +18,27 @@ _UMLAUT_MAP = {
 CASE_LOWER = 0       # alles klein
 CASE_TITLE = 1       # erster Buchstabe groß, Rest klein
 CASE_UPPER = 2       # ALLES GROSS
-CASE_EXPLICIT = 3    # Mischfall — exakte Form wird separat gespeichert
+CASE_EXPLICIT = 3    # Mischfall, exakte Form wird separat gespeichert
 
 # Einheitliche Erklärung für UI und Schritte
 NORMALIZATION_HELP = {
     "umlauts": (
         "Umlaute werden vor der Berechnung in zwei Buchstaben geschrieben: "
-        "ä/Ä → AE, ö/Ö → OE, ü/Ü → UE. Danach gilt nur noch das Alphabet A–Z und ß."
+        "ä/Ä → AE, ö/Ö → OE, ü/Ü → UE. Danach gilt nur noch das Alphabet A bis Z und ß."
     ),
     "eszett": (
-        "Das Eszett ß ist der 27. Buchstabe — mit der Primzahl 103. "
+        "Das Eszett ß ist der 27. Buchstabe, mit der Primzahl 103. "
         "Es wird nicht in ss aufgeteilt und behält beim Encodieren seine Form."
     ),
     "eszett_example_1": (
-        "Bei Straße bleibt das ß erhalten: das normalisierte Wort ist STRAßE — "
+        "Bei Straße bleibt das ß erhalten: das normalisierte Wort ist STRAßE, "
         "ein ß, also der Primfaktor 103 (nicht zwei S mit Primzahl 19)."
     ),
     "eszett_example_2": (
-        "Strauß wird zu STRAUß — ebenfalls mit einem ß am Ende."
+        "Strauß wird zu STRAUß, ebenfalls mit einem ß am Ende."
     ),
     "eszett_example_3": (
-        "Strasse (geschrieben mit ss) wird zu STRASSE — zwei Buchstaben S. "
+        "Strasse (geschrieben mit ss) wird zu STRASSE, zwei Buchstaben S. "
         "Das ist mathematisch ein anderes Wort als STRAßE, auch wenn es umgangssprachlich dasselbe bedeuten kann."
     ),
     "eszett_compare": (
@@ -46,13 +46,13 @@ NORMALIZATION_HELP = {
         "aber ß zählt nur, wenn es wirklich im Wort steht."
     ),
     "letters": (
-        "Es zählen 27 Buchstaben: A–Z und ß. "
+        "Es zählen 27 Buchstaben: A bis Z und ß. "
         "Beim Encodieren einzelner Wörter werden Leerzeichen und Satzzeichen entfernt; "
         "in .gpm-Dateien bleiben sie im Text erhalten."
     ),
     "original": (
         "Wie du das Wort ursprünglich geschrieben hast (mit ß, Umlauten, Groß/Klein), "
-        "wird in der Datenbank und in .gpm-Dateien zusätzlich gespeichert — "
+        "wird in der Datenbank und in .gpm-Dateien zusätzlich gespeichert, "
         "damit der Text später exakt rekonstruiert werden kann."
     ),
     "decode_result": (
@@ -68,37 +68,37 @@ NORMALIZATION_HELP = {
 # Kurze, tab-spezifische Anleitungen (ohne Wiederholung der Norm-Regeltabelle)
 TAB_GUIDE = {
     "encode": (
-        "Schreib ein Wort — oder mehrere, durch Leerzeichen getrennt. "
+        "Schreib ein Wort, oder mehrere, durch Leerzeichen getrennt. "
         "Das Tool zieht daraus die Buchstaben, normalisiert still im Hintergrund und rechnet für jedes Wort S und I. "
         "Satzzeichen und Ziffern zwischen Wörtern werden hier ignoriert; "
         "für ganze Sätze mit Kommas, Zeilenumbrüchen oder Emoji nimm den Tab GPM Datei."
     ),
     "decode": (
         "Hier brauchst du die beiden Zahlen aus dem Encodieren: Substanz S und Index I. "
-        "Nach dem Decodieren siehst du die normalisierte Form — also Großbuchstaben, ß bleibt ß. "
+        "Nach dem Decodieren siehst du die normalisierte Form, also Großbuchstaben, ß bleibt ß. "
         "Ob du ursprünglich Müller oder MUELLER eingegeben hattest, erkennt man aus S und I allein nicht; "
         "dafür müsste die Originalschreibweise mitgespeichert sein (Datenbank oder .gpm)."
     ),
     "compare": (
-        "Tipp zwei Wörter ein — beliebige Schreibweise. "
+        "Tipp zwei Wörter ein, beliebige Schreibweise. "
         "Im Hintergrund werden beide normalisiert; du siehst dann ggT (Schnittmenge der Buchstaben) "
         "und kgV (Vereinigung). "
-        "Gut zum Ausprobieren: gleiche Bedeutung, andere Schreibung — oder Wörter mit gemeinsamen Buchstaben."
+        "Gut zum Ausprobieren: gleiche Bedeutung, andere Schreibung, oder Wörter mit gemeinsamen Buchstaben."
     ),
     "diff": (
         "Frag dich: Was bleibt von Wort 1 übrig, wenn alle gemeinsamen Buchstaben mit Wort 2 abgezogen werden? "
         "Oder: Haben beide dieselben Buchstaben, stehen sie aber in anderer Reihenfolge? "
-        "Trage zwei Wörter ein — die Beispiele unten zeigen typische Fälle."
+        "Trage zwei Wörter ein, die Beispiele unten zeigen typische Fälle."
     ),
     "gpm": (
         "Hier kompiliert du ganzen Text: Wörter ins Genom, Abfolge in die Wort-Geometrie (I), "
         "technische Zellen (I_Satz) in der Zell-Kette, alles dazwischen in den Separator-Layer. "
-        "Groß- und Kleinschreibung bleibt über eine eigene Schicht erhalten — "
+        "Groß- und Kleinschreibung bleibt über eine eigene Schicht erhalten, "
         "Straße und straße sind dasselbe Wort im Genom, aber unterschiedlich rekonstruiert. "
         "Wie einzelne Buchstaben normalisiert werden, steht im Tab Konzept."
     ),
     "wortpaar": (
-        "Zwei Wörter eingeben — dann wählst du oben Vergleichen (ggT und kgV) "
+        "Zwei Wörter eingeben, dann wählst du oben Vergleichen (ggT und kgV) "
         "oder Differenz (S_rest, Teilmenge, Anagramm). Die Felder bleiben gleich."
     ),
     "ikurve": (
@@ -117,15 +117,15 @@ TAB_GUIDE = {
 
 MATCHING_HELP = {
     "gcd_mode": (
-        "ggT-Filter: ein Suchwort — findet Genom-Einträge mit gemeinsamen Primfaktoren "
+        "ggT-Filter: ein Suchwort, findet Genom-Einträge mit gemeinsamen Primfaktoren "
         "(Schnittmenge der Buchstaben)."
     ),
     "lcm_mode": (
-        "kgV-Filter: zwei Suchwörter — berechnet kgV(S₁, S₂) als Vereinigungsmenge. "
+        "kgV-Filter: zwei Suchwörter, berechnet kgV(S₁, S₂) als Vereinigungsmenge. "
         "Ein Genom-Wort passt, wenn seine Substanz durch kgV teilbar ist (S % kgV == 0)."
     ),
     "lcm_example": (
-        "Beispiel MUT und WUT: kgV enthält M, W, U und T — Genom-Wörter wie MUTWUT decken beide Begriffe ab."
+        "Beispiel MUT und WUT: kgV enthält M, W, U und T, Genom-Wörter wie MUTWUT decken beide Begriffe ab."
     ),
     "substance_mode": "Exakter Substanz-Match: nur Wörter mit identischer Substanz S.",
 }
@@ -133,23 +133,23 @@ MATCHING_HELP = {
 DIFF_HELP = {
     "intro": (
         "Die arithmetische Differenz dividiert Substanz durch ggT: "
-        "S_rest = S₁ ÷ ggT(S₁, S₂) — welche Buchstaben in Wort 1 übrig bleiben, "
+        "S_rest = S₁ ÷ ggT(S₁, S₂), welche Buchstaben in Wort 1 übrig bleiben, "
         "wenn alle gemeinsamen Buchstaben mit Wort 2 abgezogen werden."
     ),
     "subset": (
-        "Ist S_rest == 1 und S₁ ≠ S₂, enthält Wort 1 nur Buchstaben, die auch in Wort 2 vorkommen — "
+        "Ist S_rest == 1 und S₁ ≠ S₂, enthält Wort 1 nur Buchstaben, die auch in Wort 2 vorkommen, "
         "eine echte Buchstaben-Teilmenge (Multimenge über Primfaktoren), nicht nur Gleichheit."
     ),
     "anagram": (
         "Bei S₁ = S₂ und I₁ ≠ I₂ haben beide Wörter dieselbe Buchstabenmenge, "
-        "aber eine andere Anordnung — ein Anagramm, erkannt mit einer Index-Vergleichsoperation."
+        "aber eine andere Anordnung, ein Anagramm, erkannt mit einer Index-Vergleichsoperation."
     ),
     "example_subset": (
-        "Beispiel AT und CAT: ggT enthält A und T; S_rest für AT ist 1 — "
+        "Beispiel AT und CAT: ggT enthält A und T; S_rest für AT ist 1, "
         "AT ist Buchstaben-Teilmenge von CAT."
     ),
     "example_anagram": (
-        "Beispiel LISTEN und SILENT: gleiche Substanz S, unterschiedlicher Index I — perfektes Anagramm."
+        "Beispiel LISTEN und SILENT: gleiche Substanz S, unterschiedlicher Index I, perfektes Anagramm."
     ),
     "multiset_note": (
         "Hinweis: Es geht um die Multimenge der Buchstaben (Primfaktoren), "
@@ -161,15 +161,15 @@ DIFF_HELP = {
 INDEX_HELP = {
     "intro": (
         "Der Index I ist die Position im Permutationsraum N pro Wort. "
-        "Über die Token-Reihenfolge entsteht eine I-Kurve — der rhythmische Fingerabdruck der Satzgeometrie."
+        "Über die Token-Reihenfolge entsteht eine I-Kurve, der rhythmische Fingerabdruck der Satzgeometrie."
     ),
     "i_distance": (
-        "Die I-Distanz misst Sprünge zwischen aufeinanderfolgenden Token (delta_ratio) — "
+        "Die I-Distanz misst Sprünge zwischen aufeinanderfolgenden Token (delta_ratio), "
         "typische Satzstrukturen erzeugen ähnliche Sprungmuster im fraktalen Entscheidungsbaum."
     ),
     "waveform_parallel": (
         "Bei Synonym-Ersatz ändern sich Wörter und Substanz S; die I-Kurven über die Token-Positionen "
-        "können dennoch strukturell parallel bleiben — eine Wellenform-Isomorphie auf Wort-Ebene."
+        "können dennoch strukturell parallel bleiben, eine Wellenform-Isomorphie auf Wort-Ebene."
     ),
     "example": (
         "Vergleiche zwei Texte mit gleicher Satzstruktur aber anderen Wörtern: "
@@ -177,41 +177,41 @@ INDEX_HELP = {
     ),
     "limit_note": (
         "Es wird die Token-Geometrie verglichen, nicht Zeichen-für-Zeichen. "
-        "Reine mathematische Struktur-Kreuzvalidierung — keine semantische Plagiat-Bewertung."
+        "Reine mathematische Struktur-Kreuzvalidierung, keine semantische Plagiat-Bewertung."
     ),
     "icurve_token_max": f"{MAX_I_CURVE_TOKENS:,}".replace(",", "."),
     "source_note": (
         "Freitext wird kompiliert; eine geladene .gpm nutzt die gespeicherte Geometrie aus dem GPM-Tab."
     ),
     "meta_genome": (
-        "Meta-Genom: alle Header-Substanzen nach Häufigkeit zu einem Dokumenten-Vektor V multipliziert — "
+        "Meta-Genom: alle Header-Substanzen nach Häufigkeit zu einem Dokumenten-Vektor V multipliziert, "
         "ggT(V₁, V₂) misst Domänen-Überlappung ohne die Datei zu öffnen."
     ),
     "meta_language": (
-        "Sprache: Funktionswort-Muster (der/die/das vs. the/and/is) plus Referenz-Profil — "
+        "Sprache: Funktionswort-Muster (der/die/das vs. the/and/is) plus Referenz-Profil, "
         "aus der Wort-DB wenn genug Einträge vorhanden, sonst eingebaute Muster. "
-        "Deutsch: zusätzliches ß-Signal. Bei niedriger Konfidenz: „Unklar“ — "
+        "Deutsch: zusätzliches ß-Signal. Bei niedriger Konfidenz: „Unklar“, "
         "der DB-Sprachaudit nutzt dann die de/en-Score-Tendenz."
     ),
     "structure_isomorphism": (
-        "Isomorphie-Index: gewichtete Fusion isolierter Metrik-Achsen (Wort-DTW, Substanz, Zelle, Relation, Meta) — "
+        "Isomorphie-Index: gewichtete Fusion isolierter Metrik-Achsen (Wort-DTW, Substanz, Zelle, Relation, Meta), "
         "partielle strukturelle Überlappung, kein Urteil über Textherkunft."
     ),
     "cell_geometry": (
-        "Zell-Geometrie (I_Satz): technische Segmente (≤50 Token, Gap-Split bei .!?) — "
+        "Zell-Geometrie (I_Satz): technische Segmente (≤50 Token, Gap-Split bei .!?), "
         "jede Zelle hat ein Skelett (Häufigkeiten der Wort-Kategorien) und I_Satz im Permutationsraum. "
         "Vergleich der Zell-Ketten via DTW, weil Einfügungen die Grenzen verschieben."
     ),
     "cell_twins": (
-        "Strukturelle Zell-Zwillinge: hoher Zell-DTW-Score bei niedrigem Literal-Match — "
+        "Strukturelle Zell-Zwillinge: hoher Zell-DTW-Score bei niedrigem Literal-Match, "
         "gleicher Satzbau (Skelett + I_Satz), andere Wörter (Synonym-Ersatz oder strukturelle Kopie)."
     ),
     "substance_align": (
-        "Substanz-Ausrichtung: ggT-Kette entlang der Token-Folge — misst Buchstaben-Überlappung "
+        "Substanz-Ausrichtung: ggT-Kette entlang der Token-Folge, misst Buchstaben-Überlappung "
         "unabhängig von I. Hoher Score bei Synonymen mit gleicher Substanz oder paralleler Buchstabenstruktur."
     ),
     "relation_domain": (
-        "Relations-Profil: Domäne als Wort-Bigramme und Substanz-Paare, nicht nur Einzelwörter — "
+        "Relations-Profil: Domäne als Wort-Bigramme und Substanz-Paare, nicht nur Einzelwörter, "
         "geteilte Beziehungen deuten auf strukturelle Kopie des Satzbau-Musters hin."
     ),
     "db_language": (
@@ -222,7 +222,7 @@ INDEX_HELP = {
     "spectroscope": (
         "Spektroskopie in der geometrischen Matrix: Bereich markieren → Teal (Substanz-Teiler), "
         "Amber (Struktur-Zwilling), Kreuzfeuer (beides). Läuft über den eingefrorenen GPM-Cache "
-        "nach dem Vergleich — kein erneutes Tippen im I-Kurve-Tab."
+        "nach dem Vergleich, kein erneutes Tippen im I-Kurve-Tab."
     ),
 }
 
@@ -233,24 +233,24 @@ CIPHER_HELP = {
         "und Index I; der Schlüssel kann ein Wort (→ Primzahlprodukt) oder eine Primzahl sein."
     ),
     "modes": (
-        "Wort-, Primzahl-, S+I- und Hardcore-Modus — mit ehrlicher Sicherheitsbewertung. "
+        "Wort-, Primzahl-, S+I- und Hardcore-Modus, mit ehrlicher Sicherheitsbewertung. "
         "Hardcore wechselt mehrere Schlüssel (Wort oder prime:N) pro Token ab."
     ),
     "i_shadow": (
-        "Die I-Geometrie bleibt im Chiffretext verborgen, solange der Schlüssel fehlt — "
+        "Die I-Geometrie bleibt im Chiffretext verborgen, solange der Schlüssel fehlt, "
         "analog zur I-Kurven-Analyse, die strukturelle Parallelen ohne Wortgleichheit erkennt."
     ),
     "limit_note": (
-        "Symmetrische Demo-Verschlüsselung — kein Ersatz für AES. Max. 2.000 Token; "
+        "Symmetrische Demo-Verschlüsselung, kein Ersatz für AES. Max. 2.000 Token; "
         "Satzzeichen werden mitverschlüsselt (Separator-Schicht)."
     ),
     "hardcore_hint": (
-        "Hardcore: kommagetrennt, z. B. GEHEIM, prime:17, ALPHA, prime:103 — "
+        "Hardcore: kommagetrennt, z. B. GEHEIM, prime:17, ALPHA, prime:103, "
         "Wörter und Primzahlen wechseln unabhängig voneinander."
     ),
     "gpm_encrypt": (
         "Im GPM-Editor optional als verschlüsselte .gpm speichern (Magic GPC): "
-        "ohne Schlüssel liefert Lesen und Suche kein Genom — nur Entschlüsselung mit dem gleichen Schlüssel."
+        "ohne Schlüssel liefert Lesen und Suche kein Genom, nur Entschlüsselung mit dem gleichen Schlüssel."
     ),
 }
 

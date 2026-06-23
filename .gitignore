@@ -52,3 +52,7 @@ Ge-Prime-Matrix/venv/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Deploy secrets (VPS)
+deploy/ssh.config.local
+deploy/.env.deploy

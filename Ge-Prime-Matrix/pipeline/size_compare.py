@@ -312,7 +312,7 @@ def compare_encoded_word(
         headline = f"S(I) spart {human_bytes(saved)} ({pct} %)"
         points = [
             f"Klartext: {human_bytes(best_plain)} · kleinstes S(I): {human_bytes(best_gpm)}",
-            f"S hat {len(s_text)} Dezimalstellen — bei langen Wörtern wächst der Vorteil",
+            f"S hat {len(s_text)} Dezimalstellen, bei langen Wörtern wächst der Vorteil",
             "In .gpm zählen Wiederholungen nur einmal im Genom",
         ]
     elif best_gpm == best_plain:
@@ -482,7 +482,7 @@ def compare_gpm_document(*, source_text: str, blob: bytes) -> SizeComparison:
             "words_spaced",
             "Nur Wörter + Leerzeichen",
             words_only,
-            "Ohne Satzzeichen — nicht verlustfrei",
+            "Ohne Satzzeichen, nicht verlustfrei",
             ext=".txt",
             category="document",
         ),
@@ -614,7 +614,7 @@ def compare_gpm_document(*, source_text: str, blob: bytes) -> SizeComparison:
             f"{human_bytes(source_bytes)} Text → {human_bytes(file_bytes)} .gpm",
             f"PDF wäre {human_bytes(pdf_b)} · ZIP {human_bytes(zip_b)}",
             f"JSON-Export {human_bytes(json_export)} ({json_factor}× größer als .gpm)",
-            "Wörter im Genom nur einmal — ideal bei Wiederholungen",
+            "Wörter im Genom nur einmal, ideal bei Wiederholungen",
         ]
     elif ratio <= 1.15:
         verdict = "tie"
@@ -632,7 +632,7 @@ def compare_gpm_document(*, source_text: str, blob: bytes) -> SizeComparison:
             f"Quelltext {human_bytes(source_bytes)} · .gpm {human_bytes(file_bytes)} · PDF {human_bytes(pdf_b)}",
             f"Aufteilung: Header {file_header_bytes} · Genom {genome_bytes} · Geometrie {body_bytes} · "
             f"Separator {separator_bytes} · Explicit {explicit_bytes} · CRC {crc_bytes}",
-            f"JSON-Export {human_bytes(json_export)} — {json_factor}× größer als .gpm",
+            f"JSON-Export {human_bytes(json_export)}, {json_factor}× größer als .gpm",
             "Lohnt bei Wiederholungen, Substanz-Matching und exakter Rekonstruktion",
         ]
 
@@ -726,7 +726,7 @@ def compare_encode_batch(words: list[dict]) -> SizeComparison:
         _calc("Summe Binär S(I)", "Genom S + Geometrie I je Wort (2/4/8/16 Byte)", size=sum_binary_si),
         _calc(
             "Summe Einzelwörter",
-            "ohne Leerzeichen — nur zum Vergleich, nicht als Datei",
+            "ohne Leerzeichen, nur zum Vergleich, nicht als Datei",
             size=sum_plain,
         ),
     ]
@@ -747,7 +747,7 @@ def compare_encode_batch(words: list[dict]) -> SizeComparison:
         headline = "Klartext schlägt die S(I)-Summe"
         points = [
             f"Klartext {human_bytes(best_plain)} · S(I) gesamt {human_bytes(best_gpm)}",
-            "Typisch bei kurzen Wörtern — .gpm lohnt bei Dokumenten mit Wiederholungen",
+            "Typisch bei kurzen Wörtern.gpm lohnt bei Dokumenten mit Wiederholungen",
         ]
 
     insight = {

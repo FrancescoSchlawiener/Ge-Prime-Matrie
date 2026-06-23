@@ -1,0 +1,10 @@
+# Copy to deploy/ssh.config.local (gitignored) and use:
+#   ssh -F deploy/ssh.config.local schlawiener
+#
+# Do NOT commit passwords. Prefer SSH keys:
+#   ssh-copy-id -F deploy/ssh.config.local schlawiener
+
+Host schlawiener
+    HostName 145.223.116.113
+    User root
+    StrictHostKeyChecking accept-new

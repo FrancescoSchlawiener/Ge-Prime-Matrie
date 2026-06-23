@@ -1,0 +1,20 @@
+services:
+  gpm:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    container_name: gpm
+    ports:
+      - "127.0.0.1:5000:5000"
+    environment:
+      GE_PRIME_ENV: production
+      PORT: "5000"
+      HOST: "0.0.0.0"
+      OPEN_BROWSER: "0"
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - gpm_data:/app/Ge-Prime-Matrix/data
+    restart: unless-stopped
+
+volumes:
+  gpm_data:
