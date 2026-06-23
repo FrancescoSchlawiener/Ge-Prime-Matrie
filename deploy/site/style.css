@@ -1,19 +1,23 @@
+/* schlawiener.space – weiches Slate-Theme, harmonisch mit GPM (#0a0e14) aber heller */
+
 :root {
-  --bg: #0a0e14;
-  --bg-glow: #121820;
-  --surface: #131920;
-  --surface-hover: #1a222d;
-  --border: #2a3441;
-  --border-soft: #1e2836;
-  --text: #e8eef4;
-  --muted: #8b9cb3;
+  --bg: #1e2733;
+  --bg-soft: #243040;
+  --surface: #2c3849;
+  --surface-hover: #344155;
+  --surface-card: #303d4f;
+  --border: #445568;
+  --border-soft: #3a485a;
+  --text: #f2f6fa;
+  --muted: #a8b4c4;
   --accent: #6cb6ff;
-  --accent-dim: #316dca;
-  --green: #56d364;
-  --violet: #a371f7;
-  --orange: #f0883e;
-  --radius: 14px;
-  --shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
+  --accent-hover: #8ec8ff;
+  --accent-dim: #4a8fd4;
+  --violet: #b794f6;
+  --orange: #f5a962;
+  --warm-glow: rgba(232, 196, 160, 0.07);
+  --radius: 16px;
+  --shadow: 0 10px 32px rgba(12, 18, 28, 0.22);
 }
 
 * {
@@ -29,68 +33,80 @@ body {
   min-height: 100vh;
   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
   font-size: 1rem;
-  line-height: 1.65;
+  line-height: 1.7;
   color: var(--text);
   background:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(49, 109, 202, 0.18), transparent),
-    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(163, 113, 247, 0.08), transparent),
-    var(--bg);
+    radial-gradient(ellipse 90% 55% at 50% -10%, rgba(108, 182, 255, 0.12), transparent 55%),
+    radial-gradient(ellipse 50% 35% at 100% 20%, var(--warm-glow), transparent),
+    linear-gradient(175deg, var(--bg-soft) 0%, var(--bg) 45%, #1a222c 100%);
 }
 
 a {
   color: var(--accent);
   text-decoration: none;
-  transition: color 0.15s ease;
+  transition: color 0.18s ease;
 }
 
 a:hover {
-  color: #9fd0ff;
+  color: var(--accent-hover);
 }
 
 .page {
   max-width: 720px;
   margin: 0 auto;
-  padding: 2.5rem 1.25rem 3rem;
+  padding: 2.75rem 1.35rem 3.25rem;
 }
 
 .hero {
-  padding: 2rem 0 2.5rem;
-  border-bottom: 1px solid var(--border-soft);
+  padding: 1.75rem 1.35rem 2rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
 
 .eyebrow {
-  margin: 0 0 0.75rem;
-  font-size: 0.75rem;
+  margin: 0 0 0.65rem;
+  font-size: 0.74rem;
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--accent-dim);
 }
 
 .hero h1 {
-  margin: 0 0 0.75rem;
-  font-size: clamp(1.75rem, 5vw, 2.35rem);
-  font-weight: 650;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
+  margin: 0 0 0.65rem;
+  font-size: clamp(1.7rem, 5vw, 2.2rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--text);
 }
 
 .lead {
   margin: 0;
   max-width: 36em;
-  font-size: 1.05rem;
+  font-size: 1.02rem;
   color: var(--muted);
+  font-weight: 400;
 }
 
 .section {
   padding: 2rem 0 0;
 }
 
+.hero-plain {
+  padding: 0 0 1.5rem;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
 .section h2 {
   margin: 0 0 1rem;
   font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted);
 }
@@ -107,54 +123,55 @@ a:hover {
 
 .project-card {
   display: block;
-  padding: 1.25rem 1.35rem;
-  background: linear-gradient(165deg, var(--surface) 0%, var(--bg-glow) 100%);
-  border: 1px solid var(--border);
+  padding: 1.3rem 1.4rem;
+  background: var(--surface-card);
+  border: 1px solid var(--border-soft);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+  transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 
 .project-card:hover {
   border-color: var(--accent-dim);
   background: var(--surface-hover);
-  transform: translateY(-2px);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 36px rgba(12, 18, 28, 0.28);
   color: inherit;
 }
 
 .project-card:hover h3 {
-  color: var(--accent);
+  color: var(--accent-hover);
 }
 
 .project-tag {
   display: inline-block;
-  margin-bottom: 0.65rem;
-  padding: 0.2rem 0.55rem;
+  margin-bottom: 0.7rem;
+  padding: 0.22rem 0.6rem;
   font-size: 0.68rem;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--accent);
-  background: rgba(108, 182, 255, 0.1);
-  border: 1px solid rgba(108, 182, 255, 0.22);
+  background: rgba(108, 182, 255, 0.14);
+  border: 1px solid rgba(108, 182, 255, 0.28);
   border-radius: 999px;
 }
 
 .project-card:nth-child(2) .project-tag {
   color: var(--violet);
-  background: rgba(163, 113, 247, 0.1);
-  border-color: rgba(163, 113, 247, 0.25);
+  background: rgba(183, 148, 246, 0.12);
+  border-color: rgba(183, 148, 246, 0.3);
 }
 
 .project-card:nth-child(3) .project-tag {
   color: var(--orange);
-  background: rgba(240, 136, 62, 0.1);
-  border-color: rgba(240, 136, 62, 0.25);
+  background: rgba(245, 169, 98, 0.12);
+  border-color: rgba(245, 169, 98, 0.3);
 }
 
 .project-card h3 {
-  margin: 0 0 0.45rem;
-  font-size: 1.15rem;
+  margin: 0 0 0.5rem;
+  font-size: 1.12rem;
   font-weight: 600;
   color: var(--text);
   transition: color 0.15s ease;
@@ -162,15 +179,16 @@ a:hover {
 
 .project-card p {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: 0.93rem;
   color: var(--muted);
-  line-height: 1.55;
+  line-height: 1.6;
 }
 
 .project-card .arrow {
   display: inline-block;
-  margin-top: 0.85rem;
-  font-size: 0.82rem;
+  margin-top: 0.9rem;
+  font-size: 0.84rem;
+  font-weight: 500;
   color: var(--accent);
 }
 
@@ -179,8 +197,8 @@ a:hover {
   flex-wrap: wrap;
   gap: 0.75rem 1.25rem;
   align-items: center;
-  margin-top: 3rem;
-  padding-top: 1.5rem;
+  margin-top: 2.75rem;
+  padding-top: 1.35rem;
   border-top: 1px solid var(--border-soft);
   font-size: 0.875rem;
   color: var(--muted);
@@ -195,7 +213,7 @@ a:hover {
 }
 
 .back {
-  margin: 0 0 1.5rem;
+  margin: 0 0 1.25rem;
 }
 
 .back a {
@@ -204,14 +222,14 @@ a:hover {
 }
 
 .profile-section {
-  padding: 1.75rem 0 0;
+  padding: 1.5rem 0 0;
 }
 
 .profile-section h2 {
   margin: 0 0 0.65rem;
   font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted);
 }
@@ -222,15 +240,16 @@ a:hover {
 }
 
 .profile-article {
-  margin-top: 1.5rem;
+  margin-top: 1.15rem;
   padding: 1.25rem 1.35rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--surface-card);
+  border: 1px solid var(--border-soft);
   border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
 
 .profile-article h3 {
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.45rem;
   font-size: 1.05rem;
 }
 
@@ -239,18 +258,19 @@ a:hover {
 }
 
 .profile-article h3 a:hover {
-  color: var(--accent);
+  color: var(--accent-hover);
 }
 
 .profile-article p {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: 0.93rem;
   color: var(--muted);
+  line-height: 1.6;
 }
 
 @media (min-width: 640px) {
   .page {
-    padding: 3rem 1.5rem 4rem;
+    padding: 3.25rem 1.5rem 4rem;
   }
 
   .project-grid {
