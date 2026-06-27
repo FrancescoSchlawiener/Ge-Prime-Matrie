@@ -1,4 +1,4 @@
-"""Index-Vektoren (I-Kurve) — topologische Stil-Analyse aus GPM-Geometrie.
+"""Index-Vektoren (I-Kurve), topologische Stil-Analyse aus GPM-Geometrie.
 
 Pro Body-Token: i_ratio = I/N, delta_ratio zwischen aufeinanderfolgenden Token.
 ``analyze_pair`` kombiniert Kurvenvergleich mit Meta-Genom (Sprache, Domäne,
@@ -54,7 +54,7 @@ def normalize_skeleton(frequencies) -> tuple[int, ...]:
 
 
 def skeleton_signature(cell: dict) -> tuple[tuple[int, ...], int, int]:
-    """(norm_skeleton, perm_index, perm_space) — exakte Struktur-Zwillinge."""
+    """(norm_skeleton, perm_index, perm_space), exakte Struktur-Zwillinge."""
     raw = cell.get("skeleton") or cell.get("frequencies") or []
     return (normalize_skeleton(raw), int(cell["perm_index"]), int(cell["perm_space"]))
 
@@ -576,9 +576,9 @@ def compare_i_curves(
             "Strukturelle Wellenform-Parallelität bei divergentem Literal-Vektor."
         )
     elif geometry_score >= 0.5:
-        interpretation = "Partielle I-Kurven-Überlappung — moderate Geometrie-Ähnlichkeit."
+        interpretation = "Partielle I-Kurven-Überlappung, moderate Geometrie-Ähnlichkeit."
     else:
-        interpretation = "Unabhängige I-Kurven — Isomorphie-Index unter Schwellwert."
+        interpretation = "Unabhängige I-Kurven, Isomorphie-Index unter Schwellwert."
 
     return {
         "geometry_score": round(geometry_score, 6),
@@ -678,7 +678,7 @@ def analyze_pair(
         )
     elif structural_cell_twins:
         comparison["interpretation"] = (
-            "Zell-Zwillinge und parallele Wort-Wellenform — hohe Satzbau-Isomorphie."
+            "Zell-Zwillinge und parallele Wort-Wellenform, hohe Satzbau-Isomorphie."
         )
 
     cross_a = cross_analysis(document_a)

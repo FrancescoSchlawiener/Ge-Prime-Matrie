@@ -3,12 +3,12 @@
 Ausführung: ``dev.bat main.py`` (Windows) bzw. ``python main.py``.
 
 Demos:
-  demo_encode_decode — Normalisierung, S/I, Rekonstruktion
-  demo_compare       — ggT und kgV
-  demo_diff          — Teilmenge, Anagramm
-  demo_i_curve       — I-Kurven-Vergleich und Geometrie-Score
-  demo_cipher        — S(I)-Verschlüsselung (word, hardcore)
-  demo_db            — Wörter in SQLite speichern
+  demo_encode_decode, Normalisierung, S/I, Rekonstruktion
+  demo_compare      , ggT und kgV
+  demo_diff         , Teilmenge, Anagramm
+  demo_i_curve      , I-Kurven-Vergleich und Geometrie-Score
+  demo_cipher       , S(I)-Verschlüsselung (word, hardcore)
+  demo_db           , Wörter in SQLite speichern
 """
 
 from ge_prime.compare import compare_substances

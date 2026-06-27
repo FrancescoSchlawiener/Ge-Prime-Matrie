@@ -1,4 +1,4 @@
-"""Meta-Genom — Dokumenten-Vektor V aus Header-Genomen.
+"""Meta-Genom, Dokumenten-Vektor V aus Header-Genomen.
 
 Aus Häufigkeiten der Header-Substanzen entsteht V = ∏ S^count.
 Sprache/Domäne: ``ge_prime.linguistics``; Struktur-Matrix mit I-Kurve (Kreuzvalidierung).
@@ -458,7 +458,7 @@ def assess_structure_matrix(
     cross_a: dict | None = None,
     cross_b: dict | None = None,
 ) -> dict:
-    """Fusionierte Struktur-Matrix über isolierte Metrik-Achsen — keine Plagiat-Urteile."""
+    """Fusionierte Struktur-Matrix über isolierte Metrik-Achsen, keine Plagiat-Urteile."""
     word_geo = icurve_comparison.get("geometry_score", 0.0)
     literal = icurve_comparison.get("literal_match_ratio", 0.0)
     meta_sim = meta_comparison.get("similarity_ratio", 0.0)
@@ -573,12 +573,12 @@ def assess_structure_matrix(
         bullets.append(f"Zell-DTW hoch ({cell_score:.0%})")
     if substance_parallel:
         bullets.append(
-            f"Substanz-Kette deckt {subst_score:.0%} — {subst_cmp.get('substance_twin_count', 0)} Substanz-Zwillinge"
+            f"Substanz-Kette deckt {subst_score:.0%}, {subst_cmp.get('substance_twin_count', 0)} Substanz-Zwillinge"
         )
     if relation_twins_flag:
         shared = relation_comparison.get("shared_word_bigrams") or []
         bullets.append(
-            f"{len(shared)} geteilte Wort-Bigramme — Relations-Score {rel_score:.0%}"
+            f"{len(shared)} geteilte Wort-Bigramme, Relations-Score {rel_score:.0%}"
         )
     if meta_genome_strong:
         bullets.append(f"Meta-Genom ggT {meta_sim:.0%}")
@@ -587,7 +587,7 @@ def assess_structure_matrix(
             f"DB bestätigt {db_a.get('coverage_ratio', 0):.0%} / {db_b.get('coverage_ratio', 0):.0%} der {lang_a.get('label', '?')}-Tokens"
         )
     if mixed_language_suspect:
-        bullets.append("Mischsignal in der DB-Matrix (≥30 % — Richtwert)")
+        bullets.append("Mischsignal in der DB-Matrix (≥30 %, Richtwert)")
     if not bullets:
         bullets.append("Keine auffällige Achsen-Überlappung")
 
@@ -608,7 +608,7 @@ def assess_structure_matrix(
     elif classification == "literal_identity":
         bullets.append("Literal-Identität (Token + I-Kurve)")
     elif classification == "independent":
-        bullets.append("Unabhängige Matrizen — niedriger Isomorphie-Index")
+        bullets.append("Unabhängige Matrizen, niedriger Isomorphie-Index")
 
     interpretation = " · ".join(bullets)
 

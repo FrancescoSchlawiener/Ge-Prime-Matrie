@@ -1,3 +1,8 @@
+function appUrl(path) {
+  const prefix = (document.body && document.body.dataset.urlPrefix) || '';
+  return prefix + path;
+}
+
 function fmtLetters(obj) {
   if (!obj || Object.keys(obj).length === 0) return '—';
   return Object.entries(obj).map(([c, n]) => c + (n > 1 ? '×' + n : '')).join(' ');
@@ -122,7 +127,7 @@ function renderSizeCompare(data) {
     const detail = typeof step === 'string' ? step : step.detail;
     const label = typeof step === 'string' ? 'Schritt' : step.label;
     const human = typeof step === 'object' && step.human ? `<span class="mono">${escapeHtml(step.human)}</span>` : '';
-    return `<li><strong>${escapeHtml(label)}</strong> — ${escapeHtml(detail || '')} ${human}</li>`;
+    return `<li><strong>${escapeHtml(label)}</strong>, ${escapeHtml(detail || '')} ${human}</li>`;
   }).join('');
 
   return `
@@ -199,7 +204,7 @@ function wireEncodeSizeButtons(scope) {
     const target = scope.querySelector('#encode-batch-size-result');
     if (!lastEncodeWords || !lastEncodeWords.length) return;
     runSizeCompare(
-      '/api/size/encode-batch',
+      appUrl('/api/size/encode-batch'),
       {
         words: lastEncodeWords.map((w) => ({
           original: w.original,
@@ -220,7 +225,7 @@ function wireEncodeSizeButtons(scope) {
       if (!w) return;
       const target = btn.closest('.word-panel-body')?.querySelector('.size-result');
       runSizeCompare(
-        '/api/size/encode-word',
+        appUrl('/api/size/encode-word'),
         {
           original: w.original,
           normalized: w.normalized,
@@ -236,13 +241,13 @@ function wireEncodeSizeButtons(scope) {
 
 function wireDecodeSizeButton(scope, payload) {
   scope.querySelector('#decode-size-btn')?.addEventListener('click', (ev) => {
-    runSizeCompare('/api/size/decode', payload, scope.querySelector('#decode-size-result'), ev.currentTarget);
+    runSizeCompare(appUrl('/api/size/decode'), payload, scope.querySelector('#decode-size-result'), ev.currentTarget);
   });
 }
 
 function wireGpmSizeButton(scope, payload) {
   scope.querySelector('.btn-gpm-size')?.addEventListener('click', (ev) => {
-    runSizeCompare('/api/size/gpm', payload, scope.querySelector('.gpm-size-result'), ev.currentTarget);
+    runSizeCompare(appUrl('/api/size/gpm'), payload, scope.querySelector('.gpm-size-result'), ev.currentTarget);
   });
 }
 
@@ -347,8 +352,8 @@ function initTabs() {
     warn.className = 'error';
     warn.style.margin = '1rem';
     warn.textContent = expectedVersion
-      ? `Alte UI geladen — bitte start.bat neu starten (Build ${expectedVersion} erwartet).`
-      : 'Alte UI geladen — bitte start.bat neu starten und Strg+F5.';
+      ? `Alte UI geladen, bitte start.bat neu starten (Build ${expectedVersion} erwartet).`
+      : 'Alte UI geladen, bitte start.bat neu starten und Strg+F5.';
     document.querySelector('header')?.appendChild(warn);
   }
 
@@ -406,7 +411,7 @@ function applyDbStats(data) {
   if (!totalEl || !statsEl) return;
   totalEl.textContent = String(data.total_words ?? 0);
   if (!data.lang_stats || data.lang_stats.length === 0) {
-    statsEl.innerHTML = '<p class="muted" id="db-empty-hint">Noch leer — Wörter im Tab Encodieren speichern oder <code>python scrape.py --source kevina</code></p>';
+    statsEl.innerHTML = '<p class="muted" id="db-empty-hint">Noch leer, Wörter im Tab Encodieren speichern oder <code>python scrape.py --source kevina</code></p>';
     return;
   }
   const items = data.lang_stats
@@ -419,20 +424,20 @@ async function refreshDbStats() {
   const statsEl = document.getElementById('db-lang-stats');
   if (!statsEl) return;
   try {
-    const res = await fetch('/api/db/stats');
+    const res = await fetch(appUrl('/api/db/stats'));
     if (!res.ok) {
-      statsEl.innerHTML = '<p class="error">DB-Statistik nicht erreichbar — bitte <code>start.bat</code> neu starten.</p>';
+      statsEl.innerHTML = '<p class="error">DB-Statistik nicht erreichbar, bitte <code>start.bat</code> neu starten.</p>';
       return;
     }
     applyDbStats(await res.json());
   } catch {
-    statsEl.innerHTML = '<p class="error">DB-Statistik — Netzwerkfehler.</p>';
+    statsEl.innerHTML = '<p class="error">DB-Statistik, Netzwerkfehler.</p>';
   }
 }
 
 function formatDbSaveMeta(data) {
   if (data.saved == null && data.db_duplicates == null) {
-    return '<span class="error">Speichern nicht aktiv — bitte start.bat neu starten.</span>';
+    return '<span class="error">Speichern nicht aktiv, bitte start.bat neu starten.</span>';
   }
   const parts = [];
   const saved = data.saved || 0;
@@ -452,13 +457,13 @@ function formatDbSaveMeta(data) {
   return parts.join('');
 }
 
-/* Encodieren — Batch mit Akkordeon */
+/* Encodieren, Batch mit Akkordeon */
 document.getElementById('encode-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const el = document.getElementById('encode-result');
   showLoading(el, 'Encodiere…');
   try {
-    const res = await fetch('/api/encode', {
+    const res = await fetch(appUrl('/api/encode'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: document.getElementById('encode-text').value }),
@@ -535,7 +540,7 @@ document.getElementById('decode-form')?.addEventListener('submit', async (e) => 
   const el = document.getElementById('decode-result');
   showLoading(el, 'Decodiere…');
   try {
-    const res = await fetch('/api/decode', {
+    const res = await fetch(appUrl('/api/decode'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -572,7 +577,7 @@ document.getElementById('decode-form')?.addEventListener('submit', async (e) => 
   }
 });
 
-/* Wortpaar — Vergleichen & Differenz */
+/* Wortpaar, Vergleichen & Differenz */
 document.getElementById('wortpaar-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const word1 = document.getElementById('word1')?.value || '';
@@ -585,7 +590,7 @@ document.getElementById('wortpaar-form')?.addEventListener('submit', async (e) =
   if (getPairMode() === 'compare') {
     showLoading(compareEl, 'Vergleiche…');
     try {
-      const res = await fetch('/api/compare', {
+      const res = await fetch(appUrl('/api/compare'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ word1, word2 }),
@@ -617,12 +622,12 @@ document.getElementById('wortpaar-form')?.addEventListener('submit', async (e) =
               <div class="compare-gcd-label">ggT(S₁, S₂)</div>
               <div class="compare-gcd-value mono">${fmtNum(c.gcd_value)}</div>
               <div class="compare-gcd-sim">Ähnlichkeit: <strong>${simPct}&nbsp;%</strong> (ggT ÷ min(S))</div>
-              <p class="compare-match-hint muted">Schnittmenge — gemeinsame Buchstaben</p>
+              <p class="compare-match-hint muted">Schnittmenge, gemeinsame Buchstaben</p>
             </div>
             <div class="compare-lcm-card">
               <div class="compare-gcd-label">kgV(S₁, S₂)</div>
               <div class="compare-gcd-value mono">${fmtNum(c.lcm_value)}</div>
-              <p class="compare-match-hint muted">Vereinigung — minimale Substanz für beide Wörter</p>
+              <p class="compare-match-hint muted">Vereinigung, minimale Substanz für beide Wörter</p>
               <p class="compare-union-letters"><span class="compare-letter-label">Union</span> ${fmtLetters(c.union_letters)}</p>
             </div>
           </div>
@@ -642,7 +647,7 @@ document.getElementById('wortpaar-form')?.addEventListener('submit', async (e) =
 
   showLoading(diffEl, 'Berechne Differenz…');
   try {
-    const res = await fetch('/api/diff', {
+    const res = await fetch(appUrl('/api/diff'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ word1, word2 }),
@@ -936,8 +941,8 @@ function updateIcurveGpmUi() {
   const workspace = document.getElementById('ikurve-gpm-workspace-status');
   if (workspace) {
     workspace.textContent = hasShared
-      ? 'GPM-Arbeitskopie geladen — eigene .gpm pro Seite ablegen oder ohne eigene Datei die Arbeitskopie nutzen.'
-      : 'Optional: .gpm pro Seite per Drag-and-Drop — oder im Tab GPM Datei kompilieren/lesen.';
+      ? 'GPM-Arbeitskopie geladen, eigene .gpm pro Seite ablegen oder ohne eigene Datei die Arbeitskopie nutzen.'
+      : 'Optional: .gpm pro Seite per Drag-and-Drop, oder im Tab GPM Datei kompilieren/lesen.';
   }
   ['a', 'b'].forEach((side) => {
     const sideGpm = ikurveSideGpm[side];
@@ -1046,7 +1051,7 @@ async function loadIcurveSideGpmFile(file, side) {
   const bytes = new Uint8Array(buf);
   if (isEncryptedGpmBytes(bytes)) {
     throw new Error(
-      'Verschlüsselte .gpm — im Tab GPM Datei mit Schlüssel lesen oder eine unverschlüsselte .gpm hier ablegen.'
+      'Verschlüsselte .gpm, im Tab GPM Datei mit Schlüssel lesen oder eine unverschlüsselte .gpm hier ablegen.'
     );
   }
   ikurveSideGpm[side] = {
@@ -1183,10 +1188,10 @@ function renderPairedSparklines(pointsA, pointsB, strokeA, strokeB, opts = {}) {
       widthRatio: cellLayout.widthRatio,
     });
     const scrollWrap = cellLayout.scrollable
-      ? `<div class="ikurve-sparkline-scroll" data-ikurve-scroll="long" data-ikurve-side="${side}" data-ikurve-pair="${pairIndex}" tabindex="0" aria-label="Längere Kurve — horizontal scrollen">${svg}</div>`
+      ? `<div class="ikurve-sparkline-scroll" data-ikurve-scroll="long" data-ikurve-side="${side}" data-ikurve-pair="${pairIndex}" tabindex="0" aria-label="Längere Kurve, horizontal scrollen">${svg}</div>`
       : svg;
     const hint = cellLayout.scrollable
-      ? '<span class="ikurve-scroll-hint muted">Längere Kurve — horizontal scrollen</span>'
+      ? '<span class="ikurve-scroll-hint muted">Längere Kurve, horizontal scrollen</span>'
       : '';
     return `<div class="ikurve-chart-cell" data-ikurve-side="${side}" data-ikurve-pair="${pairIndex}"><span class="ikurve-chart-label">${escapeHtml(label)}</span>${scrollWrap}${hint}</div>`;
   };
@@ -1274,14 +1279,14 @@ function renderSignalOverview(p, c, cellCmp, substCmp, relCmp) {
 
 function renderDtwFailedWarning(cmp, label) {
   if (!cmp?.dtw_failed) return '';
-  return `<p class="ikurve-dtw-failed" role="alert"><strong>${escapeHtml(label)}:</strong> DTW fehlgeschlagen (Fenster-Deadlock oder leere Kurve) — 0&nbsp;% ist kein Vergleichswert.</p>`;
+  return `<p class="ikurve-dtw-failed" role="alert"><strong>${escapeHtml(label)}:</strong> DTW fehlgeschlagen (Fenster-Deadlock oder leere Kurve), 0&nbsp;% ist kein Vergleichswert.</p>`;
 }
 
 function renderSubstanceTwinsBanner(p) {
   if (!p?.substance_parallel) return '';
   return `<div class="ikurve-substance-twins-banner" role="status">
     <strong>Substanz-Parallelität</strong>
-    <p>Gleiche oder sehr ähnliche Substanz-Kette bei unterschiedlichen Wörtern — Buchstabenstruktur kopiert, Wörter getauscht.</p>
+    <p>Gleiche oder sehr ähnliche Substanz-Kette bei unterschiedlichen Wörtern, Buchstabenstruktur kopiert, Wörter getauscht.</p>
   </div>`;
 }
 
@@ -1289,7 +1294,7 @@ function renderRelationTwinsBanner(p) {
   if (!p?.relation_twins) return '';
   return `<div class="ikurve-relation-twins-banner" role="status">
     <strong>Relations-Zwillinge</strong>
-    <p>Geteilte Wort-Bigramme und Beziehungsmuster — typisch für strukturelle Umformulierung mit gleichem Satzbau-Gerüst.</p>
+    <p>Geteilte Wort-Bigramme und Beziehungsmuster, typisch für strukturelle Umformulierung mit gleichem Satzbau-Gerüst.</p>
   </div>`;
 }
 
@@ -1324,7 +1329,7 @@ function renderLanguageDbCard(metaA, metaB, p) {
       return '<p class="muted">DB-Sprachaudit deaktiviert (Modus „Aus“).</p>';
     }
     if (db.reason === 'language_unknown') {
-      return '<p class="muted">Keine de/en-Tendenz — DB-Abdeckung nicht berechenbar.</p>';
+      return '<p class="muted">Keine de/en-Tendenz, DB-Abdeckung nicht berechenbar.</p>';
     }
     if (db.reason === 'no_repo') {
       return '<p class="muted">Wort-Datenbank nicht angebunden.</p>';
@@ -1348,9 +1353,9 @@ function renderLanguageDbCard(metaA, metaB, p) {
         ${mismatches(dbB) ? `<p class="muted">Abweichende DB-Zuordnung (Beispiele): ${mismatches(dbB)}</p>` : ''}
       </div>
     </div>
-    ${p?.mixed_language_suspect ? '<p class="muted ikurve-flag">Mischsignal in der DB-Matrix (≥30 % — Richtwert)</p>' : ''}
+    ${p?.mixed_language_suspect ? '<p class="muted ikurve-flag">Mischsignal in der DB-Matrix (≥30 %, Richtwert)</p>' : ''}
     ${p?.db_confirmed ? '<p class="muted ok">DB bestätigt beide Texte in der erkannten Sprache.</p>' : ''}
-    <p class="muted ikurve-db-richtwert-note">Reiner Abgleich gegen die hinterlegte Wort-DB — statistischer Richtwert, keine forensische Bewertung.</p>
+    <p class="muted ikurve-db-richtwert-note">Reiner Abgleich gegen die hinterlegte Wort-DB, statistischer Richtwert, keine forensische Bewertung.</p>
   </div>`;
 }
 
@@ -1379,7 +1384,7 @@ function renderCellTwinsBanner(c) {
   if (!c?.structural_cell_twins) return '';
   return `<div class="ikurve-cell-twins-banner" role="status">
     <strong>Strukturelle Zell-Zwillinge</strong>
-    <p>Gleicher Satzbau (Skelett + I_Satz), andere Wörter — typisch für Synonym-Ersatz oder strukturelle Kopie.</p>
+    <p>Gleicher Satzbau (Skelett + I_Satz), andere Wörter, typisch für Synonym-Ersatz oder strukturelle Kopie.</p>
   </div>`;
 }
 
@@ -1478,10 +1483,10 @@ async function parseJsonResponse(res) {
 
 function ikurveFetchErrorMessage(err) {
   if (err?.name === 'AbortError') {
-    return 'Zeitüberschreitung — Server antwortet nicht rechtzeitig. Text kürzen, DB-Audit auf „Aus“ stellen oder start.bat neu starten.';
+    return 'Zeitüberschreitung, Server antwortet nicht rechtzeitig. Text kürzen, DB-Audit auf „Aus“ stellen oder start.bat neu starten.';
   }
   if (err?.message === 'Failed to fetch') {
-    return 'Server nicht erreichbar — läuft start.bat? Dann Seite mit Strg+F5 neu laden.';
+    return 'Server nicht erreichbar, läuft start.bat? Dann Seite mit Strg+F5 neu laden.';
   }
   return err?.message || 'Netzwerkfehler.';
 }
@@ -1504,7 +1509,7 @@ async function runIcurveAnalysis() {
     const timeoutId = setTimeout(() => controller.abort(), ICURVE_FETCH_TIMEOUT_MS);
     let res;
     try {
-      res = await fetch('/api/i-curve', {
+      res = await fetch(appUrl('/api/i-curve'), {
         method: 'POST',
         body,
         signal: controller.signal,
@@ -1535,7 +1540,7 @@ async function runIcurveAnalysis() {
 
     await new Promise((resolve) => requestAnimationFrame(resolve));
     if (typeof renderIcurveLab !== 'function') {
-      showError(el, 'UI-Modul ikurve_lab.js nicht geladen — Seite mit Strg+F5 neu laden.');
+      showError(el, 'UI-Modul ikurve_lab.js nicht geladen, Seite mit Strg+F5 neu laden.');
       return;
     }
     renderIcurveLab(data, window.ikurveViewState);
@@ -1675,7 +1680,7 @@ document.getElementById('cipher-form')?.addEventListener('submit', async (e) => 
   const keys = document.getElementById('cipher-key')?.value || '';
   const mode = getCipherMode();
   const direction = getCipherDirection();
-  const endpoint = direction === 'decrypt' ? '/api/cipher/decrypt' : '/api/cipher/encrypt';
+  const endpoint = direction === 'decrypt' ? appUrl('/api/cipher/decrypt') : appUrl('/api/cipher/encrypt');
   showLoading(el, direction === 'decrypt' ? 'Entschlüssele…' : 'Verschlüssele S(I)-Geometrie…');
   try {
     const body = direction === 'decrypt'
@@ -1853,9 +1858,9 @@ function renderCellGeometryBlock(cellGeo, { title = 'Zell-Geometrie' } = {}) {
     p.perm_index,
     p.i_satz_ratio,
     p.token_count,
-    `${p.token_start}–${p.token_start + p.token_count - 1}`,
+    `${p.token_start}-${p.token_start + p.token_count - 1}`,
   ]);
-  const trunc = cellGeo.truncated ? '<p class="muted">Tabelle gekürzt — mehr Zellen in der Datei.</p>' : '';
+  const trunc = cellGeo.truncated ? '<p class="muted">Tabelle gekürzt, mehr Zellen in der Datei.</p>' : '';
   return `<div class="cell-geometry-block">
     <h3 style="margin-top:1rem">${escapeHtml(title)} (${fmtNum(cellGeo.count)} Zellen)</h3>
     ${trunc}
@@ -1916,7 +1921,7 @@ async function analyzeGpmFile(file, { cipherKeys = '' } = {}) {
   const form = new FormData();
   form.append('file', file);
   if (cipherKeys) form.append('cipher_keys', cipherKeys);
-  const res = await fetch('/api/gpm/read', { method: 'POST', body: form });
+  const res = await fetch(appUrl('/api/gpm/read'), { method: 'POST', body: form });
   const data = await res.json();
   if (!res.ok) {
     const err = new Error(data.error || 'Lesen fehlgeschlagen.');
@@ -1958,9 +1963,9 @@ function showGpmReadAnalysis(data, el) {
 
   showResult(el, `
     <p class="muted">Format-Version: <strong>v${a.version}</strong></p>
-    ${data.encrypted_source ? renderEncryptedGpmBadge(a.cipher_security, a.cipher_mode || '?') + '<p class="muted">Entschlüsselt — im Speicher liegt die normale .gpm für Suche und I-Kurve.</p>' : ''}
+    ${data.encrypted_source ? renderEncryptedGpmBadge(a.cipher_security, a.cipher_mode || '?') + '<p class="muted">Entschlüsselt, im Speicher liegt die normale .gpm für Suche und I-Kurve.</p>' : ''}
     ${renderLosslessBadge(a.lossless)}
-    <p class="lossless-badge ok">✓ Rekonstruierter Text im Editor geladen — oben bearbeiten oder neu kompilieren</p>
+    <p class="lossless-badge ok">✓ Rekonstruierter Text im Editor geladen, oben bearbeiten oder neu kompilieren</p>
     <div class="gpm-actions">
       <button type="button" class="btn btn-secondary" id="gpm-reload-editor-btn">Erneut in Editor laden</button>
       <button type="button" class="btn btn-secondary btn-gpm-size">Speichergröße vergleichen</button>
@@ -2024,7 +2029,7 @@ document.getElementById('gpm-compile-form')?.addEventListener('submit', async (e
   }
   showLoading(el, encrypt ? 'Erzeuge verschlüsselte .gpm …' : 'Kompiliere .gpm …');
   try {
-    const res = await fetch('/api/gpm/compile', {
+    const res = await fetch(appUrl('/api/gpm/compile'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2045,7 +2050,7 @@ document.getElementById('gpm-compile-form')?.addEventListener('submit', async (e
         ${renderEncryptedGpmBadge(data.security, data.cipher_mode)}
         ${renderCipherSecurity(data.security)}
         <p class="muted">${escapeHtml(data.encrypt_note || '')}</p>
-        <p class="muted">I-Kurve und Suche nutzen die unverschlüsselte Arbeitskopie im Speicher — Download bleibt verschlüsselt.</p>
+        <p class="muted">I-Kurve und Suche nutzen die unverschlüsselte Arbeitskopie im Speicher, Download bleibt verschlüsselt.</p>
         ${renderLosslessBadge(data.lossless)}
         ${renderGpmStats(data.stats, data.cell_geometry)}
         <div class="gpm-actions">
@@ -2054,7 +2059,7 @@ document.getElementById('gpm-compile-form')?.addEventListener('submit', async (e
         </div>
         ${renderReconstruction(data.reconstructed_text, data.lossless)}
         ${renderCellGeometryBlock(data.cell_geometry)}
-        <p class="muted">Genom- und Geometrie-Tabellen sind in der Datei verborgen. Zum Lesen Schlüssel im Bereich „Lesen — Analyse“ verwenden.</p>
+        <p class="muted">Genom- und Geometrie-Tabellen sind in der Datei verborgen. Zum Lesen Schlüssel im Bereich „Lesen, Analyse“ verwenden.</p>
       `);
       refreshGpmEditorStats({ zellen: data.stats?.zellen_anzahl, bodyMode: data.stats?.body_mode });
       document.getElementById('gpm-to-ikurve-btn')?.addEventListener('click', () => {
@@ -2121,7 +2126,7 @@ document.getElementById('gpm-search-form')?.addEventListener('submit', async (e)
   const query2 = document.getElementById('gpm-search-query2')?.value.trim() || '';
   const mode = document.getElementById('gpm-search-mode').value;
   if (!gpmPlainBase64) {
-    showError(el, 'Keine .gpm geladen — zuerst kompilieren oder Datei lesen.');
+    showError(el, 'Keine .gpm geladen, zuerst kompilieren oder Datei lesen.');
     return;
   }
   if (!query) {
@@ -2134,7 +2139,7 @@ document.getElementById('gpm-search-form')?.addEventListener('submit', async (e)
   }
   showLoading(el, 'Suche …');
   try {
-    const res = await fetch('/api/gpm/search', {
+    const res = await fetch(appUrl('/api/gpm/search'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ file_base64: gpmPlainBase64, query, query2, mode }),
@@ -2259,7 +2264,7 @@ async function runSpectroscopeForEditor({
     abortGpmSpectroscope();
     if (panel) {
       panel.classList.remove('hidden');
-      panel.textContent = 'Kein Text — zuerst Inhalt einfügen.';
+      panel.textContent = 'Kein Text, zuerst Inhalt einfügen.';
     }
     if (window.GeometricViewport?.clearInto) {
       window.GeometricViewport.clearInto(editorId, viewportId);
@@ -2276,7 +2281,7 @@ async function runSpectroscopeForEditor({
   const controller = new AbortController();
   gpmSpectroAbort = controller;
   try {
-    const res = await fetch('/api/spectroscope', {
+    const res = await fetch(appUrl('/api/spectroscope'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       signal: controller.signal,
@@ -2299,7 +2304,7 @@ async function runSpectroscopeForEditor({
     const summary = `${scope}: ${merged.length} Treffer · ${crossfire} Kreuzfeuer`;
     if (panel) {
       panel.classList.remove('hidden');
-      panel.innerHTML = `<div class="spectro-result-panel"><strong>Spektroskopie</strong> — ${escapeHtml(summary)}</div>`;
+      panel.innerHTML = `<div class="spectro-result-panel"><strong>Spektroskopie</strong>, ${escapeHtml(summary)}</div>`;
     }
   } catch (err) {
     if (err?.name === 'AbortError') return;
@@ -2397,7 +2402,7 @@ async function runIcurveSpectroscope(side) {
   if (!gpmBase64) {
     if (panel) {
       panel.classList.remove('hidden');
-      panel.textContent = 'Kein GPM-Cache — zuerst I-Kurven vergleichen.';
+      panel.textContent = 'Kein GPM-Cache, zuerst I-Kurven vergleichen.';
     }
     return;
   }
@@ -2419,7 +2424,7 @@ async function runIcurveSpectroscope(side) {
   const controller = new AbortController();
   ikurveSpectroAbort = controller;
   try {
-    const res = await fetch('/api/spectroscope', {
+    const res = await fetch(appUrl('/api/spectroscope'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       signal: controller.signal,
@@ -2443,7 +2448,7 @@ async function runIcurveSpectroscope(side) {
     const summary = `${scope}: ${merged.length} Treffer · ${crossfire} Kreuzfeuer`;
     if (panel) {
       panel.classList.remove('hidden');
-      panel.innerHTML = `<div class="spectro-result-panel"><strong>Spektroskopie</strong> — ${escapeHtml(summary)}</div>`;
+      panel.innerHTML = `<div class="spectro-result-panel"><strong>Spektroskopie</strong>, ${escapeHtml(summary)}</div>`;
     }
   } catch (err) {
     if (err?.name === 'AbortError') return;
@@ -2559,18 +2564,18 @@ async function checkServerHealth() {
   }
 
   try {
-    const res = await fetch('/api/health');
+    const res = await fetch(appUrl('/api/health'));
     if (!res.ok) {
-      showBanner('Server veraltet — bitte start.bat neu starten (/api/health fehlt).');
+      showBanner('Server veraltet, bitte start.bat neu starten (/api/health fehlt).');
       return;
     }
     const data = await res.json();
     if (expected && data.version && data.version !== expected) {
-      showBanner(`Server-Build ${data.version} ≠ Seite ${expected} — start.bat neu starten und Strg+F5.`);
+      showBanner(`Server-Build ${data.version} ≠ Seite ${expected}, start.bat neu starten und Strg+F5.`);
       return;
     }
     if (!data.routes?.db_stats || !data.routes?.encode) {
-      showBanner('Server ohne DB/Encode-API — start.bat neu starten.');
+      showBanner('Server ohne DB/Encode-API, start.bat neu starten.');
       return;
     }
     if (banner) banner.remove();

@@ -1,5 +1,5 @@
 /**
- * I-Kurve v42 — Spektroskopie-Labor (Client-Cache + Drei-Zonen-Akkordeon)
+ * I-Kurve v42, Spektroskopie-Labor (Client-Cache + Drei-Zonen-Akkordeon)
  */
 window.currentAnalysis = null;
 window.ikurveViewState = { mode: 'semantic', depth: 'sentence', chartScale: 'union' };
@@ -187,7 +187,7 @@ function renderSparklineDownsampleHint(data, viewState) {
       || isSparklineDownsampled(data.structural_b?.[cfg.dataKey]);
   }
   if (!downsampled) return '';
-  return '<p class="ikurve-sparkline-hint muted">Sparkline visuell auf 500 Punkte downsampled — arithmetische Tabellen in Zone 3 sind vollständig.</p>';
+  return '<p class="ikurve-sparkline-hint muted">Sparkline visuell auf 500 Punkte downsampled, arithmetische Tabellen in Zone 3 sind vollständig.</p>';
 }
 
 function setIcurveMode(mode) {
@@ -303,7 +303,7 @@ function renderZone2SparklineFallbackHint(payloadA, payloadB) {
   const a = resolveSparklinePoints(payloadA);
   const b = resolveSparklinePoints(payloadB);
   if (!a.usedPreviewFallback && !b.usedPreviewFallback) return '';
-  return '<p class="ikurve-sparkline-hint muted">Kurven aus Preview-Daten (sparkline_points fehlte) — volle Ketten in Zone 3.</p>';
+  return '<p class="ikurve-sparkline-hint muted">Kurven aus Preview-Daten (sparkline_points fehlte), volle Ketten in Zone 3.</p>';
 }
 
 function renderIcurveChartsContainerHtml(analysis, state) {

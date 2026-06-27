@@ -1,8 +1,8 @@
-"""S(I)-Verschlüsselung — symmetrische Obfuskation mit Wort- und Primzahl-Schlüsseln.
+"""S(I)-Verschlüsselung, symmetrische Obfuskation mit Wort- und Primzahl-Schlüsseln.
 
 Modi: word, prime, si, hardcore. Kompiliert Text zu GPM-Geometrie, transformiert
 S/I und Separator-Schicht. Wird auch von ``gpm/cipher_wrap`` (GPC) genutzt.
-Kein Ersatz für AES — wer PRIME_MAP und Schlüssel kennt, kann entschlüsseln.
+Kein Ersatz für AES, wer PRIME_MAP und Schlüssel kennt, kann entschlüsseln.
 """
 
 from __future__ import annotations
@@ -145,10 +145,10 @@ def _decrypt_s(s_enc: int, key: KeyEntry, position: int, *, dual_lane: bool) -> 
     if dual_lane:
         k2 = _mix_int(key, position, "S2")
         if (s_enc - k2) % k != 0:
-            raise ValueError("Entschlüsselung fehlgeschlagen — falscher Schlüssel oder beschädigte Daten.")
+            raise ValueError("Entschlüsselung fehlgeschlagen, falscher Schlüssel oder beschädigte Daten.")
         return (s_enc - k2) // k
     if s_enc % k != 0:
-        raise ValueError("Entschlüsselung fehlgeschlagen — falscher Schlüssel oder beschädigte Daten.")
+        raise ValueError("Entschlüsselung fehlgeschlagen, falscher Schlüssel oder beschädigte Daten.")
     return s_enc // k
 
 
@@ -167,14 +167,14 @@ def _decrypt_i(i_enc: int, perm_space: int, key: KeyEntry, position: int, *, dua
 
 
 def assess_security(mode: str, keys: list[KeyEntry]) -> dict:
-    """Ehrliche Sicherheitsbewertung für UI — kein Ersatz für AES."""
+    """Ehrliche Sicherheitsbewertung für UI, kein Ersatz für AES."""
     warnings = [
         "Symmetrisch: wer PRIME_MAP und Schlüssel kennt, kann entschlüsseln.",
-        "Kein Ersatz für AES/GPG — geeignet für Demonstration und Obfuskation.",
+        "Kein Ersatz für AES/GPG, geeignet für Demonstration und Obfuskation.",
     ]
     base = {
         MODE_WORD: (32, "niedrig", "Einzelnes Wort → Substanz S als Schlüsselmaterial"),
-        MODE_PRIME: (40, "niedrig", "Eine Primzahl als Schlüssel — kurze Schlüssel sind erratbar"),
+        MODE_PRIME: (40, "niedrig", "Eine Primzahl als Schlüssel, kurze Schlüssel sind erratbar"),
         MODE_SI: (55, "mittel", "Getrennte S- und I-Mischung aus einem Wortschlüssel"),
         MODE_HARDCORE: (72, "hoch", "Wechselnde Wort- und Primzahl-Schlüssel pro Token"),
     }[mode]
@@ -209,7 +209,7 @@ def encrypt_text(text: str, *, mode: str, keys_raw: str | list[str]) -> dict:
     if mode not in VALID_MODES:
         raise ValueError(f"Unbekannter Modus: {mode}")
     if not text or not text.strip():
-        raise ValueError("Leerer Text — nichts zu verschlüsseln.")
+        raise ValueError("Leerer Text, nichts zu verschlüsseln.")
 
     keys = parse_keys(keys_raw, mode=mode)
     document, _, stats = compile_text(text)

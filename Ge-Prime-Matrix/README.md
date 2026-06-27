@@ -1,15 +1,15 @@
 # Ge-Prime-Matrix
 
-Web-App und Bibliothek zur **Substanz-Codierung** von Wörtern und Texten: jedes Wort wird als Paar **S(I)** gespeichert — **S** (Substanz) ist das Primzahlprodukt der Buchstaben, **I** (Index) die Position im Permutationsraum.
+Web-App und Bibliothek zur **Substanz-Codierung** von Wörtern und Texten: jedes Wort wird als Paar **S(I)** gespeichert, **S** (Substanz) ist das Primzahlprodukt der Buchstaben, **I** (Index) die Position im Permutationsraum.
 
 Darauf aufbauend:
 
-- **`.gpm` v5** — verlustfreies Binärformat mit Zell-Geometrie (I_Satz) und v4-Genom/Separator
-- **I-Kurve & Meta-Genom** — Stil-Analyse, Sprache/Domäne, Struktur-Kreuzvalidierung
-- **S(I)-Verschlüsselung** — symmetrische Obfuskation mit Wort-/Primzahl-Schlüsseln
-- **GPC** — verschlüsselte `.gpm`-Hülle für den Editor (ohne Schlüssel kein lesbares Genom)
+- **`.gpm` v5**, verlustfreies Binärformat mit Zell-Geometrie (I_Satz) und v4-Genom/Separator
+- **I-Kurve & Meta-Genom**, Stil-Analyse, Sprache/Domäne, Struktur-Kreuzvalidierung
+- **S(I)-Verschlüsselung**, symmetrische Obfuskation mit Wort-/Primzahl-Schlüsseln
+- **GPC**, verschlüsselte `.gpm`-Hülle für den Editor (ohne Schlüssel kein lesbares Genom)
 
-**Build:** `2026.06-gpm-v49` · **GPM-Format:** v7 (v1–v6 lesbar) · **GPC-Cipher:** v1
+**Build:** `2026.06-gpm-v49` · **GPM-Format:** v7 (v1 bis v6 lesbar) · **GPC-Cipher:** v1
 
 ---
 
@@ -38,7 +38,7 @@ Darauf aufbauend:
 
 ### Substanz S
 
-Jeder Buchstabe (A–Z und **ß**) hat eine feste Primzahl. Die **Substanz** eines Wortes ist das Produkt aller Primzahlen — unabhängig von der Buchstabenreihenfolge.
+Jeder Buchstabe (A bis Z und **ß**) hat eine feste Primzahl. Die **Substanz** eines Wortes ist das Produkt aller Primzahlen, unabhängig von der Buchstabenreihenfolge.
 
 Beispiel: `HALLO` → H·A·L·L·O → `47 × 3 × 23 × 23 × 5`
 
@@ -50,10 +50,10 @@ Bei gleicher Buchstabenmenge gibt es viele Anordnungen. **I** ist der lexikograp
 
 | Operation | Formel | Bedeutung |
 |-----------|--------|-----------|
-| **ggT** | `gcd(S₁, S₂)` | Schnittmenge — gemeinsame Buchstaben |
-| **kgV** | `lcm(S₁, S₂)` | Vereinigung — minimale Substanz für beide Wörter |
+| **ggT** | `gcd(S₁, S₂)` | Schnittmenge, gemeinsame Buchstaben |
+| **kgV** | `lcm(S₁, S₂)` | Vereinigung, minimale Substanz für beide Wörter |
 
-Der ggT eignet sich für Ähnlichkeitssuche (gemeinsame Primfaktoren). Der kgV liefert die synthetische Vereinigungsmenge: In `.gpm`-Genomen findet man passende Wörter mit **`S_Genom % kgV == 0`** — ein Modulo statt Regex-Kaskaden.
+Der ggT eignet sich für Ähnlichkeitssuche (gemeinsame Primfaktoren). Der kgV liefert die synthetische Vereinigungsmenge: In `.gpm`-Genomen findet man passende Wörter mit **`S_Genom % kgV == 0`**, ein Modulo statt Regex-Kaskaden.
 
 Implementierung: [`ge_prime/compare.py`](Ge-Prime-Matrix/ge_prime/compare.py) (`substance_lcm`, `substance_covers`, `union_letters`).
 
@@ -69,11 +69,11 @@ Implementierung: [`ge_prime/diff.py`](Ge-Prime-Matrix/ge_prime/diff.py).
 
 ### Index-Vektoren (I-Kurve) & Meta-Genom
 
-Über die Token-Reihenfolge entsteht pro Text eine **I-Kurve** — der rhythmische Fingerabdruck der Satzgeometrie.
+Über die Token-Reihenfolge entsteht pro Text eine **I-Kurve**, der rhythmische Fingerabdruck der Satzgeometrie.
 
 | Feld | Bedeutung |
 |------|-----------|
-| **i_ratio** | `I / N` — topologische Position im Permutationsraum (0–1) |
+| **i_ratio** | `I / N`, topologische Position im Permutationsraum (0 bis 1) |
 | **delta_ratio** | Sprung zwischen aufeinanderfolgenden Token |
 | **Geometrie-Score** | Mittel aus Ratio- und Delta-Ähnlichkeit zweier Kurven |
 | **Literal-Match** | Anteil gleicher Wörter an gleicher Position (Kontrast) |
@@ -82,10 +82,10 @@ Implementierung: [`ge_prime/diff.py`](Ge-Prime-Matrix/ge_prime/diff.py).
 **Meta-Genom:** Aus dem Header-Genom wird ein Dokumenten-Vektor **V = ∏ S^Häufigkeit** gebildet (effizient als Primzahl-Profil). Damit lassen sich ohne Öffnen der Datei:
 
 - **Sprache** schätzen (Referenz-Genome de/en, ß-Signal für Deutsch)
-- **Domäne** clustern (ggT von V₁ und V₂ — Medizin vs. Recht als Demo-Referenzen)
-- **DB-Sprachaudit** — unique Token gegen die Wort-Datenbank (auch bei „Unklar“ über de/en-Scores)
-- **Spektroskopie** — Text markieren in I-Kurve (A/B) oder GPM-Editor: Teal/Amber/Kreuzfeuer
-- **Isomorphie-Index** — gewichtete Fusion isolierter Metrik-Achsen (Wort-DTW, Substanz, Zelle, Relation, Meta, Literal)
+- **Domäne** clustern (ggT von V₁ und V₂, Medizin vs. Recht als Demo-Referenzen)
+- **DB-Sprachaudit**, unique Token gegen die Wort-Datenbank (auch bei „Unklar“ über de/en-Scores)
+- **Spektroskopie**, Text markieren in I-Kurve (A/B) oder GPM-Editor: Teal/Amber/Kreuzfeuer
+- **Isomorphie-Index**, gewichtete Fusion isolierter Metrik-Achsen (Wort-DTW, Substanz, Zelle, Relation, Meta, Literal)
 
 **Metriken-Architektur (Kreuzvalidierung):**
 
@@ -99,14 +99,14 @@ Implementierung: [`ge_prime/diff.py`](Ge-Prime-Matrix/ge_prime/diff.py).
 
 **Validierungs-Pipeline (5 Schritte):** NFC-Tokenisierung → Bitmasken-Vorfilter → I-Kurven → Enjambement-Phase → DB-Matrix-Audit. API: `validation_pipeline`, `structure_assessment`.
 
-**Hierarchie-Ebenen (I-Kurve-Tab):** Wort, Sinn (Phrase/Satz/Absatz), Raum (Zeile). Formfeed-Seitenumbrüche (`\f`) sind keine Laufzeit-Ebene — nur für Export/PDF (`build_page_nodes_for_export`).
+**Hierarchie-Ebenen (I-Kurve-Tab):** Wort, Sinn (Phrase/Satz/Absatz), Raum (Zeile). Formfeed-Seitenumbrüche (`\f`) sind keine Laufzeit-Ebene, nur für Export/PDF (`build_page_nodes_for_export`).
 
 **Sprache & DB-Abdeckung (I-Kurve-Tab):**
 
 | Anzeige | Bedeutung |
 |---------|-----------|
 | **Deutsch / Englisch** | Sprache mit ausreichender Konfidenz erkannt |
-| **Unklar (hybrid/patterns/db)** | Konfidenz zu niedrig — Label bleibt „Unklar“, Erkennungsmethode in Klammern |
+| **Unklar (hybrid/patterns/db)** | Konfidenz zu niedrig, Label bleibt „Unklar“, Erkennungsmethode in Klammern |
 | **DB-Audit gegen DE/EN** | Audit-Sprache aus Score-Tendenz (bei unsicherer Erkennung) |
 | **X % bestätigt** | Anteil unique Token, die in der Audit-Sprache in der DB stehen |
 | **Fremdkörper** | Wörter eher der anderen Sprache (Modus de↔en) |
@@ -117,7 +117,7 @@ Audit-Modi im Formular: **de ↔ en** (Standard), **Alle DB-Sprachen**, **Aus**.
 Implementierung: [`ge_prime/i_curve.py`](Ge-Prime-Matrix/ge_prime/i_curve.py), [`ge_prime/meta_genome.py`](Ge-Prime-Matrix/ge_prime/meta_genome.py).
 API: **POST `/api/i-curve`** (Freitext oder `.gpm` pro Seite, max. 10.000 Token).
 
-> **Abgrenzung:** Reine mathematische Struktur-Kreuzvalidierung — keine semantische Plagiat-Bewertung.
+Hinweis: Struktur-Kreuzvalidierung, keine Plagiat-Bewertung.
 
 ### S(I)-Verschlüsselung
 
@@ -125,15 +125,15 @@ Text wird kompiliert; **S**, **I** und die Separator-Schicht werden schlüsselab
 
 | Modus | Schlüssel | Sicherheit (ehrlich) |
 |-------|-----------|----------------------|
-| **word** | Buchstabenwort → Substanz S | niedrig — Lernen/Demo |
-| **prime** | `prime:N` (z. B. `prime:17`) | niedrig — kurze Schlüssel erratbar |
+| **word** | Buchstabenwort → Substanz S | niedrig, Lernen/Demo |
+| **prime** | `prime:N` (z. B. `prime:17`) | niedrig, kurze Schlüssel erratbar |
 | **si** | Wort mit getrennter S/I-Mischung | mittel |
-| **hardcore** | Kommagetrennt: Wörter und `prime:N` wechseln pro Token | hoch — gemischte Sequenz |
+| **hardcore** | Kommagetrennt: Wörter und `prime:N` wechseln pro Token | hoch, gemischte Sequenz |
 
 API: **POST `/api/cipher/encrypt`**, **POST `/api/cipher/decrypt`**.  
 Implementierung: [`ge_prime/cipher.py`](Ge-Prime-Matrix/ge_prime/cipher.py).
 
-> **Abgrenzung:** Symmetrisch — wer `PRIME_MAP` und den Schlüssel kennt, kann entschlüsseln. Kein Ersatz für AES/GPG.
+Hinweis: Symmetrische Obfuskation, kein Ersatz für AES/GPG.
 
 ---
 
@@ -144,7 +144,7 @@ Vor dem Encodieren werden Wörter vereinheitlicht. Diese Regeln gelten überall 
 | Regel | Verhalten |
 |-------|-----------|
 | **Umlaute** | ä/Ä → AE, ö/Ö → OE, ü/Ü → UE |
-| **Eszett ß** | Eigener Buchstabe mit Primzahl **103** — **kein** ß→ss mehr |
+| **Eszett ß** | Eigener Buchstabe mit Primzahl **103**, **kein** ß→ss mehr |
 | **Groß/Klein** | Nach Normalisierung: Großbuchstaben + ß; Python-`.upper()` würde ß→SS zerstören → eigene ß-bewusste Logik |
 | **Original** | In der DB bleibt die Originalschreibweise erhalten |
 | **Satzzeichen** | Beim **Encodieren einzelner Wörter** ignoriert; in **`.gpm`** verbatim in der Separator-Schicht |
@@ -170,25 +170,25 @@ Für die **exakte Rekonstruktion** des Originaltextes:
 | 0 | alles klein |
 | 1 | Erster groß, Rest klein |
 | 2 | ALLES GROSS (ß → ẞ) |
-| 3 | **Explicit** — Mischfall (z. B. `McDonald`), exakte Form im Overflow gespeichert |
+| 3 | **Explicit**, Mischfall (z. B. `McDonald`), exakte Form im Overflow gespeichert |
 
 ---
 
 ## Das .gpm-Format v5
 
-Statt Buchstabenketten speichert `.gpm` **reine Ganzzahlen** plus Schreibweise- und Separator-Schichten — **zeichengenaue Rekonstruktion** möglich. **v5** ergänzt die fraktale **Zell-Geometrie** (I_Satz): Wörter werden zu Atomen einer Zelle, der Body ist eine Kette von Zellen (max. 50 Token pro Zelle). **v1–v4** bleiben lesbar.
+Statt Buchstabenketten speichert `.gpm` **reine Ganzzahlen** plus Schreibweise- und Separator-Schichten, **zeichengenaue Rekonstruktion** möglich. **v5** ergänzt die fraktale **Zell-Geometrie** (I_Satz): Wörter werden zu Atomen einer Zelle, der Body ist eine Kette von Zellen (max. 50 Token pro Zelle). **v1 bis v4** bleiben lesbar.
 
 ```
 [GPM\x05 + Header 29 Byte + Flag BODY_CELL/BODY_FLAT]
   → Genom (v4): jedes Wort einmal (Original, Normalisiert, S als 2/4/8/16-Byte-Ganzzahl)
   → Body v5 (CELL): zellen_anzahl × [Skelett, I_Satz, k × (Word-ID, Case, I_Wort)]
-  → Body FLAT (Fallback): wie v4 — [Word-ID, Case, I] pro Token
+  → Body FLAT (Fallback): wie v4, [Word-ID, Case, I] pro Token
   → Separator-Blob + Perm-Code (Z/S/E/U-Bits)
   → Explicit-Overflow: Mischschreibweisen (CASE_EXPLICIT → eigene Kategorie pro Vorkommen)
   → CRC32-Trailer
 ```
 
-**Zell-Teilung:** Gap-Split an `.!?`, Ziel ~30 Token, hart max. 50 — damit N_Satz in 64/128-Bit-Stufen bleibt (bereits 21 eindeutige Kategorien → N > 2⁶⁴).
+**Zell-Teilung:** Gap-Split an `.!?`, Ziel ~30 Token, hart max. 50, damit N_Satz in 64/128-Bit-Stufen bleibt (bereits 21 eindeutige Kategorien → N > 2⁶⁴).
 
 ### Speicherbreite von S und I
 
@@ -202,8 +202,8 @@ S und I werden **nicht als Dezimaltext**, sondern als **Binär-Ganzzahlen** mit 
 | 3 | 16 | sehr große Wörter |
 
 - **S (Genom):** 1 Byte Stufen-Info + 2/4/8/16 Byte Wert (`s_class` in 2 Bit).
-- **I (Wort-Geometrie):** 2/4/8/16 Byte — Breite aus Wort-N.
-- **I_Satz (Zell-Geometrie, v5):** 2/4/8/16 Byte — Breite aus Zell-N; pro Zelle ein Skelett + ein I_Satz.
+- **I (Wort-Geometrie):** 2/4/8/16 Byte, Breite aus Wort-N.
+- **I_Satz (Zell-Geometrie, v5):** 2/4/8/16 Byte, Breite aus Zell-N; pro Zelle ein Skelett + ein I_Satz.
 
 ### Separator-Layer & Perm-Code
 
@@ -211,13 +211,13 @@ Beim Kompilieren scannt der Compiler alle Zwischenräume zwischen Wörtern und s
 
 | Bit | Klasse | Bedeutung |
 |-----|--------|-----------|
-| — | BASE | Leerzeichen, Zeilenumbrüche, Satzzeichen inkl. `_` (literal, Perm 0) |
-| Z = 1 | Ziffern | 0–9 per Escape-Sequenz |
+|, | BASE | Leerzeichen, Zeilenumbrüche, Satzzeichen inkl. `_` (literal, Perm 0) |
+| Z = 1 | Ziffern | 0 bis 9 per Escape-Sequenz |
 | S = 2 | Symbole | @, €, §, … per feste Tabelle |
 | E = 4 | Emoji | häufige Emoji per feste Tabelle |
 | U = 8 | Unicode | Fallback für Symbole/Emoji außerhalb der Tabellen |
 
-Symbole und Emoji liegen **nicht in der Datei**, sondern im Code (`gpm/separator_codec.py`). Beim Perm-Scan wird **U** automatisch gesetzt, wenn ein Zeichen nicht in der festen Tabelle steht (z. B. seltene Unicode-Sonderzeichen). Neu kompiliert wird **v5**; v1–v4 werden weiter gelesen.
+Symbole und Emoji liegen **nicht in der Datei**, sondern im Code (`gpm/separator_codec.py`). Beim Perm-Scan wird **U** automatisch gesetzt, wenn ein Zeichen nicht in der festen Tabelle steht (z. B. seltene Unicode-Sonderzeichen). Neu kompiliert wird **v5**; v1 bis v4 werden weiter gelesen.
 
 **Module:**
 
@@ -227,7 +227,7 @@ Symbole und Emoji liegen **nicht in der Datei**, sondern im Code (`gpm/separator
 | `gpm/cell_geom.py` | Zell-Teilung, I_Satz, Kategorie-Schlüssel |
 | `ge_prime/multiset_geom.py` | Gemeinsame Multiset-Engine (Wort + Zelle) |
 | `gpm/reader.py` | Lesen, Rekonstruktion, Suche |
-| `gpm/format.py` | Binär lesen/schreiben, CRC, v1–v4-Kompat |
+| `gpm/format.py` | Binär lesen/schreiben, CRC, v1 bis v4-Kompat |
 | `gpm/int_codec.py` | Festbreiten 2/4/8/16 Byte für S und I |
 | `gpm/separator_codec.py` | Perm-Code, Encode/Decode Separator-Blob |
 | `gpm/cipher_wrap.py` | GPC-Hülle: verschlüsselte `.gpm` (Magic `GPC`) |
@@ -237,11 +237,11 @@ Symbole und Emoji liegen **nicht in der Datei**, sondern im Code (`gpm/separator
 
 ## Verschlüsselte .gpm (GPC)
 
-Normale `.gpm`-Dateien beginnen mit **`GPM`**. Verschlüsselte Dateien beginnen mit **`GPC`** — der Inhalt ist ein S(I)-Cipher-Paket; **`read_gpm` liefert ohne Schlüssel kein Genom**.
+Normale `.gpm`-Dateien beginnen mit **`GPM`**. Verschlüsselte Dateien beginnen mit **`GPC`**, der Inhalt ist ein S(I)-Cipher-Paket; **`read_gpm` liefert ohne Schlüssel kein Genom**.
 
 ```
 [GPC\x01]
-  → JSON-Metadaten (Cipher-Version, Modus — kein Schlüssel)
+  → JSON-Metadaten (Cipher-Version, Modus, kein Schlüssel)
   → S(I)-Cipher-Nutzlast (Base64-Payload aus ge_prime.cipher)
 ```
 
@@ -290,7 +290,7 @@ Auf vielen Systemen zeigt `python` nur auf den **Windows-Store-Alias** (funktion
 | Datei | Zweck |
 |-------|--------|
 | **`setup.bat`** | Findet Python, schreibt `.python-path`, erzeugt lokale `.vscode/settings.json` (gitignored), installiert Pakete |
-| **`dev.bat`** | Führt Befehle mit dem Projekt-Python aus — **ohne** System-PATH |
+| **`dev.bat`** | Führt Befehle mit dem Projekt-Python aus, **ohne** System-PATH |
 | **`.python-path`** | Gespeicherter Pfad zum Python-Interpreter (gitignored) |
 | **`.venv/`** | Optionale virtuelle Umgebung (wenn `venv`-Modul verfügbar) |
 
@@ -346,7 +346,7 @@ URL nach Start: **http://127.0.0.1:5000**
 | **Konzept** | Erklärung S(I), Primzahl-Map, Normalisierung |
 | **Encodieren** | Bis zu 50 Wörter → DB (Random/unsortiert) |
 | **Decodieren** | S + I → normalisiertes Wort |
-| **Wortpaar** | Vergleichen (ggT/kgV) und Differenz (Teilmenge, Anagramm) — gemeinsame Wortfelder |
+| **Wortpaar** | Vergleichen (ggT/kgV) und Differenz (Teilmenge, Anagramm), gemeinsame Wortfelder |
 | **I-Kurve** | Index-Vektoren, Meta-Genom, Sprache/Domäne, DB-Sprachaudit, Struktur-Kreuzvalidierung |
 | **GPM Datei** | Editor, S(I)-Verschlüsselung, kompilieren, lesen, rekonstruieren, Substanz-/ggT-/kgV-Suche; optional **GPC** beim Kompilieren |
 | **Datenbank** | Statistik nach Sprache |
@@ -379,15 +379,15 @@ Alle API-Antworten: `Cache-Control: no-store`.
 | POST | `/api/cipher/encrypt` | `{ "text", "mode", "keys" }` | S(I)-Verschlüsselung (word/prime/si/hardcore) |
 | POST | `/api/cipher/decrypt` | `{ "ciphertext", "keys" }` | Entschlüsselung (Modus im Paket) |
 
-**`/api/i-curve` — Antwort (Auszug):** `curve_a`, `curve_b` (`sparkline_points`, `point_count`, Vorschau-Tabellen), `comparison`, `meta_a` / `meta_b` (`language` inkl. `db_coverage`, Domäne, Top-Wörter), `meta_comparison`, `structure_assessment` (`isomorphism_index`, `classification`, `db_coverage_a`/`b`, `db_audit_mode`), `validation_pipeline`.
+**`/api/i-curve`, Antwort (Auszug):** `curve_a`, `curve_b` (`sparkline_points`, `point_count`, Vorschau-Tabellen), `comparison`, `meta_a` / `meta_b` (`language` inkl. `db_coverage`, Domäne, Top-Wörter), `meta_comparison`, `structure_assessment` (`isomorphism_index`, `classification`, `db_coverage_a`/`b`, `db_audit_mode`), `validation_pipeline`.
 
 ### .gpm
 
 | Methode | Pfad | Beschreibung |
 |---------|------|--------------|
 | POST | `/api/gpm/compile` | JSON `{ "text", optional "encrypt", "cipher_mode", "cipher_keys" }` → Base64-`.gpm` v5 oder verschlüsselte GPC-Hülle |
-| POST | `/api/gpm/read` | Upload oder `{ "file_base64", optional "cipher_keys" }` → Analyse (v1–v4); GPC-Dateien brauchen Schlüssel |
-| POST | `/api/gpm/search` | `{ "file_base64", "query", "mode", "query2"? }` — `substance`, `gcd` oder `lcm` (kgV braucht `query2`) |
+| POST | `/api/gpm/read` | Upload oder `{ "file_base64", optional "cipher_keys" }` → Analyse (v1 bis v4); GPC-Dateien brauchen Schlüssel |
+| POST | `/api/gpm/search` | `{ "file_base64", "query", "mode", "query2"? }`, `substance`, `gcd` oder `lcm` (kgV braucht `query2`) |
 
 ---
 
@@ -421,14 +421,14 @@ Ge-Prime-Matrix/
 ├── stop.bat               # Server stoppen (Windows)
 ├── setup.bat / dev.bat    # Setup bzw. Python-Wrapper
 ├── .env.example           # Vorlage für lokale Umgebungsvariablen (committet)
-├── .gitignore             # DB, .env, Logs, venv, IDE-Settings — siehe unten
+├── .gitignore             # DB.env, Logs, venv, IDE-Settings, siehe unten
 ├── render.yaml            # Render.com Deployment
 ├── requirements.txt
-├── data/                  # SQLite (gitignored), sample_words_de.txt, .gitkeep
+├── data/                  # SQLite (gitignored), sample_words_de.txt.gitkeep
 ├── db/                    # SQLite: Repository, Schema, Sprachen
 ├── gpm/                   # .gpm v4: Compiler, Reader, Separator, GPC-Hülle
 ├── pipeline/              # Text → S/I: Normalisierung, Token, Hilfetexte
-│   └── size_compare.py    # Speichergrößen-Vergleich (UTF-8, JSON, .gpm, …)
+│   └── size_compare.py    # Speichergrößen-Vergleich (UTF-8, JSON.gpm, …)
 ├── scrapers/              # Wortquellen: Leipzig, Aspell, GitHub, …
 ├── scripts/               # Betrieb: Server, Port-Steuerung, Bootstrap, gpm_tool
 ├── web/                   # Flask-UI + JSON-API
@@ -471,14 +471,14 @@ Ge-Prime-Matrix/
 | `gpm/` | Binärformat `.gpm` und Dokument-Logik |
 | `web/handlers/` | HTTP-API nach Funktionsbereichen |
 | `web/` | Flask-App, Templates, Static |
-| `scripts/` | Start, Stop, Setup — nicht importieren in Produktionscode |
+| `scripts/` | Start, Stop, Setup, nicht importieren in Produktionscode |
 | `db/` | Persistente Wort-Speicherung (Web + Scraper) |
 
-Root-CLI (`main.py`, `scrape.py`, `run_tests.py`) liegen bewusst im Projektroot — kurze Aufrufe via `dev.bat main.py` bzw. Doppelklick auf Batch-Dateien.
+Root-CLI (`main.py`, `scrape.py`, `run_tests.py`) liegen bewusst im Projektroot, kurze Aufrufe via `dev.bat main.py` bzw. Doppelklick auf Batch-Dateien.
 
-**Import-Konvention:** `ge_prime.*`, `gpm.*`, `web.handlers.*`, `pipeline.*`, `db.*` — keine Root-Duplikate.
+**Import-Konvention:** `ge_prime.*`, `gpm.*`, `web.handlers.*`, `pipeline.*`, `db.*`, keine Root-Duplikate.
 
-**Web-API:** [`web/app.py`](Ge-Prime-Matrix/web/app.py) registriert alle Routen über `register_routes()` in [`web/handlers/__init__.py`](Ge-Prime-Matrix/web/handlers/__init__.py) — ein Handler-Modul pro API-Bereich.
+**Web-API:** [`web/app.py`](Ge-Prime-Matrix/web/app.py) registriert alle Routen über `register_routes()` in [`web/handlers/__init__.py`](Ge-Prime-Matrix/web/handlers/__init__.py), ein Handler-Modul pro API-Bereich.
 
 ---
 
@@ -520,7 +520,7 @@ Ignore-Regeln: [`.gitignore`](.gitignore) (Repo-Root) und [`Ge-Prime-Matrix/.git
 
 ### Lokale Konfiguration
 
-**Umgebungsvariablen:** Vorlage [`.env.example`](Ge-Prime-Matrix/.env.example) nach `.env` kopieren (optional — alle Werte haben Defaults im Code):
+**Umgebungsvariablen:** Vorlage [`.env.example`](Ge-Prime-Matrix/.env.example) nach `.env` kopieren (optional, alle Werte haben Defaults im Code):
 
 ```batch
 copy .env.example .env
@@ -539,7 +539,7 @@ cd Ge-Prime-Matrix
 dev.bat run_tests.py
 ```
 
-Keine `.db`, `.env` oder `settings.json` im Index — dann ist das Repo sicher öffentlich sichtbar.
+Keine `.db`, `.env` oder `settings.json` im Index, dann ist das Repo sicher öffentlich sichtbar.
 
 ---
 
@@ -554,7 +554,7 @@ Keine `.db`, `.env` oder `settings.json` im Index — dann ist das Repo sicher �
 
 **Hinweise:**
 
-- Dateisystem ist **ephemeral** — SQLite unter `data/` geht bei Redeploy verloren. Für Persistenz: Render Postgres oder externes Storage.
+- Dateisystem ist **ephemeral**, SQLite unter `data/` geht bei Redeploy verloren. Für Persistenz: Render Postgres oder externes Storage.
 - Bindung erfolgt an `0.0.0.0:$PORT` (automatisch in Produktion).
 - Free Tier: Spin-down nach Inaktivität (siehe [Render-Docs](https://render.com/docs/free)).
 
@@ -591,7 +591,7 @@ Abdeckung (Auswahl):
 
 ## Umgebungsvariablen
 
-Alle Variablen sind optional — der Server startet ohne `.env` mit den Defaults unten. Vorlage zum Kopieren: [`.env.example`](Ge-Prime-Matrix/.env.example) (committet); echte `.env`-Dateien sind gitignored.
+Alle Variablen sind optional, der Server startet ohne `.env` mit den Defaults unten. Vorlage zum Kopieren: [`.env.example`](Ge-Prime-Matrix/.env.example) (committet); echte `.env`-Dateien sind gitignored.
 
 | Variable | Standard | Beschreibung |
 |----------|----------|--------------|
@@ -600,8 +600,8 @@ Alle Variablen sind optional — der Server startet ohne `.env` mit den Defaults
 | `OPEN_BROWSER` | `1` (lokal) / `0` (Prod) | Chrome beim Start |
 | `FLASK_DEBUG` | `0` | Flask-Debug-Modus |
 | `GE_PRIME_DB` | `data/ge_prime.db` | SQLite-Pfad |
-| `GE_PRIME_ENV` | — | `production` → Cloud-Modus |
-| `RENDER` | — | Von Render gesetzt → Produktion |
+| `GE_PRIME_ENV` |, | `production` → Cloud-Modus |
+| `RENDER` |, | Von Render gesetzt → Produktion |
 | `PYTHONIOENCODING` | `utf-8` | Konsolen-Encoding |
 
 ---
@@ -633,7 +633,7 @@ Datei beschädigt oder von alter/incompatibler Version. Neu kompilieren mit aktu
 
 ### GPC: „Schlüssel erforderlich“ / `needs_keys`
 
-Die Datei beginnt mit **GPC** — normales Lesen liefert nur Metadaten (Modus). Gleiche Schlüssel und Modus wie beim Kompilieren in den Editor-Feldern angeben.
+Die Datei beginnt mit **GPC**, normales Lesen liefert nur Metadaten (Modus). Gleiche Schlüssel und Modus wie beim Kompilieren in den Editor-Feldern angeben.
 
 ### I-Kurve: „Symbol nicht in Tabelle“
 
@@ -641,11 +641,11 @@ Unbekanze Zeichen werden beim Kompilieren über Perm **U** (Unicode-Fallback) ab
 
 ### Cursor-Terminal: Befehle ohne Ausgabe
 
-Sandbox ohne Python im PATH — `dev.bat` verwenden oder Terminal mit vollem Systemzugriff.
+Sandbox ohne Python im PATH, `dev.bat` verwenden oder Terminal mit vollem Systemzugriff.
 
 ### venv schlägt fehl (pgAdmin-Python)
 
-Normal — pgAdmin-Python hat oft kein `venv`-Modul. `setup.bat` nutzt dann pgAdmin-Python **direkt** (`.python-path`).
+Normal, pgAdmin-Python hat oft kein `venv`-Modul. `setup.bat` nutzt dann pgAdmin-Python **direkt** (`.python-path`).
 
 ---
 

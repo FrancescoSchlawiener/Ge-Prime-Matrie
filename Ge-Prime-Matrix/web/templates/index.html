@@ -7,10 +7,10 @@
   <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}?v={{ static_version }}" type="image/svg+xml">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ static_version }}">
 </head>
-<body data-app-version="{{ app_version }}" data-tab-gpm="1">
+<body data-app-version="{{ app_version }}" data-tab-gpm="1" data-url-prefix="{{ url_prefix }}">
   <header>
     <h1>Ge-Prime-Matrix <span class="build-tag">{{ app_version }}</span></h1>
-    <p class="tagline">Sprache als reine Mathematik — verlustfrei komprimieren und rekonstruieren</p>
+    <p class="tagline">Sprache als reine Mathematik, verlustfrei komprimieren und rekonstruieren</p>
     <p class="formula-hero">Datenobjekt = S(I)</p>
     <nav class="tabs" role="tablist">
       <button type="button" class="tab-btn active" data-tab="konzept" role="tab" aria-selected="true">Konzept</button>
@@ -28,8 +28,8 @@
     <section id="tab-konzept" class="tab-panel active">
       <div class="card">
         <h2>Was ist Ge-Prime-Matrix?</h2>
-        <p class="lead">Jedes Wort lässt sich in zwei Ganzzahlen zerlegen: die <strong>Substanz S</strong> (welche Buchstaben vorkommen) und den <strong>Index I</strong> (in welcher Reihenfolge sie stehen). Zusammen sind sie das Datenobjekt <strong>S(I)</strong> — verlustfrei umkehrbar.</p>
-        <p>Die Substanz entsteht aus dem Produkt fester Primzahlen pro Buchstabe. Der Index ist die Position im lexikographisch sortierten Raum aller Anordnungen mit denselben Buchstaben. So wird Sprache zu reiner Mathematik — ohne Wörterbuch und ohne Näherung.</p>
+        <p class="lead">Jedes Wort lässt sich in zwei Ganzzahlen zerlegen: die <strong>Substanz S</strong> (welche Buchstaben vorkommen) und den <strong>Index I</strong> (in welcher Reihenfolge sie stehen). Zusammen sind sie das Datenobjekt <strong>S(I)</strong>, verlustfrei umkehrbar.</p>
+        <p>Die Substanz entsteht aus dem Produkt fester Primzahlen pro Buchstabe. Der Index ist die Position im lexikographisch sortierten Raum aller Anordnungen mit denselben Buchstaben. So wird Sprache zu reiner Mathematik, ohne Wörterbuch und ohne Näherung.</p>
         <div class="flow">
           <span class="flow-box">Wort</span>
           <span class="flow-arrow">→</span>
@@ -42,45 +42,45 @@
       </div>
 
       <div class="card">
-        <h2>Die Oberfläche — was du hier machen kannst</h2>
+        <h2>Die Oberfläche, was du hier machen kannst</h2>
         <dl class="tool-guide">
           <dt>Encodieren</dt>
           <dd>Bis zu 50 Wörter eingeben. Du siehst Schritt für Schritt, wie S und I entstehen; die Werte landen optional in der Wort-Datenbank.</dd>
           <dt>Decodieren</dt>
-          <dd>Substanz S und Index I einfügen — das Werkzeug rekonstruiert das normalisierte Wort und erklärt den Rückweg durch Faktorisierung und Permutationsbaum.</dd>
+          <dd>Substanz S und Index I einfügen, das Werkzeug rekonstruiert das normalisierte Wort und erklärt den Rückweg durch Faktorisierung und Permutationsbaum.</dd>
           <dt>Wortpaar</dt>
-          <dd>Vergleichen: ggT und kgV zweier Wörter. Differenz: S_rest = S₁ ÷ ggT — Teilmenge und Anagramm.</dd>
+          <dd>Vergleichen: ggT und kgV zweier Wörter. Differenz: S_rest = S₁ ÷ ggT, Teilmenge und Anagramm.</dd>
           <dt>I-Kurve</dt>
-          <dd>Index-Vektoren über den Textverlauf — I-Distanz, Meta-Genom (Sprache/Domäne via ggT), Kurvenvergleich und mathematische Struktur-Kreuzvalidierung.</dd>
+          <dd>Index-Vektoren über den Textverlauf, I-Distanz, Meta-Genom (Sprache/Domäne via ggT), Kurvenvergleich und mathematische Struktur-Kreuzvalidierung.</dd>
           <dt>GPM Datei</dt>
-          <dd>Ganzen Text in <strong>.gpm</strong> kompilieren — optional <strong>verschlüsselt (GPC)</strong>. Editor, S(I)-Verschlüsselung, Lesen, Substanz-/ggT-/kgV-Suche.</dd>
+          <dd>Ganzen Text in <strong>.gpm</strong> kompilieren, optional <strong>verschlüsselt (GPC)</strong>. Editor, S(I)-Verschlüsselung, Lesen, Substanz-/ggT-/kgV-Suche.</dd>
           <dt>Datenbank</dt>
           <dd>Übersicht gespeicherter Wörter nach Sprache (Web-Einträge ohne Sprachangabe erscheinen als Random / unsortiert).</dd>
         </dl>
       </div>
 
       <div class="card">
-        <h2>S — Substanz (Primzahlprodukt)</h2>
-        <p>Jeder Buchstabe <strong>A–Z und ß</strong> trägt eine <strong>feste Primzahl</strong> (27 Zeichen — ß = 103). S ist das Produkt aller Primzahlen im Wort.</p>
+        <h2>Substanz S (Primzahlprodukt)</h2>
+        <p>Jeder Buchstabe <strong>A bis Z und ß</strong> trägt eine <strong>feste Primzahl</strong> (27 Zeichen, ß = 103). S ist das Produkt aller Primzahlen im Wort.</p>
         <ul>
-          <li>Reihenfolge spielt keine Rolle — nur die Multimenge zählt.</li>
+          <li>Reihenfolge spielt keine Rolle, nur die Multimenge zählt.</li>
           <li>Kollisionsfrei durch eindeutige Primfaktorzerlegung.</li>
           <li>Aus S allein lässt sich die Buchstaben-Zutatenliste rekonstruieren.</li>
         </ul>
       </div>
 
       <div class="card">
-        <h2>I — Index (Permutations-Rang)</h2>
+        <h2>Index I (Permutations-Rang)</h2>
         <p>S kennt die Buchstaben, aber nicht ihre Anordnung. I ist die Zeilennummer im lexikographisch sortierten Raum aller Permutationen.</p>
         <ul>
-          <li>N = L! / (k₁! · k₂! · …) — Anzahl möglicher Anordnungen.</li>
+          <li>N = L! / (k₁! · k₂! · …), Anzahl möglicher Anordnungen.</li>
           <li>Berechnung über fraktale Intervallschachtelung (Entscheidungsbaum).</li>
           <li>Rechenaufwand wächst nur mit Wortlänge, nicht mit Wörterbuchgröße.</li>
         </ul>
       </div>
 
       <div class="card">
-        <h2>Decodieren — der Rückweg</h2>
+        <h2>Decodieren: der Rückweg</h2>
         <ol>
           <li><strong>Faktorisiere S</strong> → welche Buchstaben, wie oft?</li>
           <li><strong>Öffne den Permutations-Raum</strong> → wie viele Anordnungen gibt es?</li>
@@ -92,7 +92,7 @@
       <div class="card">
         <h2>Sprache in der Datenbank</h2>
         <ul>
-          <li><strong>Web (Encodieren):</strong> Random / unsortiert — keine Sprache angegeben</li>
+          <li><strong>Web (Encodieren):</strong> Random / unsortiert, keine Sprache angegeben</li>
           <li><strong>Scraper:</strong> jeweils die passende Sprache (z.&nbsp;B. Deutsch, Englisch, Spanisch, Französisch, …)</li>
           <li><strong>Sonst:</strong> Random / unsortiert</li>
         </ul>
@@ -102,29 +102,29 @@
         <h2>I-Kurve &amp; Meta-Genom</h2>
         <p>Über die Token-Reihenfolge entsteht pro Text eine <strong>I-Kurve</strong>: für jedes Wort der Quotient <strong>I / N</strong> (Position im Permutationsraum) und die Sprünge zwischen Token (<strong>delta_ratio</strong>).</p>
         <ul>
-          <li><strong>Geometrie-Score</strong> — Ähnlichkeit zweier Kurven (Ratio + Delta).</li>
-          <li><strong>Literal-Match</strong> — Anteil gleicher Wörter an gleicher Position (Kontrast zur Geometrie).</li>
-          <li><strong>structural_waveform_parallel</strong> — hohe Wort-DTW-Geometrie, niedriger Literal-Match, gleiche Token-Anzahl.</li>
-          <li><strong>Meta-Genom V</strong> — Produkt aller Header-Substanzen gewichtet mit Häufigkeit; ggT(V₁, V₂) für Domänen-Überlappung.</li>
-          <li><strong>Sprache / Domäne</strong> — Referenz-Genome (de/en, Medizin/Recht als Demo).</li>
+          <li><strong>Geometrie-Score</strong>, Ähnlichkeit zweier Kurven (Ratio + Delta).</li>
+          <li><strong>Literal-Match</strong>, Anteil gleicher Wörter an gleicher Position (Kontrast zur Geometrie).</li>
+          <li><strong>structural_waveform_parallel</strong>, hohe Wort-DTW-Geometrie, niedriger Literal-Match, gleiche Token-Anzahl.</li>
+          <li><strong>Meta-Genom V</strong>, Produkt aller Header-Substanzen gewichtet mit Häufigkeit; ggT(V₁, V₂) für Domänen-Überlappung.</li>
+          <li><strong>Sprache / Domäne</strong>, Referenz-Genome (de/en, Medizin/Recht als Demo).</li>
         </ul>
-        <p class="muted">Mathematische Struktur-Kreuzvalidierung — keine semantische Plagiat-Bewertung. Max. {{ index_help.icurve_token_max }} Token pro Seite.</p>
+        <p class="muted">Mathematische Struktur-Kreuzvalidierung, keine semantische Plagiat-Bewertung. Max. {{ index_help.icurve_token_max }} Token pro Seite.</p>
       </div>
 
       <div class="card">
         <h2>Verschlüsselung &amp; GPC</h2>
         <p>Text wird kompiliert; <strong>S</strong>, <strong>I</strong> und die Separator-Schicht werden schlüsselabhängig transformiert (Bereich <strong>S(I)-Verschlüsselung</strong> im Tab GPM Datei).</p>
         <ul>
-          <li><strong>Wort-Schlüssel</strong> — Buchstabenwort → Substanz S (Lernmodus).</li>
-          <li><strong>Primzahl-Schlüssel</strong> — <code>prime:17</code> aus der festen Map.</li>
-          <li><strong>Hardcore</strong> — kommagetrennte Wörter und <code>prime:N</code> wechseln pro Token.</li>
-          <li><strong>GPC</strong> — verschlüsselte <strong>.gpm</strong> (Magic <code>GPC</code>): ohne Schlüssel kein lesbares Genom im Editor.</li>
+          <li><strong>Wort-Schlüssel</strong>, Buchstabenwort → Substanz S (Lernmodus).</li>
+          <li><strong>Primzahl-Schlüssel</strong>, <code>prime:17</code> aus der festen Map.</li>
+          <li><strong>Hardcore</strong>, kommagetrennte Wörter und <code>prime:N</code> wechseln pro Token.</li>
+          <li><strong>GPC</strong>, verschlüsselte <strong>.gpm</strong> (Magic <code>GPC</code>): ohne Schlüssel kein lesbares Genom im Editor.</li>
         </ul>
-        <p class="muted">Symmetrische Obfuskation — wer PRIME_MAP und den Schlüssel kennt, kann entschlüsseln. Kein AES-Ersatz.</p>
+        <p class="muted">Symmetrische Obfuskation, wer PRIME_MAP und den Schlüssel kennt, kann entschlüsseln. Kein AES-Ersatz.</p>
       </div>
 
       <div class="card">
-        <h2>Primzahl-Mapping (27 Buchstaben — ß = 103)</h2>
+        <h2>Primzahl-Mapping (27 Buchstaben, ß = 103)</h2>
         <p class="muted norm-prime-hint">Sortiert nach Primzahl. <strong>ß</strong> ist kein Umlaut und wird nicht zu ss expandiert.</p>
         <div class="prime-grid">
           {% for letter, prime in prime_map %}
@@ -187,7 +187,7 @@
     <section id="tab-wortpaar" class="tab-panel" hidden>
       <div class="card">
         <div class="tool-page-head">
-          {% with title='Wortpaar — Vergleichen & Differenz', lead=norm_help.compare, guide=tab_guide.wortpaar %}
+          {% with title='Wortpaar: Vergleichen und Differenz', lead=norm_help.compare, guide=tab_guide.wortpaar %}
           {% include 'partials/tool_page_head.html' %}
           {% endwith %}
         </div>
@@ -243,7 +243,7 @@
     <section id="tab-ikurve" class="tab-panel" hidden>
       <div class="card">
         <div class="tool-page-head">
-          {% with title='Index-Vektoren — Stil & Geometrie', lead=index_help.intro, guide=tab_guide.ikurve %}
+          {% with title='Index-Vektoren: Stil und Geometrie', lead=index_help.intro, guide=tab_guide.ikurve %}
           {% include 'partials/tool_page_head.html' %}
           {% endwith %}
           <details class="tool-help-details">
@@ -314,7 +314,7 @@
               </div>
             </div>
           </div>
-          <p class="muted tip-below-form" id="ikurve-gpm-workspace-status">Optional: .gpm pro Seite per Drag-and-Drop — oder im Tab GPM Datei kompilieren/lesen.</p>
+          <p class="muted tip-below-form" id="ikurve-gpm-workspace-status">Optional: .gpm pro Seite per Drag-and-Drop, oder im Tab GPM Datei kompilieren/lesen.</p>
           <label class="ikurve-audit-mode-label">DB-Sprachaudit
             <select id="ikurve-db-audit-mode" class="ikurve-audit-mode-select">
               <option value="de_en" selected>de ↔ en (schnell)</option>
@@ -360,12 +360,12 @@
     <!-- .GPM DATEI -->
     <section id="tab-gpm" class="tab-panel" hidden>
       <div class="card">
-        <h2>Das .gpm-Format (v7 — verlustfrei)</h2>
+        <h2>Das .gpm-Format (v7, verlustfrei)</h2>
         <p class="lead">Eine <strong>.gpm</strong>-Datei speichert Text als Mathematik: jedes Wort einmal mit S, jede Wiederholung als Verweis, technische Zellen mit I_Satz, Satzzeichen und Leerzeichen in einer eigenen Schicht. Der Originaltext lässt sich bytegenau rekonstruieren.</p>
         <div class="gpm-anatomy">
           <div class="gpm-segment">
             <h3>Genom</h3>
-            <p>Alle verschiedenen Wörter des Textes — mit Original, normalisierter Form und Substanz S.</p>
+            <p>Alle verschiedenen Wörter des Textes, mit Original, normalisierter Form und Substanz S.</p>
           </div>
           <div class="gpm-segment">
             <h3>Wort-Geometrie</h3>
@@ -373,11 +373,11 @@
           </div>
           <div class="gpm-segment">
             <h3>Zell-Geometrie</h3>
-            <p>Fraktale Segmente (≤50 Token): Skelett der Wort-Kategorien und I_Satz pro Zelle — Kette statt monolithischer Body.</p>
+            <p>Fraktale Segmente (≤50 Token): Skelett der Wort-Kategorien und I_Satz pro Zelle, Kette statt monolithischer Body.</p>
           </div>
           <div class="gpm-segment">
             <h3>Separator-Layer</h3>
-            <p>Alles zwischen den Wörtern: Leerzeichen, Zeilenumbrüche, Satzzeichen, Ziffern, Symbole, Emoji — kompakt codiert.</p>
+            <p>Alles zwischen den Wörtern: Leerzeichen, Zeilenumbrüche, Satzzeichen, Ziffern, Symbole, Emoji, kompakt codiert.</p>
           </div>
           <div class="gpm-segment">
             <h3>Integrität</h3>
@@ -388,7 +388,7 @@
 
       <div class="card">
         <div class="tool-page-head">
-          {% with title='Editor — Text kompilieren', guide=tab_guide.gpm %}
+          {% with title='Editor: Text kompilieren', guide=tab_guide.gpm %}
           {% include 'partials/tool_page_head.html' %}
           {% endwith %}
           <details class="tool-help-details">
@@ -439,7 +439,7 @@
             <legend>Verschlüsselung beim Speichern</legend>
             <label class="gpm-encrypt-toggle">
               <input type="checkbox" id="gpm-encrypt-enable">
-              Als verschlüsselte .gpm speichern — ohne Schlüssel nicht lesbar (Magic GPC)
+              Als verschlüsselte .gpm speichern, ohne Schlüssel nicht lesbar (Magic GPC)
             </label>
             <div id="gpm-encrypt-panel" class="gpm-encrypt-panel hidden">
               <fieldset class="cipher-mode-fieldset gpm-cipher-modes">
@@ -459,7 +459,7 @@
 
       <div class="card" id="gpm-cipher-section">
         <div class="tool-page-head">
-          {% with title='S(I)-Verschlüsselung — Primzahlen & Wörter', lead=cipher_help.intro, guide=tab_guide.cipher %}
+          {% with title='S(I)-Verschlüsselung: Primzahlen und Wörter', lead=cipher_help.intro, guide=tab_guide.cipher %}
           {% include 'partials/tool_page_head.html' %}
           {% endwith %}
           <details class="tool-help-details">
@@ -494,7 +494,7 @@
       </div>
 
       <div class="card">
-        <h2>Lesen — Analyse</h2>
+        <h2>Lesen, Analyse</h2>
         <p class="muted">Genom, Geometrie-Vorschau und zeichengenaue Rekonstruktion. Verschlüsselte Dateien (GPC) benötigen den Schlüssel.</p>
         <form id="gpm-read-form" class="tool-form tool-form-stack">
           <div id="gpm-read-dropzone" class="file-dropzone">
@@ -503,7 +503,7 @@
             <span class="file-dropzone-name muted hidden" id="gpm-read-file-name"></span>
           </div>
           <div id="gpm-decrypt-panel" class="gpm-decrypt-panel hidden">
-            <p class="gpm-decrypt-lead"><strong>Verschlüsselte Datei</strong> — Schlüssel zum Entschlüsseln:</p>
+            <p class="gpm-decrypt-lead"><strong>Verschlüsselte Datei</strong>, Schlüssel zum Entschlüsseln:</p>
             <label class="full-width">Schlüssel
               <input type="text" id="gpm-read-cipher-key" spellcheck="false" placeholder="Wie beim Kompilieren · Hardcore: kommagetrennt" autocomplete="off">
             </label>
@@ -515,7 +515,7 @@
       </div>
 
       <div class="card">
-        <h2>Suche — Ganzzahl-Matching</h2>
+        <h2>Suche, Ganzzahl-Matching</h2>
         <p class="muted">{{ match_help.substance_mode }}</p>
         <p class="muted">{{ match_help.gcd_mode }}</p>
         <p class="muted">{{ match_help.lcm_mode }}</p>
@@ -537,7 +537,7 @@
           </label>
           <button type="submit" class="btn">In geladener .gpm suchen</button>
         </form>
-        <p class="muted tip-below-form">Zuerst kompilieren oder eine .gpm-Datei lesen — die Datei bleibt im Speicher für Suche.</p>
+        <p class="muted tip-below-form">Zuerst kompilieren oder eine .gpm-Datei lesen, die Datei bleibt im Speicher für Suche.</p>
         <div id="gpm-search-result" class="result hidden"></div>
       </div>
     </section>
@@ -546,7 +546,7 @@
     <section id="tab-datenbank" class="tab-panel" hidden>
       <div class="card">
         <div class="tool-page-head">
-          {% with title='Wort-Datenbank', lead='Gespeicherte Einträge nach Sprache — Web-Encodieren ohne Sprachangabe erscheint als Random / unsortiert.', guide=tab_guide.datenbank %}
+          {% with title='Wort-Datenbank', lead='Gespeicherte Einträge nach Sprache, Web-Encodieren ohne Sprachangabe erscheint als Random / unsortiert.', guide=tab_guide.datenbank %}
           {% include 'partials/tool_page_head.html' %}
           {% endwith %}
         </div>
@@ -559,7 +559,7 @@
           {% endfor %}
         </ul>
         {% else %}
-        <p class="muted" id="db-empty-hint">Noch leer — Wörter im Tab Encodieren speichern oder <code>python scrape.py --source kevina</code></p>
+        <p class="muted" id="db-empty-hint">Noch leer, Wörter im Tab Encodieren speichern oder <code>python scrape.py --source kevina</code></p>
         {% endif %}
         </div>
       </div>
