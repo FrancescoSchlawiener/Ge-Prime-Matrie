@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPM - Zero-Copy Ring-0 Kernel Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { mono: ['Fira Code', 'monospace'], sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        kernel: { bg: '#030303', panel: '#0a0a0a', border: '#1f1f22', accent: '#00e5ff', alert: '#ff003c', succ: '#00ff66', tensor: '#eab308' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #030303; color: #e5e5e5; }
+        .glow-succ { box-shadow: 0 0 15px rgba(0, 255, 102, 0.15); }
+        .glow-alert { box-shadow: 0 0 20px rgba(255, 0, 60, 0.25); }
+        .glow-accent { box-shadow: 0 0 15px rgba(0, 229, 255, 0.15); }
+        .glow-tensor { box-shadow: 0 0 30px rgba(234, 179, 8, 0.25); }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+        
+        .hardware-line { position: relative; }
+        .hardware-line::before { content: 'DMA>'; position: absolute; left: -25px; color: #ff003c; font-weight: bold; opacity: 0.8; font-size: 10px; top: 2px;}
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-kernel-tensor selection:text-black">
+
+    <header class="border-b border-kernel-border bg-kernel-panel/90 backdrop-blur sticky top-0 z-50 px-6 py-3">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="h-2.5 w-2.5 rounded-full bg-kernel-tensor animate-pulse glow-tensor"></div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+                        GPM KERNEL <span class="text-[10px] px-1.5 py-0.5 rounded bg-kernel-tensor/10 text-kernel-tensor border border-kernel-tensor/20 font-mono">ring-0</span>
+                    </h1>
+                    <p class="text-[10px] text-zinc-500 uppercase tracking-widest font-mono">SIGIO Interrupts | Modulo BIG_PRIME | Tensor Pointers</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-xs text-kernel-succ mono border border-kernel-succ/30 px-2 py-1 rounded bg-black shadow-sm glow-succ" id="shmStatus">MMAP: ZERO-COPY</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Column: Hardware DMA Controller -->
+        <div class="lg:col-span-5 flex flex-col gap-6">
+            
+            <div class="bg-kernel-panel border border-kernel-border rounded-lg p-5 shadow-lg relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-kernel-alert to-transparent opacity-50"></div>
+                <h2 class="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-4 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-kernel-alert" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    Hardware DMA (Ring-Buffer)
+                </h2>
+                
+                <p class="text-[11px] text-zinc-500 mb-4 font-mono leading-relaxed">
+                    Schreibt Bytes asynchron in den RAM. Der FPM-Kernel schläft (<code class="text-zinc-300">pause()</code>), bis ein <code class="text-zinc-300">SIGIO</code> Hardware-Interrupt ihn weckt. Das eliminiert alle read()-Latenzen.
+                </p>
+
+                <textarea id="dmaInput" class="w-full h-24 bg-[#050505] border border-kernel-border rounded p-3 text-sm text-kernel-alert focus:outline-none focus:border-kernel-alert focus:ring-1 focus:ring-kernel-alert font-mono placeholder-zinc-700 resize-none" placeholder="Schreibe in den RAM... (z.B. _START BAR _END)"></textarea>
+                
+                <div class="mt-4 flex gap-2">
+                    <button onclick="sendInterrupt()" class="flex-grow bg-kernel-alert/10 hover:bg-kernel-alert/20 text-kernel-alert border border-kernel-alert/30 rounded p-2 text-xs font-bold uppercase tracking-wider transition-colors flex justify-center items-center gap-2">
+                        <span>Send SIGIO Interrupt</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
+                    </button>
+                </div>
+                
+                <div class="mt-5 border-t border-kernel-border pt-4">
+                    <span class="text-[10px] text-zinc-600 block mb-2 font-mono uppercase">Verschränkungs-Testdaten laden:</span>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="fillDMA('_START BAR FRANCESCO GROSS _END')" class="text-[10px] px-2 py-1 rounded bg-[#050505] border border-zinc-800 hover:border-kernel-alert hover:text-kernel-alert transition font-mono">Tensor-Faltung (Normal)</button>
+                        <button onclick="fillDMA('_START VERYLONGSTRINGTHATWOULDOVERFLOWULLONGMAX _END')" class="text-[10px] px-2 py-1 rounded bg-[#050505] border border-zinc-800 hover:border-kernel-alert hover:text-kernel-alert transition font-mono">BIG_PRIME Modulo Test</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FPM Core Math Matrix -->
+            <div class="bg-kernel-panel border border-kernel-border rounded-lg p-5 shadow-lg">
+                <h2 class="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-4">GPM Arithmetic Core</h2>
+                <div class="p-3 bg-[#050505] border border-zinc-800 rounded text-[10px] font-mono text-zinc-400 space-y-3">
+                    <div>
+                        <span class="block text-zinc-600 mb-1">Zyklische Hardware-Grenze (BIG_PRIME):</span>
+                        <span class="text-kernel-accent break-all text-xs font-bold">100.000.000.000.000.003</span>
+                    </div>
+                    <div class="pt-2 border-t border-zinc-800">
+                        <span class="block text-zinc-600 mb-1">Identitäts-Erhaltung (Modulo-Arithmetik):</span>
+                        <span class="text-kernel-succ break-all">S = (S * p) % BIG_PRIME</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Kernel Space & Tensor View -->
+        <div class="lg:col-span-7 flex flex-col gap-6">
+            
+            <!-- Tensor View (Linked List) -->
+            <div class="bg-kernel-panel border border-kernel-border rounded-lg p-5 shadow-lg flex flex-col">
+                <h2 class="text-xs font-semibold uppercase tracking-widest text-zinc-300 flex items-center gap-2 mb-4">
+                    <svg class="w-4 h-4 text-kernel-tensor" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"></path></svg>
+                    Satz-Substrat (Tensor Linked List im RAM)
+                </h2>
+
+                <div id="tensorList" class="flex items-center gap-2 overflow-x-auto pb-4 pt-2 px-2">
+                    <div class="text-zinc-600 text-[10px] font-mono italic whitespace-nowrap">SHM_PTR -> NULL (Warte auf SIGIO)</div>
+                </div>
+            </div>
+
+            <!-- The Ultimate Tensor Collapse View -->
+            <div id="tensorCollapseView" class="hidden bg-gradient-to-br from-[#1a1400] to-[#0a0a0a] border border-kernel-tensor/40 rounded-lg p-6 shadow-lg glow-tensor relative overflow-hidden transition-all duration-500">
+                <div class="absolute -right-10 -top-10 w-40 h-40 bg-kernel-tensor/10 blur-3xl rounded-full"></div>
+                
+                <h2 class="text-sm font-bold uppercase tracking-widest text-kernel-tensor mb-4 flex items-center gap-3">
+                    Ultimative Tensor-Verschränkung (Satz-Ebene)
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-black/60 border border-kernel-tensor/20 p-4 rounded-lg">
+                        <span class="text-[10px] text-zinc-500 font-mono uppercase block mb-1">Groß-S (Tensor Masse % BIG_PRIME)</span>
+                        <div id="val_Stotal" class="text-xl font-bold text-white font-mono break-all">0</div>
+                    </div>
+                    <div class="bg-black/60 border border-kernel-tensor/20 p-4 rounded-lg">
+                        <span class="text-[10px] text-zinc-500 font-mono uppercase block mb-1">Groß-I (Tensor-Index)</span>
+                        <div id="val_Itotal" class="text-xl font-bold text-kernel-accent font-mono break-all">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FPM Kernel Execution Log -->
+            <div class="bg-kernel-panel border border-kernel-border rounded-lg shadow-lg flex flex-col h-64">
+                <div class="border-b border-kernel-border p-3 px-5 flex justify-between items-center bg-[#050505] rounded-t-lg">
+                    <h2 class="text-xs font-semibold uppercase tracking-widest text-zinc-300">
+                        Kernel Execution Context (SIGIO Wakeup)
+                    </h2>
+                </div>
+                
+                <div id="kernelLog" class="p-5 pl-8 font-mono text-[11px] overflow-y-auto flex-grow space-y-3">
+                    <div class="text-zinc-600 italic">-- Dämon im pause() Zustand. 0% CPU Last.</div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        const primeMatrix = {
+            'E': 2, 'A': 3, 'O': 5, 'I': 7, 'T': 11, 'N': 13,
+            'R': 17, 'S': 19, 'L': 23, 'C': 29, 'D': 31, 'U': 37,
+            'M': 41, 'P': 43, 'H': 47, 'G': 53, 'B': 59, 'F': 61,
+            'Y': 67, 'W': 71, 'K': 73, 'V': 79, 'X': 83, 'Z': 89,
+            'J': 97, 'Q': 101, 'ß': 103
+        };
+
+        const BIG_PRIME = 100000000000000003n;
+        let raumAktiv = false;
+        let currentTensorObjects = [];
+
+        function logTo(html) {
+            const el = document.getElementById('kernelLog');
+            const time = new Date().toISOString().split('T')[1].slice(0,-1);
+            el.innerHTML += `<div class="hardware-line"><span class="text-zinc-600 mr-2">[${time}]</span> ${html}</div>`;
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function fillDMA(text) {
+            document.getElementById('dmaInput').value = text;
+        }
+
+        function factorial(n) {
+            if (n <= 1) return 1n;
+            let f = 1n;
+            for (let i = 2; i <= n; i++) f *= BigInt(i);
+            return f;
+        }
+
+        function calculateIAndN(sequence) {
+            const L = sequence.length;
+            if (L === 0) return { index: 0n, N: 0n };
+
+            const freqs = {};
+            const alphabet = [];
+            for (let p of sequence) {
+                if (!freqs[p]) { freqs[p] = 0; alphabet.push(p); }
+                freqs[p]++;
+            }
+
+            // Strikt aufsteigende Sortierung für Geometrie
+            alphabet.sort((a, b) => (a < b ? -1 : (a > b ? 1 : 0)));
+
+            let total_N = factorial(L);
+            for (let p of alphabet) {
+                if (freqs[p] > 1) total_N /= factorial(freqs[p]);
+            }
+
+            let index_I = 0n;
+            const workFreqs = { ...freqs };
+
+            for (let t = 0; t < L; t++) {
+                const currentElement = sequence[t];
+                let sprungweite_total = 0n;
+                
+                for (let j = 0; j < alphabet.length; j++) {
+                    const p = alphabet[j];
+                    if (p >= currentElement) break;
+
+                    if (workFreqs[p] > 0) {
+                        workFreqs[p]--;
+                        let subPerms = factorial(L - 1 - t);
+                        for (let k = 0; k < alphabet.length; k++) {
+                            const pk = alphabet[k];
+                            if (workFreqs[pk] > 1) subPerms /= factorial(workFreqs[pk]);
+                        }
+                        sprungweite_total += subPerms;
+                        workFreqs[p]++;
+                    }
+                }
+                index_I += sprungweite_total;
+                workFreqs[currentElement]--;
+            }
+            return { index: index_I, N: total_N };
+        }
+
+        function updateTensorUI() {
+            const list = document.getElementById('tensorList');
+            if (currentTensorObjects.length === 0) {
+                list.innerHTML = `<div class="text-zinc-600 text-[10px] font-mono italic whitespace-nowrap">SHM_PTR -> NULL</div>`;
+                return;
+            }
+
+            let html = '';
+            currentTensorObjects.forEach((obj, idx) => {
+                html += `
+                    <div class="bg-[#050505] border border-zinc-800 p-3 rounded-lg flex flex-col gap-1 min-w-[150px] shadow-md border-t-2 border-t-kernel-accent shrink-0">
+                        <span class="text-[9px] text-zinc-500 uppercase font-bold tracking-wider border-b border-zinc-900 pb-1 mb-1">Struct [${idx}]</span>
+                        <span class="text-xs text-zinc-300">W: <span class="text-white font-bold">"${obj.word}"</span></span>
+                        <span class="text-[10px] text-zinc-400 mt-1">S: <span class="text-kernel-succ">${obj.S}</span></span>
+                        <span class="text-[10px] text-zinc-400">I: <span class="text-kernel-accent">${obj.I}</span></span>
+                        <span class="text-[9px] text-zinc-500 mt-2 font-mono flex items-center gap-1 border-t border-zinc-900 pt-2">
+                            *tensor_next ${idx === currentTensorObjects.length - 1 ? '<span class="text-red-500 font-bold">NULL</span>' : '<span class="text-kernel-tensor font-bold">PTR</span>'}
+                        </span>
+                    </div>
+                `;
+                if (idx < currentTensorObjects.length - 1) {
+                    html += `
+                        <div class="flex items-center text-kernel-tensor px-1 shrink-0">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                        </div>
+                    `;
+                }
+            });
+            list.innerHTML = html;
+        }
+
+        function sendInterrupt() {
+            const input = document.getElementById('dmaInput').value;
+            if (!input.trim()) return;
+
+            logTo(`<span class="text-kernel-alert font-bold">SIGIO EMPFANGEN. Kernel wacht aus pause() auf...</span>`);
+            
+            const words = input.split(/[\s\t\n\r]+/).filter(w => w.length > 0);
+            document.getElementById('dmaInput').value = ''; // Flush DMA
+
+            const tensorView = document.getElementById('tensorCollapseView');
+
+            words.forEach((word) => {
+                if (word === '_START') {
+                    raumAktiv = true;
+                    currentTensorObjects = [];
+                    updateTensorUI();
+                    tensorView.classList.add('hidden');
+                    logTo(`<span class="text-kernel-tensor font-bold">---> ÖFFNE TENSOR-SCOPE (_START)</span>`);
+                    return;
+                }
+                
+                if (word === '_END') {
+                    if (raumAktiv && currentTensorObjects.length > 0) {
+                        // TENSOR KOLLAPS MIT ZYKLISCHER MODULO REDUKTION
+                        let S_total = 1n;
+                        const massArray = [];
+                        
+                        currentTensorObjects.forEach(obj => {
+                            let s_val = BigInt(obj.S);
+                            massArray.push(s_val);
+                            // Traversierung des Tensors und Modulo Rechnung auf Gesamt-Satz
+                            S_total = (S_total * s_val) % BIG_PRIME;
+                        });
+
+                        const tensorResult = calculateIAndN(massArray);
+                        
+                        document.getElementById('val_Stotal').innerText = S_total.toString();
+                        document.getElementById('val_Itotal').innerText = tensorResult.index.toString();
+                        
+                        tensorView.classList.remove('hidden');
+                        logTo(`<span class="text-kernel-tensor font-bold"><--- COLLAPSE TENSOR (_END). Groß-S und Groß-I über LinkedList iteriert.</span>`);
+                    }
+                    raumAktiv = false;
+                    return;
+                }
+
+                if (!raumAktiv) return;
+
+                const primes = [];
+                let word_S = 1n;
+
+                for (let i=0; i<word.length; i++) {
+                    let char = word[i].toUpperCase();
+                    if (word[i] === 'ß') char = 'ß';
+
+                    if (primeMatrix[char]) {
+                        const prime = BigInt(primeMatrix[char]);
+                        primes.push(prime);
+                        
+                        // VOLLENDUNG: ZYKLISCHE REDUKTION AUF LOKALER WORT-EBENE
+                        // Das System stürzt bei langen Wörtern nie wieder ab!
+                        word_S = (word_S * prime) % BIG_PRIME;
+                    }
+                }
+
+                if (primes.length > 0) {
+                    const result = calculateIAndN(primes);
+                    currentTensorObjects.push({
+                        word: word,
+                        S: word_S.toString(),
+                        I: result.index.toString()
+                    });
+                    
+                    logTo(`Verzeigere Genom <b>${word}</b> -> struct { S: ${word_S}, I: ${result.index}, *tensor_next }`);
+                    updateTensorUI();
+                }
+            });
+            
+            logTo(`<span class="text-zinc-500">Ring-Puffer leer. Kernel führt pause() aus. 0% CPU.</span>`);
+        }
+    </script>
+</body>
+</html>

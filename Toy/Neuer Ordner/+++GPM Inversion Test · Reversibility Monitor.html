@@ -1,0 +1,2836 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPM Inversion Test · Reversibility Monitor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { mono: ['Fira Code', 'monospace'], sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        kernel: { bg: 'var(--bg)', panel: 'var(--panel)', border: 'var(--border)', accent: 'var(--accent)', alert: 'var(--red)', succ: 'var(--green)', tensor: 'var(--yellow)' }
+                    }
+                }
+            }
+        }
+    </script>
+    
+<style>
+    :root {
+        --bg: #030303;
+        --panel: #0a0a0a;
+        --panel2: #050505;
+        --border: #1f1f22;
+        --border-soft: #2a2a30;
+        --accent: #00d9ff;
+        --green: #22c55e;
+        --yellow: #eab308;
+        --red: #ef4444;
+        --neutral: #71717a;
+        --radius: 14px;
+        --radius-sm: 10px;
+        --radius-lg: 18px;
+        --shadow: 0 20px 50px rgba(0,0,0,.35);
+        --shadow-soft: 0 10px 24px rgba(0,0,0,.25);
+        --content-pad: 1.25rem;
+        --content-gap: 1rem;
+        
+        /* Unified Type Colors */
+        --type-prefix: #00d9ff;
+        --type-stem: #22c55e;
+        --type-suffix: #eab308;
+        --type-custom: #a855f7;
+        --type-name: #fb923c;
+        --type-compound: #38bdf8;
+        --type-particle: #22d3ee;
+        --type-other: #a1a1aa;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    
+    body {
+        overflow-x: hidden;
+        background-color: var(--bg);
+        color: #e5e5e5;
+        font-family: 'Inter', sans-serif;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background:
+            radial-gradient(circle at top left, rgba(0,217,255,.06), transparent 26%),
+            radial-gradient(circle at bottom right, rgba(234,179,8,.04), transparent 24%),
+            linear-gradient(180deg, #050505 0%, #030303 100%);
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: #0a0a0a; }
+    ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 2px; }
+
+    /* Glows & Animations */
+    .glow-succ { box-shadow: 0 0 30px rgba(0, 255, 102, 0.25); }
+    .glow-alert {
+        box-shadow: 0 0 30px rgba(255, 0, 60, 0.35);
+        animation: panic 0.3s ease infinite alternate;
+    }
+    .glow-tensor { box-shadow: 0 0 20px rgba(234, 179, 8, 0.2); }
+    
+    @keyframes panic {
+        0% { box-shadow: 0 0 20px rgba(255, 0, 60, 0.3); transform: scale(1); }
+        100% { box-shadow: 0 0 80px rgba(255, 0, 60, 0.6); transform: scale(1.02); }
+    }
+    @keyframes flashGreen {
+        0% { background-color: rgba(0, 255, 102, 0); }
+        50% { background-color: rgba(0, 255, 102, 0.2); }
+        100% { background-color: rgba(0, 255, 102, 0); }
+    }
+    @keyframes flashRed {
+        0% { background-color: rgba(255, 0, 60, 0); }
+        50% { background-color: rgba(255, 0, 60, 0.2); }
+        100% { background-color: rgba(255, 0, 60, 0); }
+    }
+    .flash-succ { animation: flashGreen 0.6s ease; }
+    .flash-alert { animation: flashRed 0.6s ease; }
+
+    /* Layout & Panels */
+    .app-shell {
+        padding-left: clamp(1rem, 2vw, 1.5rem);
+        padding-right: clamp(1rem, 2vw, 1.5rem);
+    }
+    main { padding-top: 1.25rem !important; padding-bottom: 1.25rem !important; }
+    
+    .card-shell {
+        background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0)), var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-soft);
+        padding: 1.05rem 1.05rem 1.05rem 1.15rem;
+    }
+    
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        font-size: .72rem;
+        text-transform: uppercase;
+        letter-spacing: .18em;
+        color: #a1a1aa;
+        font-weight: 700;
+    }
+    .section-title .mark {
+        width: 4px;
+        height: 1rem;
+        border-radius: 9999px;
+        background: var(--accent);
+    }
+
+    /* Buttons & Interactables */
+    .btn-primary, .btn-secondary, .btn-danger, .btn-ghost,
+    .help-badge, .nav-btn, .filter-chip, .icon-btn {
+        transition: all .16s ease;
+    }
+    
+    .btn-primary {
+        border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+        background: color-mix(in srgb, var(--accent) 10%, transparent);
+        color: var(--accent);
+        border-radius: 9999px;
+        padding: .65rem .95rem;
+        font-size: .75rem;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+    }
+    .btn-primary:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); transform: translateY(-1px); }
+    
+    .btn-secondary, .help-badge {
+        border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+        background: color-mix(in srgb, var(--accent) 8%, transparent);
+        color: var(--accent);
+        border-radius: 9999px;
+        padding: .48rem .8rem;
+        font-size: .72rem;
+        font-weight: 700;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+    }
+    .btn-secondary:hover, .help-badge:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); transform: translateY(-1px); }
+    
+    .btn-danger {
+        border: 1px solid color-mix(in srgb, var(--red) 35%, transparent);
+        background: color-mix(in srgb, var(--red) 10%, transparent);
+        color: var(--red);
+        border-radius: 9999px;
+        padding: .48rem .8rem;
+        font-size: .72rem;
+        font-weight: 800;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+    }
+    .btn-danger:hover { background: color-mix(in srgb, var(--red) 16%, transparent); transform: translateY(-1px); }
+    
+    .btn-ghost, .nav-btn, .filter-chip {
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,.02);
+        color: #c9c9d1;
+        border-radius: 12px;
+        padding: .58rem .75rem;
+        font-size: .73rem;
+        font-weight: 700;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+    }
+    .btn-ghost:hover, .nav-btn:hover, .filter-chip:hover {
+        border-color: color-mix(in srgb, var(--accent) 34%, var(--border));
+        color: #fff;
+        background: color-mix(in srgb, var(--accent) 5%, transparent);
+    }
+    .filter-chip.border-kernel-accent {
+        border-color: rgba(0,229,255,0.45);
+        background: rgba(0,229,255,0.10);
+        color: #fff;
+    }
+
+    .nav-btn {
+        display: flex;
+        align-items: center;
+        gap: .65rem;
+        width: 100%;
+        text-align: left;
+        padding: .82rem .95rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .nav-btn::before {
+        content: '';
+        width: .5rem;
+        height: .5rem;
+        border-radius: 9999px;
+        background: color-mix(in srgb, var(--accent) 45%, transparent);
+        flex: 0 0 auto;
+        opacity: .8;
+    }
+    .nav-btn:hover::before { opacity: 1; }
+    .nav-btn.active {
+        border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+        background: color-mix(in srgb, var(--accent) 8%, transparent);
+        color: #fff;
+        box-shadow: inset 3px 0 0 var(--accent);
+    }
+    .nav-btn svg { color: var(--accent); }
+
+    .icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,0.02);
+        color: #d4d4d8;
+    }
+    .icon-btn:hover { transform: translateY(-1px); border-color: rgba(0,229,255,0.35); color: #00e5ff; }
+    .icon-btn.danger:hover { border-color: rgba(255,0,60,0.35); color: #ff003c; }
+
+    /* Chips & Badges */
+    .mini-chip {
+        font-size: 9px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,0.02);
+        color: #a1a1aa;
+    }
+    .library-badge {
+        font-size: 10px;
+        padding: 3px 8px;
+        border-radius: 9999px;
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,0.02);
+        color: #a1a1aa;
+    }
+    .info-pill {
+        font-size: 10px;
+        padding: 3px 8px;
+        border-radius: 9999px;
+        border: 1px solid rgba(0,229,255,0.22);
+        background: rgba(0,229,255,0.08);
+        color: #00e5ff;
+        white-space: nowrap;
+    }
+    
+    .type-chip {
+        font-size: 10px;
+        line-height: 1;
+        padding: 4px 8px;
+        border-radius: 9999px;
+        border: 1px solid transparent;
+        white-space: nowrap;
+    }
+    .type-prefix { background: rgba(0,217,255,.12); color: var(--type-prefix); border-color: color-mix(in srgb, var(--type-prefix) 24%, transparent); }
+    .type-stem { background: rgba(34,197,94,.12); color: var(--type-stem); border-color: color-mix(in srgb, var(--type-stem) 24%, transparent); }
+    .type-suffix { background: rgba(234,179,8,.12); color: var(--type-suffix); border-color: color-mix(in srgb, var(--type-suffix) 24%, transparent); }
+    .type-custom { background: rgba(168,85,247,.12); color: var(--type-custom); border-color: color-mix(in srgb, var(--type-custom) 24%, transparent); }
+    .type-name { background: rgba(251,146,60,.12); color: var(--type-name); border-color: color-mix(in srgb, var(--type-name) 24%, transparent); }
+    .type-compound { background: rgba(56,189,248,.12); color: var(--type-compound); border-color: color-mix(in srgb, var(--type-compound) 24%, transparent); }
+    .type-particle { background: rgba(34,211,238,.12); color: var(--type-particle); border-color: color-mix(in srgb, var(--type-particle) 24%, transparent); }
+    .type-other { background: rgba(161,161,170,.12); color: var(--type-other); border-color: color-mix(in srgb, var(--type-other) 24%, transparent); }
+
+    .lang-chip {
+        font-size: 9px;
+        line-height: 1;
+        padding: 3px 6px;
+        border-radius: 6px;
+        border: 1px solid rgba(0,229,255,0.18);
+        background: rgba(0,229,255,0.06);
+        color: #7dd3fc;
+    }
+
+    /* Standardized Morpheme Card (used in Library AND Audit) */
+    .morpheme-card {
+        position: relative;
+        border: 1px solid var(--border);
+        background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0)), var(--panel2);
+        border-radius: var(--radius);
+        padding: .95rem 1rem 1rem 1.1rem;
+        overflow: hidden;
+    }
+    .morpheme-card .title {
+        font-size: .93rem;
+        font-weight: 800;
+        line-height: 1.1;
+        color: #fff;
+        word-break: break-word;
+    }
+    .morpheme-card .subtitle {
+        font-size: .72rem;
+        color: var(--neutral);
+        margin-top: .15rem;
+    }
+    .morpheme-card .meta-grid {
+        margin-top: .55rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: .35rem;
+        align-items: center;
+    }
+    .morpheme-card .actions {
+        display: flex;
+        align-items: center;
+        gap: .35rem;
+        flex-shrink: 0;
+    }
+
+    /* Modals & Overlays */
+    .modal-backdrop, .ui-help-overlay {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0,0,0,0.62);
+        backdrop-filter: blur(5px);
+        z-index: 70;
+        padding: 16px;
+    }
+    .ui-help-overlay { align-items: flex-start; justify-content: flex-end; z-index: 60; }
+    
+    .modal-card, .ui-help-panel {
+        width: min(760px, calc(100vw - 32px));
+        max-height: min(88vh, 900px);
+        overflow: auto;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        background: #070707;
+        box-shadow: 0 30px 80px rgba(0,0,0,0.45);
+    }
+    .ui-help-panel { width: min(560px, calc(100vw - 32px)); }
+    .ui-help-panel h3 { color: #fff; }
+    .ui-help-panel p, .ui-help-panel li { color: #cfcfcf; }
+
+    /* Undo Toast */
+    .undo-toast-wrap { position: fixed; left: 16px; bottom: 16px; z-index: 80; pointer-events: none; }
+    .undo-toast {
+        pointer-events: auto;
+        display: none;
+        min-width: 260px;
+        max-width: 420px;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: rgba(7,7,7,0.98);
+        box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+        padding: 12px 14px;
+    }
+    .undo-toast .action {
+        border: 1px solid rgba(0,229,255,0.24);
+        background: rgba(0,229,255,0.1);
+        color: #00e5ff;
+        border-radius: 10px;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    /* Floating Action Button */
+    .guide-fab {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        z-index: 65;
+        width: 48px;
+        height: 48px;
+        border-radius: 9999px;
+        border: 1px solid rgba(0,229,255,0.24);
+        background: rgba(0,229,255,0.10);
+        color: #00e5ff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 20px 30px rgba(0,0,0,0.25);
+    }
+    .guide-fab:hover { background: rgba(0,229,255,0.16); }
+    .guide-fab .label {
+        position: absolute;
+        right: 58px;
+        bottom: 8px;
+        opacity: 0;
+        transform: translateY(2px);
+        transition: opacity 0.15s ease, transform 0.15s ease;
+        background: rgba(7,7,7,0.95);
+        border: 1px solid var(--border);
+        color: #e5e5e5;
+        padding: 6px 10px;
+        border-radius: 9999px;
+        font-size: 12px;
+        white-space: nowrap;
+        pointer-events: none;
+    }
+    .guide-fab:hover .label { opacity: 1; transform: translateY(0); }
+
+    /* Minor Utilities */
+    .field-note { font-size: 11px; color: #71717a; line-height: 1.45; }
+    .library-toggle { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+    
+    .setting-card {
+        position: relative;
+        border: 1px solid var(--border);
+        background: var(--panel2);
+        border-radius: var(--radius);
+        padding: .9rem 1.05rem;
+    }
+    .setting-card .heading { font-size: .74rem; text-transform: uppercase; letter-spacing: .14em; color: #c9c9d1; font-weight: 800; }
+    .setting-card .desc { margin-top: .25rem; font-size: .82rem; color: var(--neutral); line-height: 1.45; }
+
+    .guidetabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .4rem;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: .75rem;
+        margin-bottom: .95rem;
+    }
+    .guide-tab {
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,.02);
+        color: #a1a1aa;
+        border-radius: 9999px;
+        padding: .45rem .75rem;
+        font-size: .72rem;
+        font-weight: 800;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+    }
+    .guide-tab.active {
+        color: #fff;
+        border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+        background: color-mix(in srgb, var(--accent) 10%, transparent);
+    }
+    .guide-pane { display: none; }
+    .guide-pane.active { display: block; }
+
+    .icon-chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.2rem;
+        height: 1.2rem;
+        border-radius: .35rem;
+        border: 1px solid currentColor;
+        font-size: .7rem;
+    }
+    
+    .stat-tile {
+        border: 1px solid var(--border);
+        background: var(--panel2);
+        border-radius: var(--radius-sm);
+        padding: .9rem 1rem;
+        text-align: right;
+    }
+    .stat-label { font-size: .56rem; text-transform: uppercase; letter-spacing: .16em; color: var(--neutral); }
+    .stat-value { margin-top: .18rem; font-family: 'Fira Code', monospace; font-weight: 800; font-size: 1rem; color: #fff; text-align: right; }
+
+    .legend-chip { display: inline-flex; align-items: center; gap: .45rem; font-size: .75rem; font-weight: 700; color: #e5e5e5; }
+    .legend-swatch {
+        width: .75rem;
+        height: .75rem;
+        border-radius: .18rem;
+        border: 1px solid currentColor;
+        box-shadow: 0 0 0 1px rgba(255,255,255,.02) inset;
+    }
+    .legend-swatch.type-prefix { color: var(--type-prefix); background: var(--type-prefix); }
+    .legend-swatch.type-stem { color: var(--type-stem); background: var(--type-stem); }
+    .legend-swatch.type-suffix { color: var(--type-suffix); background: var(--type-suffix); }
+    .legend-swatch.type-custom { color: var(--type-custom); background: var(--type-custom); }
+    .legend-swatch.type-name { color: var(--type-name); background: var(--type-name); }
+    .legend-swatch.type-compound { color: var(--type-compound); background: var(--type-compound); }
+    .legend-swatch.type-particle { color: var(--type-particle); background: var(--type-particle); }
+    .legend-swatch.type-other { color: var(--type-other); background: var(--type-other); }
+
+    /* Density & User Modes */
+    body.dense main { padding-top: .85rem !important; padding-bottom: .85rem !important; }
+    body.dense .card-shell, body.dense .bg-kernel-panel { border-radius: 12px !important; }
+    body.dense .morpheme-card, body.dense .setting-card { border-radius: 12px !important; }
+    body.dense .morpheme-card { padding: .75rem .8rem .8rem .95rem; }
+    body.beginner .expert-only { display: none !important; }
+    body.tooltips-off [title] { pointer-events: none; }
+    body.tooltips-off .help-badge, body.tooltips-off .btn-secondary { position: relative; }
+</style>
+</head>
+
+<body>
+    <header class="border-b border-kernel-border bg-kernel-panel/80 backdrop-blur px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div class="h-3 w-3 rounded-full bg-kernel-tensor animate-pulse glow-tensor"></div>
+            <div>
+                <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+                    GPM INVARIANTZ · <span class="text-[10px] px-2 py-0.5 rounded bg-kernel-tensor/10 text-kernel-tensor border border-kernel-tensor/20 font-mono">Bijektion</span>
+                </h1>
+                <p class="text-[9px] text-zinc-500 uppercase tracking-widest font-mono">Lossless compression · Reversibility monitor</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4 text-xs">
+            <span class="text-zinc-400">Invarianz:</span>
+            <span id="invarianceRate" class="text-kernel-succ font-mono font-bold text-base glow-succ px-3 py-1 bg-black/50 border border-kernel-succ/30 rounded">100.00%</span>
+        </div>
+    </header>
+
+    <div id="confirmModal" class="modal-backdrop" role="dialog" aria-modal="true">
+        <div class="modal-card p-5">
+            <div class="flex items-start justify-between gap-3 mb-4">
+                <div>
+                    <h3 id="confirmModalTitle" class="text-lg font-bold text-white">Confirm action</h3>
+                    <p id="confirmModalBody" class="text-sm text-zinc-400 mt-1"></p>
+                </div>
+                <button onclick="closeConfirmModal()" class="text-zinc-400 hover:text-white text-sm border border-zinc-700 rounded px-2 py-1">Close</button>
+            </div>
+            <div class="flex items-center justify-end gap-2">
+                <button onclick="closeConfirmModal()" class="px-4 py-2 rounded border border-zinc-700 text-zinc-300 hover:text-white">Cancel</button>
+                <button id="confirmModalAction" onclick="runConfirmModalAction()" class="px-4 py-2 rounded border border-kernel-alert/30 bg-kernel-alert/10 text-kernel-alert font-bold">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="editModal" class="modal-backdrop" role="dialog" aria-modal="true">
+        <div class="modal-card p-5">
+            <div class="flex items-start justify-between gap-3 mb-4">
+                <div>
+                    <h3 class="text-lg font-bold text-white">Edit morpheme</h3>
+                    <p class="text-sm text-zinc-400 mt-1">Update the fragment and save it back into the local library.</p>
+                </div>
+                <button onclick="closeEditModal()" class="text-zinc-400 hover:text-white text-sm border border-zinc-700 rounded px-2 py-1">Close</button>
+            </div>
+            <input id="editMorphemeId" type="hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <input id="editMorphemeText" type="text" class="bg-[#050505] border border-zinc-800 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-kernel-accent placeholder-zinc-700" placeholder="Morpheme">
+                <input id="editMorphemeLang" type="text" class="bg-[#050505] border border-zinc-800 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-kernel-accent placeholder-zinc-700" placeholder="Language code(s)">
+                <select id="editMorphemeType" class="bg-[#050505] border border-zinc-800 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-kernel-accent">
+                    <option value="prefix">Prefix</option>
+                    <option value="stem">Stem</option>
+                    <option value="suffix">Suffix</option>
+                    <option value="compound">Compound</option>
+                    <option value="particle">Particle</option>
+                    <option value="name">Name</option>
+                    <option value="custom">Custom</option>
+                    <option value="other">Other</option>
+                </select>
+                <input id="editMorphemeWeight" type="number" step="0.1" class="bg-[#050505] border border-zinc-800 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-kernel-accent" placeholder="Weight">
+            </div>
+            <div class="mt-4 flex items-center justify-end gap-2">
+                <button onclick="closeEditModal()" class="px-4 py-2 rounded border border-zinc-700 text-zinc-300 hover:text-white">Cancel</button>
+                <button onclick="saveEditedMorpheme()" class="px-4 py-2 rounded border border-kernel-succ/30 bg-kernel-succ/10 text-kernel-succ font-bold">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="importModal" class="modal-backdrop" role="dialog" aria-modal="true">
+        <div class="modal-card p-5">
+            <div class="flex items-start justify-between gap-3 mb-4">
+                <div>
+                    <h3 class="text-lg font-bold text-white">Import morpheme library</h3>
+                    <p class="text-sm text-zinc-400 mt-1">Validate a JSON library, choose how it should merge, then import it.</p>
+                </div>
+                <button onclick="closeImportModal()" class="text-zinc-400 hover:text-white text-sm border border-zinc-700 rounded px-2 py-1">Close</button>
+            </div>
+
+            <div id="importFileInfo" class="bg-[#050505] border border-zinc-800 rounded-lg p-3 text-sm text-zinc-300">
+                No file selected yet.
+            </div>
+
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-2">
+                <label class="flex items-center gap-2 bg-[#050505] border border-zinc-800 rounded px-3 py-2 text-sm">
+                    <input type="radio" name="importMode" value="merge" checked>
+                    <span>Merge</span>
+                </label>
+                <label class="flex items-center gap-2 bg-[#050505] border border-zinc-800 rounded px-3 py-2 text-sm">
+                    <input type="radio" name="importMode" value="replace">
+                    <span>Replace</span>
+                </label>
+                <label class="flex items-center gap-2 bg-[#050505] border border-zinc-800 rounded px-3 py-2 text-sm">
+                    <input type="radio" name="importMode" value="only-missing">
+                    <span>Only missing</span>
+                </label>
+            </div>
+
+            <div id="importPreview" class="mt-4 bg-[#050505] border border-zinc-800 rounded-lg p-3 text-sm text-zinc-300">
+                Import preview will appear here after validation.
+            </div>
+
+            <div class="mt-4 flex items-center justify-end gap-2">
+                <button onclick="closeImportModal()" class="px-4 py-2 rounded border border-zinc-700 text-zinc-300 hover:text-white">Cancel</button>
+                <button onclick="executeImport()" class="px-4 py-2 rounded border border-kernel-succ/30 bg-kernel-succ/10 text-kernel-succ font-bold">Import</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="undo-toast-wrap">
+        <div id="undoToast" class="undo-toast">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <div id="undoToastTitle" class="text-sm font-semibold text-white">Deleted</div>
+                    <div id="undoToastBody" class="text-xs text-zinc-400 mt-1">Entry removed.</div>
+                </div>
+                <button onclick="hideUndoToast()" class="text-zinc-500 hover:text-zinc-300 text-sm">✕</button>
+            </div>
+            <div class="mt-3 flex items-center justify-between gap-2">
+                <div class="text-[10px] text-zinc-500">You have 5 seconds to undo.</div>
+                <button id="undoToastAction" class="action" onclick="undoLastDelete()">Undo</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="systemGuideOverlay" class="ui-help-overlay" aria-hidden="true">
+        <div class="ui-help-panel p-5">
+            <div class="flex items-start justify-between gap-3 mb-4">
+                <div>
+                    <h3 class="text-lg font-bold text-white">System Guide</h3>
+                    <p class="text-sm text-zinc-400 mt-1">A short guide to the tensor model, the index fields, and the morpheme library.</p>
+                </div>
+                <button onclick="toggleSystemGuide(false)" class="btn-ghost">Close</button>
+            </div>
+
+            <div class="space-y-4 text-sm">
+                <div class="guidetabs" role="tablist" aria-label="System Guide Tabs">
+                    <button class="guide-tab active" data-guide-tab="overview" onclick="setGuideTab('overview')">Overview</button>
+                    <button class="guide-tab" data-guide-tab="math" onclick="setGuideTab('math')">Mathematics</button>
+                    <button class="guide-tab" data-guide-tab="morphology" onclick="setGuideTab('morphology')">Morphology</button>
+                    <button class="guide-tab" data-guide-tab="storage" onclick="setGuideTab('storage')">Storage</button>
+                    <button class="guide-tab" data-guide-tab="faq" onclick="setGuideTab('faq')">FAQ</button>
+                </div>
+
+                <section class="guide-pane active" data-guide-pane="overview">
+                    <div class="space-y-3">
+                        <div class="setting-card">
+                            <div class="heading">What this app does</div>
+                            <div class="desc">It turns a word into exact tensor-like fingerprints and reconstructs the same word from those values.</div>
+                        </div>
+                        <div class="setting-card">
+                            <div class="heading">How to use it</div>
+                            <div class="desc">Type a word, collapse it, then reconstruct it. In the Morpheme Library you can add fragments, search, import, export, and edit them.</div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="guide-pane" data-guide-pane="math">
+                    <div class="space-y-3">
+                        <div class="setting-card"><div class="heading">S — Substance</div><div class="desc">The exact prime-product fingerprint of the word. It is stored as a BigInt, so long words stay exact.</div></div>
+                        <div class="setting-card"><div class="heading">I — Permutation Index</div><div class="desc">The lexicographic rank of the prime multiset. It preserves ordering information.</div></div>
+                        <div class="setting-card"><div class="heading">N — Permutation Space</div><div class="desc">The number of valid permutations for the current multiset.</div></div>
+                    </div>
+                </section>
+
+                <section class="guide-pane" data-guide-pane="morphology">
+                    <div class="space-y-3">
+                        <div class="setting-card"><div class="heading">Prefix</div><div class="desc">Comes before the root, e.g. <code>un-</code>, <code>ver-</code>, <code>re-</code>.</div></div>
+                        <div class="setting-card"><div class="heading">Stem</div><div class="desc">The semantic core, e.g. <code>stand</code>, <code>kauf</code>, <code>bewusst</code>.</div></div>
+                        <div class="setting-card"><div class="heading">Suffix</div><div class="desc">Comes after the root, e.g. <code>-ing</code>, <code>-ung</code>, <code>-heit</code>.</div></div>
+                        <div class="setting-card"><div class="heading">Custom / Other</div><div class="desc">User-defined or fallback fragments for multilingual expansion.</div></div>
+                    </div>
+                </section>
+
+                <section class="guide-pane" data-guide-pane="storage">
+                    <div class="space-y-3">
+                        <div class="setting-card"><div class="heading">Local storage</div><div class="desc">The library is stored locally in IndexedDB, so your custom morphemes survive reloads on the same device.</div></div>
+                        <div class="setting-card"><div class="heading">Import / Export</div><div class="desc">Export writes a versioned JSON file. Import supports Merge, Replace, and Only missing.</div></div>
+                    </div>
+                </section>
+
+                <section class="guide-pane" data-guide-pane="faq">
+                    <div class="space-y-3">
+                        <div class="setting-card"><div class="heading">Why are some fragments red?</div><div class="desc">Red fragments are not currently matched to the library and are marked as collisions.</div></div>
+                        <div class="setting-card"><div class="heading">Can I add languages?</div><div class="desc">Yes. Enter one or more language codes in the language field, separated by commas.</div></div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <input id="morphemeImportInput" type="file" accept="application/json,.json" class="hidden">
+
+    <button id="systemGuideFab" onclick="toggleSystemGuide(true)" class="guide-fab" aria-label="System Guide">
+        <span class="text-lg font-bold leading-none">?</span>
+        <span class="label">System Guide</span>
+    </button>
+
+    <main class="flex-grow max-w-[1700px] mx-auto w-full p-7 lg:p-10 grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-10 app-shell">
+        
+        <aside class="lg:sticky lg:top-4 self-start space-y-4">
+            <div class="bg-kernel-panel border border-kernel-border rounded-lg p-4 shadow-lg">
+                <div class="text-[10px] uppercase tracking-[0.35em] text-zinc-500">System</div>
+                <div class="mt-3 space-y-2">
+                    <button class="nav-btn w-full text-left focus-ring" data-view-btn="audit" onclick="setView('audit')">
+                        <svg class="icon-chip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5"/><path d="M8 19V10"/><path d="M12 19V14"/><path d="M16 19V8"/><path d="M20 19V12"/></svg>
+                        <span>Audit</span>
+                    </button>
+                    <button class="nav-btn w-full text-left focus-ring" data-view-btn="morphemes" onclick="setView('morphemes')">
+                        <svg class="icon-chip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 19h14"/><path d="M7 5h10l2 4-7 10-7-10 2-4z"/></svg>
+                        <span>Morphemes</span>
+                    </button>
+                    <button class="nav-btn w-full text-left focus-ring" data-view-btn="rules" onclick="setView('rules')">
+                        <svg class="icon-chip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/><path d="M7 5v14"/></svg>
+                        <span>Rules</span>
+                    </button>
+                    <button class="nav-btn w-full text-left focus-ring" data-view-btn="statistics" onclick="setView('statistics')">
+                        <svg class="icon-chip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19h16"/><path d="M8 19V9"/><path d="M12 19V5"/><path d="M16 19v-7"/></svg>
+                        <span>Statistics</span>
+                    </button>
+                    <button class="nav-btn w-full text-left focus-ring" data-view-btn="stress" onclick="setView('stress')">
+                        <svg class="icon-chip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L4 14h7l-1 8 10-12h-7z"/></svg>
+                        <span>Stress Test</span>
+                    </button>
+                    <button class="nav-btn w-full text-left focus-ring" data-view-btn="logs" onclick="setView('logs')">
+                        <svg class="icon-chip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4h9l5 5v11H6z"/><path d="M14 4v5h5"/></svg>
+                        <span>Logs</span>
+                    </button>
+                    <button class="nav-btn w-full text-left focus-ring" data-view-btn="settings" onclick="setView('settings')">
+                        <svg class="icon-chip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.05.05a2 2 0 1 1-2.83 2.83l-.05-.05A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.65 1.65 0 0 0-1-1.5 1.65 1.65 0 0 0-1.82.33l-.05.05A2 2 0 1 1 3.3 17l.05-.05A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.65 1.65 0 0 0 1.5-1 1.65 1.65 0 0 0-.33-1.82l-.05-.05A2 2 0 1 1 7.05 3.3l.05.05A1.65 1.65 0 0 0 9 4.6c.23 0 .45-.04.66-.12A1.65 1.65 0 0 0 10.6 3h2.8a1.65 1.65 0 0 0 .94 1.48c.21.08.43.12.66.12a1.65 1.65 0 0 0 1.9-1.25l.05-.05A2 2 0 1 1 20.7 7l-.05.05A1.65 1.65 0 0 0 19.4 9c0 .23.04.45.12.66A1.65 1.65 0 0 0 21 10.6v2.8a1.65 1.65 0 0 0-1.48.94c-.08.21-.12.43-.12.66z"/></svg>
+                        <span>Settings</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-kernel-panel border border-kernel-border rounded-lg p-4 shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div class="text-[10px] uppercase tracking-[0.35em] text-zinc-500">Live Counter</div>
+                    <div id="saveStatus" class="text-[10px] text-zinc-500">● idle</div>
+                </div>
+                <div class="mt-3 grid grid-cols-2 gap-2">
+                    <div class="rounded-lg border border-zinc-800 bg-[#050505] p-3">
+                        <div class="text-[9px] uppercase tracking-widest text-zinc-500">Characters</div>
+                        <div id="liveChars" class="mt-1 text-lg font-mono font-bold text-white">0</div>
+                    </div>
+                    <div class="rounded-lg border border-zinc-800 bg-[#050505] p-3">
+                        <div class="text-[9px] uppercase tracking-widest text-zinc-500">Fragments</div>
+                        <div id="liveFragments" class="mt-1 text-lg font-mono font-bold text-kernel-accent">0</div>
+                    </div>
+                    <div class="rounded-lg border border-zinc-800 bg-[#050505] p-3">
+                        <div class="text-[9px] uppercase tracking-widest text-zinc-500">Confidence</div>
+                        <div id="liveConfidence" class="mt-1 text-lg font-mono font-bold text-kernel-succ">100%</div>
+                    </div>
+                    <div class="rounded-lg border border-zinc-800 bg-[#050505] p-3">
+                        <div class="text-[9px] uppercase tracking-widest text-zinc-500">Entropy</div>
+                        <div id="liveEntropy" class="mt-1 text-lg font-mono font-bold text-kernel-tensor">0.00</div>
+                    </div>
+                </div>
+                <div class="mt-3 rounded-lg border border-zinc-800 bg-[#050505] p-3">
+                    <div class="text-[9px] uppercase tracking-widest text-zinc-500">Grammar</div>
+                    <div id="liveGrammar" class="mt-1 text-sm font-mono font-bold text-white">—</div>
+                </div>
+            </div>
+
+            <div class="bg-kernel-panel border border-kernel-border rounded-lg p-4 shadow-lg">
+                <div class="text-[10px] uppercase tracking-[0.35em] text-zinc-500">Shortcuts</div>
+                <div class="mt-3 space-y-2 text-sm">
+                    <div class="flex items-center justify-between gap-2"><span class="text-zinc-400">Search</span><span class="library-badge">Ctrl+F</span></div>
+                    <div class="flex items-center justify-between gap-2"><span class="text-zinc-400">New morpheme</span><span class="library-badge">Ctrl+N</span></div>
+                    <div class="flex items-center justify-between gap-2"><span class="text-zinc-400">Save</span><span class="library-badge">Ctrl+S</span></div>
+                    <div class="flex items-center justify-between gap-2"><span class="text-zinc-400">Export</span><span class="library-badge">Ctrl+E</span></div>
+                    <div class="flex items-center justify-between gap-2"><span class="text-zinc-400">Import</span><span class="library-badge">Ctrl+I</span></div>
+                    <div class="flex items-center justify-between gap-2"><span class="text-zinc-400">Close dialog</span><span class="library-badge">Esc</span></div>
+                </div>
+            </div>
+
+            <div class="bg-kernel-panel border border-kernel-border rounded-lg p-4 shadow-lg">
+                <div class="text-[10px] uppercase tracking-[0.35em] text-zinc-500">Quick Actions</div>
+                <div class="mt-3 grid gap-2">
+                    <button onclick="setView('morphemes'); toggleLibrary(true)" class="help-badge w-full">Open Library</button>
+                    <button onclick="setView('statistics')" class="help-badge w-full">Show Stats</button>
+                    <button onclick="exportLibrary()" class="help-badge w-full">Export Library</button>
+                </div>
+            </div>
+        </aside>
+
+        <div class="min-w-0 space-y-6">
+
+            <section class="view-section" data-view="audit">
+                <div class="grid grid-cols-1 xl:grid-cols-[1.03fr_0.97fr] gap-6">
+                    <div class="space-y-6">
+                        <div class="bg-kernel-panel border border-kernel-border rounded-lg p-5 shadow-lg">
+                            <h2 class="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-3 flex items-center gap-2">
+                                <span class="w-1 h-4 bg-kernel-tensor"></span>
+                                Input (Original)
+                            </h2>
+                            <div class="flex gap-2">
+                                <input type="text" id="wordInput" class="flex-grow bg-[#050505] border border-kernel-border rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-kernel-accent focus:ring-1 focus:ring-kernel-accent placeholder-zinc-700" placeholder="Enter a word..." value="BEWUSSTSEIN" autofocus>
+                                <button onclick="collapseWord()" class="btn-primary">Collapse</button>
+                            </div>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <button onclick="setWord('BEWUSSTSEIN')" class="text-[9px] px-2 py-1 rounded bg-[#050505] border border-zinc-800 hover:border-kernel-tensor hover:text-kernel-tensor transition font-mono">Consciousness</button>
+                                <button onclick="setWord('VERKAUFEN')" class="text-[9px] px-2 py-1 rounded bg-[#050505] border border-zinc-800 hover:border-kernel-tensor hover:text-kernel-tensor transition font-mono">sell</button>
+                                <button onclick="setWord('UNDERSTANDING')" class="text-[9px] px-2 py-1 rounded bg-[#050505] border border-zinc-800 hover:border-kernel-tensor hover:text-kernel-tensor transition font-mono">Understanding</button>
+                                <button onclick="setWord('REVOLUTION')" class="text-[9px] px-2 py-1 rounded bg-[#050505] border border-zinc-800 hover:border-kernel-tensor hover:text-kernel-tensor transition font-mono">Revolution</button>
+                                <button onclick="setWord('FRANCESCO')" class="text-[9px] px-2 py-1 rounded bg-[#050505] border border-zinc-800 hover:border-kernel-tensor hover:text-kernel-tensor transition font-mono">Francesco</button>
+                            </div>
+                        </div>
+
+                        <div class="bg-kernel-panel border border-kernel-border rounded-lg p-5 shadow-lg">
+                            <h2 class="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-3 flex items-center gap-2">
+                                <span class="w-1 h-4 bg-kernel-accent"></span>
+                                Fingerprint (S, I)
+                            </h2>
+                            <div class="space-y-3">
+                                <div class="bg-[#050505] border border-zinc-800 rounded p-3">
+                                    <span class="text-[9px] text-zinc-500 block font-mono uppercase mb-0.5">Substance S (exact BigInt)</span>
+                                    <div id="displayS" class="text-kernel-accent font-mono text-sm break-all font-bold">—</div>
+                                </div>
+                                <div class="bg-[#050505] border border-zinc-800 rounded p-3">
+                                    <span class="text-[9px] text-zinc-500 block font-mono uppercase mb-0.5">Permutation Index I</span>
+                                    <div id="displayI" class="text-kernel-accent font-mono text-sm break-all font-bold">—</div>
+                                </div>
+                                <div class="bg-[#050505] border border-zinc-800 rounded p-3">
+                                    <span class="text-[9px] text-zinc-500 block font-mono uppercase mb-0.5">Permutation Space N</span>
+                                    <div id="displayN" class="text-kernel-tensor font-mono text-sm break-all font-bold">—</div>
+                                </div>
+                            </div>
+                            <div class="mt-3 text-[9px] text-zinc-600 font-mono border-t border-zinc-800 pt-2 flex justify-between">
+                                <span>BIG_PRIME = 100000000000000003</span>
+                                <span id="primeCount">Prime factors: 0</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-kernel-panel border border-kernel-border rounded-lg p-5 shadow-lg">
+                            <h2 class="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-3 flex items-center gap-2">
+                                <span class="w-1 h-4 bg-kernel-tensor"></span>
+                                Live Analysis
+                            </h2>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                <div class="bg-[#050505] border border-zinc-800 rounded-lg p-3">
+                                    <div class="text-[9px] uppercase tracking-widest text-zinc-500">Characters</div>
+                                    <div id="liveCharsAudit" class="mt-1 text-lg font-mono font-bold text-white">0</div>
+                                </div>
+                                <div class="bg-[#050505] border border-zinc-800 rounded-lg p-3">
+                                    <div class="text-[9px] uppercase tracking-widest text-zinc-500">Fragments</div>
+                                    <div id="liveFragmentsAudit" class="mt-1 text-lg font-mono font-bold text-kernel-accent">0</div>
+                                </div>
+                                <div class="bg-[#050505] border border-zinc-800 rounded-lg p-3">
+                                    <div class="text-[9px] uppercase tracking-widest text-zinc-500">Confidence</div>
+                                    <div id="liveConfidenceAudit" class="mt-1 text-lg font-mono font-bold text-kernel-succ">100%</div>
+                                </div>
+                                <div class="bg-[#050505] border border-zinc-800 rounded-lg p-3">
+                                    <div class="text-[9px] uppercase tracking-widest text-zinc-500">Entropy</div>
+                                    <div id="liveEntropyAudit" class="mt-1 text-lg font-mono font-bold text-kernel-tensor">0.00</div>
+                                </div>
+                            </div>
+                            <div class="mt-3 rounded-lg border border-zinc-800 bg-[#050505] p-3">
+                                <div class="text-[9px] uppercase tracking-widest text-zinc-500">Grammar</div>
+                                <div id="liveGrammarAudit" class="mt-1 text-sm font-mono font-bold text-white">—</div>
+                            </div>
+                            <div class="field-note mt-2">Live metrics update while you type and when the word is split into tensor fragments.</div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div class="bg-kernel-panel border border-kernel-border rounded-lg p-5 shadow-lg">
+                            <h2 class="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-3 flex items-center gap-2">
+                                <span class="w-1 h-4 bg-kernel-succ"></span>
+                                Resynthesis (from S, I)
+                            </h2>
+                            <div class="flex gap-2">
+                                <button onclick="reconstructWord()" id="reconstructBtn" class="btn-primary flex-1">Reconstruct</button>
+                            </div>
+                            <div class="mt-3 bg-[#050505] border border-zinc-800 rounded p-3 min-h-[48px] flex items-center">
+                                <div id="displayReconstructed" class="font-mono text-sm text-zinc-500 italic">— waiting for reconstruction —</div>
+                            </div>
+                            <div id="morphemChain" class="mt-3"></div>
+                            <div class="field-note mt-2">The chain below shows the current split into tensor fragments. Open the system guide for plain-language explanations.</div>
+                            <div id="validationResult" class="mt-3 text-xs font-mono flex items-center gap-2">
+                                <span class="text-zinc-600">Status:</span>
+                                <span id="validationStatus" class="text-zinc-500">⏳ nicht validiert</span>
+                            </div>
+                        </div>
+
+                        <div class="card-shell p-5 shadow-lg">
+                            <h2 class="section-title mb-3">
+                                <span class="mark"></span>
+                                Rules & Legend
+                            </h2>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                                <div class="setting-card">
+                                    <div class="legend-chip"><span class="legend-swatch type-prefix"></span><span>Prefix</span></div>
+                                    <div class="mt-2 text-white text-xs">Before the root</div>
+                                </div>
+                                <div class="setting-card">
+                                    <div class="legend-chip"><span class="legend-swatch type-stem"></span><span>Stem</span></div>
+                                    <div class="mt-2 text-white text-xs">Semantic core</div>
+                                </div>
+                                <div class="setting-card">
+                                    <div class="legend-chip"><span class="legend-swatch type-suffix"></span><span>Suffix</span></div>
+                                    <div class="mt-2 text-white text-xs">After the root</div>
+                                </div>
+                                <div class="setting-card">
+                                    <div class="legend-chip"><span class="legend-swatch type-custom"></span><span>Custom</span></div>
+                                    <div class="mt-2 text-white text-xs">User-defined fragment</div>
+                                </div>
+                                <div class="setting-card">
+                                    <div class="legend-chip"><span class="legend-swatch type-name"></span><span>Name</span></div>
+                                    <div class="mt-2 text-white text-xs">Proper name / fixed token</div>
+                                </div>
+                                <div class="setting-card">
+                                    <div class="legend-chip"><span class="legend-swatch type-other"></span><span>Other</span></div>
+                                    <div class="mt-2 text-white text-xs">Fallback class</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="view-section hidden" data-view="stress">
+                <div class="bg-kernel-panel border border-kernel-border rounded-lg p-5 shadow-lg">
+                    <h2 class="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-3 flex items-center gap-2">
+                        <span class="w-1 h-4 bg-kernel-tensor"></span>
+                        Invariance Check · Stress Test
+                    </h2>
+                    <div class="grid grid-cols-3 gap-2 mb-3">
+                        <div class="bg-[#050505] border border-zinc-800 rounded p-2 text-center">
+                            <span class="text-[8px] text-zinc-500 block uppercase">Tested</span>
+                            <span id="testCount" class="text-sm font-mono text-white font-bold">0</span>
+                        </div>
+                        <div class="bg-[#050505] border border-zinc-800 rounded p-2 text-center">
+                            <span class="text-[8px] text-zinc-500 block uppercase">Success</span>
+                            <span id="successCount" class="text-sm font-mono text-kernel-succ font-bold">0</span>
+                        </div>
+                        <div class="bg-[#050505] border border-zinc-800 rounded p-2 text-center">
+                            <span class="text-[8px] text-zinc-500 block uppercase">Rate</span>
+                            <span id="rateDisplay" class="text-sm font-mono text-kernel-tensor font-bold">100%</span>
+                        </div>
+                    </div>
+                    <button onclick="runStressTest()" class="w-full bg-kernel-tensor/5 hover:bg-kernel-tensor/15 border border-kernel-tensor/20 text-kernel-tensor py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors">
+                        🧪 Run 100-word stress test
+                    </button>
+                    <div id="stressLog" class="mt-3 max-h-72 overflow-y-auto font-mono text-[9px] text-zinc-500 border-t border-zinc-800 pt-2 space-y-0.5">
+                        <div class="text-zinc-600 italic">— ready —</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="view-section hidden" data-view="morphemes">
+                <div class="bg-kernel-panel border border-kernel-border rounded-lg p-5 shadow-lg">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <button id="libraryToggleBtn" onclick="toggleLibrary()" class="library-toggle text-xs text-zinc-400 hover:text-white transition">
+                                <span id="libraryToggleArrow">▶</span>
+                                <span>Morpheme Library</span>
+                            </button>
+                            <div id="librarySummary" class="mt-1 text-[11px] text-zinc-500">0 entries · 0 languages</div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2 justify-end">
+                            <button onclick="exportLibrary()" class="btn-secondary">Export Library</button>
+                            <button onclick="openImportPicker()" class="btn-secondary">Import Library</button>
+                            <button onclick="confirmResetDefaults()" class="btn-secondary">Reset defaults</button>
+                        </div>
+                    </div>
+
+                    <div id="libraryBody" class="hidden mt-4 space-y-3 border-t border-zinc-800 pt-4">
+                        <div class="grid grid-cols-1 lg:grid-cols-[1fr_auto_auto] gap-2">
+                            <input id="morphemeSearch" type="text"
+                                   oninput="renderMorphemeRegistry()"
+                                   class="flex-1 bg-[#050505] border border-zinc-800 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-kernel-accent placeholder-zinc-700"
+                                   placeholder="Search morphemes, languages, types...">
+                            <select id="morphemeSort" onchange="renderMorphemeRegistry()" class="bg-[#050505] border border-zinc-800 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-kernel-accent">
+                                <option value="favorites">Favorites</option>
+                                <option value="usage">Most used</option>
+                                <option value="alpha">Alphabet</option>
+                                <option value="type">Type</option>
+                                <option value="weight">Weight</option>
+                                <option value="newest">Newest</option>
+                                <option value="oldest">Oldest</option>
+                            </select>
+                            <div class="flex items-center gap-2">
+                                <button onclick="clearMorphemeSearch()" class="btn-secondary">Clear</button>
+                                <button onclick="toggleSystemGuide(true)" class="btn-secondary">System Guide</button>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2">
+                            <button class="filter-chip" data-type-filter="all" onclick="setTypeFilter('all')">All</button>
+                            <button class="filter-chip" data-type-filter="prefix" onclick="setTypeFilter('prefix')">Prefix</button>
+                            <button class="filter-chip" data-type-filter="stem" onclick="setTypeFilter('stem')">Stem</button>
+                            <button class="filter-chip" data-type-filter="suffix" onclick="setTypeFilter('suffix')">Suffix</button>
+                            <button class="filter-chip" data-type-filter="custom" onclick="setTypeFilter('custom')">Custom</button>
+                            <button class="filter-chip" data-type-filter="name" onclick="setTypeFilter('name')">Name</button>
+                            <button class="filter-chip" data-type-filter="other" onclick="setTypeFilter('other')">Other</button>
+                        </div>
+
+                        <div id="libraryStats" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2 text-xs"></div>
+
+                        <div id="bulkToolbar" class="hidden rounded-lg border border-zinc-800 bg-[#050505] p-3 flex flex-wrap items-center justify-between gap-3">
+                            <div class="text-sm text-zinc-300"><span id="bulkSelectionCount" class="font-bold text-white">0</span> selected</div>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="bulkFavoriteSelected()" class="btn-secondary">Favorite</button>
+                                <button onclick="bulkExportSelected()" class="btn-secondary">Export Selected</button>
+                                <button onclick="bulkDeleteSelected()" class="btn-secondary">Delete Selected</button>
+                            </div>
+                        </div>
+
+                        <div class="bg-[#050505] border border-zinc-800 rounded-lg p-3 space-y-3">
+                            <div class="flex items-center justify-between gap-2">
+                                <div>
+                                    <div class="text-xs font-semibold uppercase tracking-widest text-zinc-400">Add / Edit morpheme</div>
+                                    <div class="field-note mt-1">Language codes can be comma-separated, e.g. <code>en,de</code>.</div>
+                                </div>
+                                <div class="library-badge">Saved locally</div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                <input id="morphemeText" type="text" class="bg-[#050505] border border-zinc-800 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-kernel-accent placeholder-zinc-700" placeholder="Morpheme, e.g. UNDER">
+                                <input id="morphemeLang" type="text" class="bg-[#050505] border border-zinc-800 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-kernel-accent placeholder-zinc-700" placeholder="Language code(s), e.g. en,de,fr">
+                                <select id="morphemeType" class="bg-[#050505] border border-zinc-800 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-kernel-accent">
+                                    <option value="prefix">Prefix</option>
+                                    <option value="stem">Stem</option>
+                                    <option value="suffix">Suffix</option>
+                                    <option value="compound">Compound</option>
+                                    <option value="particle">Particle</option>
+                                    <option value="name">Name</option>
+                                    <option value="custom">Custom</option>
+                                    <option value="other">Other</option>
+                                </select>
+                                <input id="morphemeWeight" type="number" step="0.1" value="1.0" class="bg-[#050505] border border-zinc-800 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-kernel-accent" placeholder="Weight">
+                            </div>
+
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="saveMorphemeFromUI()" class="bg-kernel-accent/10 hover:bg-kernel-accent/20 text-kernel-accent border border-kernel-accent/30 px-3 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors">
+                                    Save
+                                </button>
+                                <button onclick="resetMorphemeForm()" class="bg-[#101010] hover:bg-[#161616] text-zinc-300 border border-zinc-800 px-3 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors">
+                                    New
+                                </button>
+                            </div>
+
+                            <div class="field-note">Tip: click a morpheme card to open it for editing; use the star to pin favorites.</div>
+                        </div>
+
+                        <div id="morphemeList" class="grid gap-3 max-h-[36rem] overflow-y-auto pr-1" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="view-section hidden" data-view="rules">
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                    <div class="bg-kernel-panel border border-kernel-border rounded-lg p-5 shadow-lg">
+                        <h2 class="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-3 flex items-center gap-2">
+                            <span class="w-1 h-4 bg-kernel-accent"></span>
+                            Rules
+                        </h2>
+                        <div class="space-y-3 text-sm text-zinc-300">
+                            <div class="rounded-lg border border-zinc-800 bg-[#050505] p-3">
+                                Long words are handled as exact BigInt fingerprints, not modulo-reduced strings.
+                            </div>
+                            <div class="rounded-lg border border-zinc-800 bg-[#050505] p-3">
+                                Morphemes are matched by a weighted graph search, not a greedy longest-prefix pass.
+                            </div>
+                            <div class="rounded-lg border border-zinc-800 bg-[#050505] p-3">
+                                Known fragments stay green; unmatched fragments are marked as collisions.
+                            </div>
+                            <div class="rounded-lg border border-zinc-800 bg-[#050505] p-3">
+                                Favorites, usage counts, and recent history are stored locally in the browser.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-kernel-panel border border-kernel-border rounded-lg p-5 shadow-lg">
+                        <h2 class="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-3 flex items-center gap-2">
+                            <span class="w-1 h-4 bg-kernel-tensor"></span>
+                            View Modes
+                        </h2>
+                        <div class="space-y-3">
+                            <button class="help-badge w-full text-left" onclick="setUiMode('simple')">Simple Mode</button>
+                            <button class="help-badge w-full text-left" onclick="setUiMode('advanced')">Advanced Mode</button>
+                            <button class="help-badge w-full text-left" onclick="setUiMode('developer')">Developer Mode</button>
+                            <div class="field-note">These modes only change visibility and density, not the actual analysis rules.</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="view-section hidden" data-view="statistics">
+                <div class="grid grid-cols-1 xl:grid-cols-[1fr_1fr] gap-6">
+                    <div class="bg-kernel-panel border border-kernel-border rounded-lg p-5 shadow-lg">
+                        <h2 class="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-3 flex items-center gap-2">
+                            <span class="w-1 h-4 bg-kernel-succ"></span>
+                            Library Statistics
+                        </h2>
+                        <div id="statsPanel" class="grid grid-cols-2 md:grid-cols-3 gap-3"></div>
+                        <div class="mt-4 rounded-lg border border-zinc-800 bg-[#050505] p-3">
+                            <div class="text-[9px] uppercase tracking-widest text-zinc-500">Storage</div>
+                            <div id="storageUsage" class="mt-1 text-white font-mono font-bold">—</div>
+                        </div>
+                        <div class="mt-3 rounded-lg border border-zinc-800 bg-[#050505] p-3">
+                            <div class="text-[9px] uppercase tracking-widest text-zinc-500">Last import</div>
+                            <div id="lastImportLabel" class="mt-1 text-white font-mono font-bold">—</div>
+                        </div>
+                    </div>
+                    <div class="bg-kernel-panel border border-kernel-border rounded-lg p-5 shadow-lg">
+                        <h2 class="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-3 flex items-center gap-2">
+                            <span class="w-1 h-4 bg-kernel-accent"></span>
+                            Audit History
+                        </h2>
+                        <div id="analysisHistory" class="space-y-2 max-h-[34rem] overflow-y-auto pr-1"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="view-section hidden" data-view="logs">
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                    <div class="bg-kernel-panel border border-kernel-border rounded-lg p-5 shadow-lg">
+                        <h2 class="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-3 flex items-center gap-2">
+                            <span class="w-1 h-4 bg-kernel-tensor"></span>
+                            Stress Log
+                        </h2>
+                        <div id="actionLog" class="max-h-[34rem] overflow-y-auto font-mono text-[9px] text-zinc-500 border border-zinc-800 rounded-lg bg-[#050505] p-3 space-y-0.5">
+                            <div class="text-zinc-600 italic">— ready —</div>
+                        </div>
+                    </div>
+                    <div class="bg-kernel-panel border border-kernel-border rounded-lg p-5 shadow-lg">
+                        <h2 class="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-3 flex items-center gap-2">
+                            <span class="w-1 h-4 bg-kernel-accent"></span>
+                            Recent Actions
+                        </h2>
+                        <div id="recentActions" class="space-y-2"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="view-section hidden" data-view="settings">
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                    <div class="card-shell p-5 shadow-lg">
+                        <h2 class="section-title mb-3">
+                            <span class="mark"></span>
+                            UI Settings
+                        </h2>
+                        <div class="space-y-3">
+                            <label class="setting-card flex items-center justify-between gap-3">
+                                <div>
+                                    <div class="heading">Beginner mode</div>
+                                    <div class="desc">Simple toggle for non-technical users.</div>
+                                </div>
+                                <input id="toggleBeginner" type="checkbox" onchange="setToggleSetting('beginner', this.checked)" class="focus-ring">
+                            </label>
+                            <label class="setting-card flex items-center justify-between gap-3">
+                                <div>
+                                    <div class="heading">Show tooltips</div>
+                                    <div class="desc">Show short explanations and hover hints across the interface.</div>
+                                </div>
+                                <input id="toggleTooltips" type="checkbox" onchange="setToggleSetting('tooltips', this.checked)" class="focus-ring">
+                            </label>
+                            <label class="setting-card flex items-center justify-between gap-3">
+                                <div>
+                                    <div class="heading">Dense cards</div>
+                                    <div class="desc">Use tighter spacing in library and audit cards.</div>
+                                </div>
+                                <input id="toggleDensity" type="checkbox" onchange="setToggleSetting('dense', this.checked)" class="focus-ring">
+                            </label>
+                        </div>
+                    </div>
+                    <div class="card-shell p-5 shadow-lg">
+                        <h2 class="section-title mb-3">
+                            <span class="mark"></span>
+                            Import / Export
+                        </h2>
+                        <div class="space-y-3">
+                            <div id="importDropzone" class="setting-card text-center text-zinc-400">
+                                Drop JSON here or use Import Library
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                <button onclick="exportLibrary()" class="btn-secondary">Export</button>
+                                <button onclick="openImportPicker()" class="btn-secondary">Import</button>
+                                <button onclick="confirmResetDefaults()" class="btn-danger">Reset defaults</button>
+                            </div>
+                            <div class="field-note">Import supports Merge, Replace, and Only missing modes; duplicate entries are detected by normalized morpheme text.</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <script>
+        // ============================================================
+        // PRIME-ALPHABET – MIT UMLAUTEN UND ß (103)
+        // ============================================================
+        const PRIME_ALPHABET = {
+            'E': 2, 'A': 3, 'O': 5, 'I': 7, 'T': 11, 'N': 13, 'R': 17, 'S': 19, 'L': 23, 'C': 29,
+            'D': 31, 'U': 37, 'M': 41, 'P': 43, 'H': 47, 'G': 53, 'B': 59, 'F': 61, 'Y': 67, 'W': 71,
+            'K': 73, 'V': 79, 'X': 83, 'Z': 89, 'J': 97, 'Q': 101, 'ß': 103, 'Ä': 107, 'Ö': 109, 'Ü': 113
+        };
+
+        const PRIME_TO_CHAR = {};
+        for (const [ch, p] of Object.entries(PRIME_ALPHABET)) {
+            PRIME_TO_CHAR[p.toString()] = ch;
+        }
+
+        function normalizeWord(word) {
+            let normalized = String(word || '').normalize('NFC');
+            normalized = normalized.replace(/ẞ/g, 'ß');
+            const SHIELD = '\uFFF0';
+            normalized = normalized.replace(/ß/g, SHIELD);
+            normalized = normalized.toUpperCase();
+            normalized = normalized.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            normalized = normalized.replace(/Ä/g, 'AE');
+            normalized = normalized.replace(/Ö/g, 'OE');
+            normalized = normalized.replace(/Ü/g, 'UE');
+            normalized = normalized.replace(new RegExp(SHIELD, 'g'), 'ß');
+            return normalized;
+        }
+
+        function normalizeMorpheme(text) {
+            return normalizeWord(text).replace(/\s+/g, '');
+        }
+
+        const DEFAULT_MORPHEMES = [
+            // German
+            { text: 'BE', lang: ['de'], type: 'prefix', weight: 1.10 },
+            { text: 'GE', lang: ['de'], type: 'prefix', weight: 1.05 },
+            { text: 'VER', lang: ['de'], type: 'prefix', weight: 1.20 },
+            { text: 'ENT', lang: ['de'], type: 'prefix', weight: 1.10 },
+            { text: 'ER', lang: ['de'], type: 'prefix', weight: 1.00 },
+            { text: 'ZER', lang: ['de'], type: 'prefix', weight: 1.10 },
+            { text: 'MISS', lang: ['de'], type: 'prefix', weight: 1.10 },
+            { text: 'NACH', lang: ['de'], type: 'prefix', weight: 1.00 },
+            { text: 'MIT', lang: ['de'], type: 'prefix', weight: 1.00 },
+            { text: 'EIN', lang: ['de'], type: 'prefix', weight: 1.00 },
+            { text: 'AUS', lang: ['de'], type: 'prefix', weight: 1.00 },
+            { text: 'AUF', lang: ['de'], type: 'prefix', weight: 1.00 },
+            { text: 'AB', lang: ['de'], type: 'prefix', weight: 1.00 },
+            { text: 'AN', lang: ['de'], type: 'prefix', weight: 1.00 },
+            { text: 'ZU', lang: ['de'], type: 'prefix', weight: 1.00 },
+            { text: 'UM', lang: ['de'], type: 'prefix', weight: 1.00 },
+            { text: 'DURCH', lang: ['de'], type: 'prefix', weight: 1.05 },
+            { text: 'UEBER', lang: ['de'], type: 'prefix', weight: 1.05 },
+            { text: 'UNTER', lang: ['de'], type: 'prefix', weight: 1.05 },
+            { text: 'OHNE', lang: ['de'], type: 'prefix', weight: 1.00 },
+            { text: 'WIDER', lang: ['de'], type: 'prefix', weight: 1.00 },
+            { text: 'HIN', lang: ['de'], type: 'prefix', weight: 1.00 },
+            { text: 'HER', lang: ['de'], type: 'prefix', weight: 1.00 },
+            { text: 'WUSST', lang: ['de'], type: 'stem', weight: 1.10 },
+            { text: 'WISS', lang: ['de'], type: 'stem', weight: 1.10 },
+            { text: 'STAND', lang: ['de'], type: 'stem', weight: 1.20 },
+            { text: 'KAUF', lang: ['de'], type: 'stem', weight: 1.10 },
+            { text: 'LAUF', lang: ['de'], type: 'stem', weight: 1.10 },
+            { text: 'GEH', lang: ['de'], type: 'stem', weight: 1.05 },
+            { text: 'KOMM', lang: ['de'], type: 'stem', weight: 1.05 },
+            { text: 'SEH', lang: ['de'], type: 'stem', weight: 1.05 },
+            { text: 'HOER', lang: ['de'], type: 'stem', weight: 1.05 },
+            { text: 'SPRECH', lang: ['de'], type: 'stem', weight: 1.05 },
+            { text: 'SCHREIB', lang: ['de'], type: 'stem', weight: 1.05 },
+            { text: 'LES', lang: ['de'], type: 'stem', weight: 1.05 },
+            { text: 'ESS', lang: ['de'], type: 'stem', weight: 1.05 },
+            { text: 'TRINK', lang: ['de'], type: 'stem', weight: 1.05 },
+            { text: 'SCHLAF', lang: ['de'], type: 'stem', weight: 1.05 },
+            { text: 'WACH', lang: ['de'], type: 'stem', weight: 1.05 },
+            { text: 'STEH', lang: ['de'], type: 'stem', weight: 1.05 },
+            { text: 'SITZ', lang: ['de'], type: 'stem', weight: 1.05 },
+            { text: 'LIEG', lang: ['de'], type: 'stem', weight: 1.05 },
+            { text: 'FALL', lang: ['de'], type: 'stem', weight: 1.05 },
+            { text: 'WERF', lang: ['de'], type: 'stem', weight: 1.05 },
+            { text: 'NEHM', lang: ['de'], type: 'stem', weight: 1.05 },
+            { text: 'GEB', lang: ['de'], type: 'stem', weight: 1.05 },
+            { text: 'HAB', lang: ['de'], type: 'stem', weight: 1.05 },
+            { text: 'WERD', lang: ['de'], type: 'stem', weight: 1.05 },
+            { text: 'TUN', lang: ['de'], type: 'stem', weight: 1.05 },
+            { text: 'MACH', lang: ['de'], type: 'stem', weight: 1.05 },
+            { text: 'DENK', lang: ['de'], type: 'stem', weight: 1.05 },
+            { text: 'FIND', lang: ['de'], type: 'stem', weight: 1.05 },
+            { text: 'BEWUSST', lang: ['de'], type: 'stem', weight: 1.20 },
+            { text: 'UNG', lang: ['de'], type: 'suffix', weight: 1.15 },
+            { text: 'HEIT', lang: ['de'], type: 'suffix', weight: 1.10 },
+            { text: 'KEIT', lang: ['de'], type: 'suffix', weight: 1.10 },
+            { text: 'SCHAFT', lang: ['de'], type: 'suffix', weight: 1.15 },
+            { text: 'TUM', lang: ['de'], type: 'suffix', weight: 1.00 },
+            { text: 'NIS', lang: ['de'], type: 'suffix', weight: 1.10 },
+            { text: 'SEL', lang: ['de'], type: 'suffix', weight: 1.00 },
+            { text: 'LICH', lang: ['de'], type: 'suffix', weight: 1.05 },
+            { text: 'IG', lang: ['de'], type: 'suffix', weight: 1.00 },
+            { text: 'ISCH', lang: ['de'], type: 'suffix', weight: 1.05 },
+            { text: 'BAR', lang: ['de'], type: 'suffix', weight: 1.00 },
+            { text: 'SAM', lang: ['de'], type: 'suffix', weight: 1.00 },
+            { text: 'HAFT', lang: ['de'], type: 'suffix', weight: 1.00 },
+            { text: 'LOS', lang: ['de'], type: 'suffix', weight: 1.00 },
+            { text: 'FREI', lang: ['de'], type: 'suffix', weight: 1.00 },
+            { text: 'VOLL', lang: ['de'], type: 'suffix', weight: 1.00 },
+            { text: 'EN', lang: ['de'], type: 'suffix', weight: 1.00 },
+            { text: 'ER', lang: ['de'], type: 'suffix', weight: 1.00 },
+            { text: 'ES', lang: ['de'], type: 'suffix', weight: 1.00 },
+            { text: 'EM', lang: ['de'], type: 'suffix', weight: 1.00 },
+            { text: 'E', lang: ['de'], type: 'suffix', weight: 0.95 },
+            { text: 'S', lang: ['de'], type: 'suffix', weight: 0.95 },
+
+            // English
+            { text: 'UN', lang: ['en'], type: 'prefix', weight: 1.05 },
+            { text: 'RE', lang: ['en'], type: 'prefix', weight: 1.05 },
+            { text: 'PRE', lang: ['en'], type: 'prefix', weight: 1.00 },
+            { text: 'POST', lang: ['en'], type: 'prefix', weight: 1.00 },
+            { text: 'ANTI', lang: ['en'], type: 'prefix', weight: 1.00 },
+            { text: 'CO', lang: ['en'], type: 'prefix', weight: 1.00 },
+            { text: 'DE', lang: ['en'], type: 'prefix', weight: 1.00 },
+            { text: 'DIS', lang: ['en'], type: 'prefix', weight: 1.00 },
+            { text: 'EX', lang: ['en'], type: 'prefix', weight: 1.00 },
+            { text: 'FORE', lang: ['en'], type: 'prefix', weight: 1.00 },
+            { text: 'INTER', lang: ['en'], type: 'prefix', weight: 1.05 },
+            { text: 'MIS', lang: ['en'], type: 'prefix', weight: 1.05 },
+            { text: 'MULTI', lang: ['en'], type: 'prefix', weight: 1.00 },
+            { text: 'NON', lang: ['en'], type: 'prefix', weight: 1.00 },
+            { text: 'OUT', lang: ['en'], type: 'prefix', weight: 1.00 },
+            { text: 'OVER', lang: ['en'], type: 'prefix', weight: 1.00 },
+            { text: 'PRO', lang: ['en'], type: 'prefix', weight: 1.00 },
+            { text: 'SEMI', lang: ['en'], type: 'prefix', weight: 1.00 },
+            { text: 'SUB', lang: ['en'], type: 'prefix', weight: 1.00 },
+            { text: 'SUPER', lang: ['en'], type: 'prefix', weight: 1.00 },
+            { text: 'TRANS', lang: ['en'], type: 'prefix', weight: 1.00 },
+            { text: 'ULTRA', lang: ['en'], type: 'prefix', weight: 1.00 },
+            { text: 'UNDER', lang: ['en'], type: 'prefix', weight: 1.20 },
+            { text: 'STAND', lang: ['en'], type: 'stem', weight: 1.20 },
+            { text: 'ING', lang: ['en'], type: 'suffix', weight: 1.15 },
+            { text: 'ED', lang: ['en'], type: 'suffix', weight: 1.00 },
+            { text: 'ER', lang: ['en'], type: 'suffix', weight: 1.00 },
+            { text: 'EST', lang: ['en'], type: 'suffix', weight: 1.00 },
+            { text: 'FUL', lang: ['en'], type: 'suffix', weight: 1.00 },
+            { text: 'LESS', lang: ['en'], type: 'suffix', weight: 1.00 },
+            { text: 'LY', lang: ['en'], type: 'suffix', weight: 1.00 },
+            { text: 'MENT', lang: ['en'], type: 'suffix', weight: 1.00 },
+            { text: 'NESS', lang: ['en'], type: 'suffix', weight: 1.00 },
+            { text: 'OUS', lang: ['en'], type: 'suffix', weight: 1.00 },
+            { text: 'TION', lang: ['en'], type: 'suffix', weight: 1.05 },
+            { text: 'SION', lang: ['en'], type: 'suffix', weight: 1.05 },
+            { text: 'ABLE', lang: ['en'], type: 'suffix', weight: 1.00 },
+            { text: 'IBLE', lang: ['en'], type: 'suffix', weight: 1.00 },
+            { text: 'AL', lang: ['en'], type: 'suffix', weight: 1.00 },
+            { text: 'IAL', lang: ['en'], type: 'suffix', weight: 1.00 },
+            { text: 'IC', lang: ['en'], type: 'suffix', weight: 1.00 },
+            { text: 'ICAL', lang: ['en'], type: 'suffix', weight: 1.00 },
+            { text: 'IVE', lang: ['en'], type: 'suffix', weight: 1.00 },
+            { text: 'ATIVE', lang: ['en'], type: 'suffix', weight: 1.00 },
+            { text: 'ITIVE', lang: ['en'], type: 'suffix', weight: 1.00 },
+
+            // French / generic Romance
+            { text: 'RE', lang: ['fr'], type: 'prefix', weight: 1.05 },
+            { text: 'DE', lang: ['fr'], type: 'prefix', weight: 1.00 },
+            { text: 'DES', lang: ['fr'], type: 'prefix', weight: 1.00 },
+            { text: 'LE', lang: ['fr'], type: 'prefix', weight: 1.00 },
+            { text: 'LA', lang: ['fr'], type: 'prefix', weight: 1.00 },
+            { text: 'LES', lang: ['fr'], type: 'prefix', weight: 1.00 },
+            { text: 'UN', lang: ['fr'], type: 'prefix', weight: 1.00 },
+            { text: 'UNE', lang: ['fr'], type: 'prefix', weight: 1.00 },
+            { text: 'ION', lang: ['fr'], type: 'suffix', weight: 1.10 },
+            { text: 'MENT', lang: ['fr'], type: 'suffix', weight: 1.00 },
+            { text: 'E', lang: ['fr'], type: 'suffix', weight: 0.95 },
+
+            // Named / special
+            { text: 'FRANCESCO', lang: ['mix'], type: 'name', weight: 1.50 },
+            { text: 'GROSS', lang: ['mix'], type: 'stem', weight: 1.20 },
+            { text: 'HYPER', lang: ['mix'], type: 'prefix', weight: 1.15 },
+            { text: 'RAUM', lang: ['de'], type: 'stem', weight: 1.10 },
+            { text: 'ZERO', lang: ['mix'], type: 'stem', weight: 1.10 },
+            { text: 'COPY', lang: ['en'], type: 'stem', weight: 1.10 },
+            { text: 'STRAßE', lang: ['de'], type: 'name', weight: 1.20 }
+        ];
+
+        let morphemeEntries = [];
+        let morphemeIndex = new Map();
+        let morphemeStarts = new Map();
+        let sortedMorphemeTexts = [];
+
+        function buildMorphemeIndex(entries) {
+            morphemeEntries = entries.map(entry => ({
+                id: entry.id || (crypto.randomUUID ? crypto.randomUUID() : `m_${Date.now()}_${Math.random().toString(16).slice(2)}`),
+                text: entry.text,
+                normalized: normalizeMorpheme(entry.text),
+                lang: Array.isArray(entry.lang) ? entry.lang : [entry.lang || 'mix'],
+                type: entry.type || 'other',
+                weight: Number.isFinite(+entry.weight) ? +entry.weight : 1.0,
+                source: entry.source || 'db',
+                createdAt: entry.createdAt || new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            }));
+
+            morphemeIndex = new Map();
+            morphemeStarts = new Map();
+            sortedMorphemeTexts = [];
+
+            for (const entry of morphemeEntries) {
+                morphemeIndex.set(entry.normalized, entry);
+                sortedMorphemeTexts.push(entry.normalized);
+                const first = entry.normalized[0] || '';
+                if (!morphemeStarts.has(first)) morphemeStarts.set(first, []);
+                morphemeStarts.get(first).push(entry);
+            }
+
+            sortedMorphemeTexts.sort((a, b) => b.length - a.length || a.localeCompare(b));
+            for (const [k, arr] of morphemeStarts.entries()) {
+                arr.sort((a, b) => b.normalized.length - a.normalized.length || b.weight - a.weight || a.normalized.localeCompare(b.normalized));
+            }
+        }
+
+        function canonicalizeForMatch(text) {
+            return normalizeMorpheme(text).replace(/\s+/g, '');
+        }
+
+        function candidatesAt(word, pos) {
+            const first = word[pos] || '';
+            const bucket = morphemeStarts.get(first) || [];
+            const out = [];
+            for (const entry of bucket) {
+                if (word.startsWith(entry.normalized, pos)) out.push(entry);
+            }
+            return out;
+        }
+
+        function splitMorphemes(word) {
+            const normalized = canonicalizeForMatch(word);
+            const memo = new Map();
+
+            function solve(pos) {
+                if (pos >= normalized.length) return { score: 0, tokens: [] };
+                if (memo.has(pos)) return memo.get(pos);
+
+                let best = {
+                    score: -1e18,
+                    tokens: [{ text: normalized[pos], normalized: normalized[pos], lang: ['unk'], type: 'char', weight: 0, source: 'fallback' }, ...solve(pos + 1).tokens]
+                };
+                best.score = solve(pos + 1).score - 80;
+
+                for (const entry of candidatesAt(normalized, pos)) {
+                    const next = solve(pos + entry.normalized.length);
+                    const structuralBonus = { prefix: 18, stem: 16, suffix: 15, name: 20, other: 12 }[entry.type] || 12;
+                    const lengthBonus = Math.min(entry.normalized.length, 12) * 2;
+                    const multiLangBonus = entry.lang.includes('mix') ? 2 : 0;
+                    const candidate = {
+                        score: next.score + (entry.weight * 60) + lengthBonus + structuralBonus + multiLangBonus,
+                        tokens: [entry, ...next.tokens]
+                    };
+                    if (candidate.score > best.score) best = candidate;
+                }
+                memo.set(pos, best);
+                return best;
+            }
+            return solve(0).tokens;
+        }
+
+        const BIG_PRIME = 100000000000000003n;
+        let currentOriginal = '';
+        let currentNormalized = '';
+        let currentS = 0n;
+        let currentI = 0n;
+        let currentN = 0n;
+        let currentPrimes = [];
+        let currentFragments = [];
+        let testCount = 0;
+        let successCount = 0;
+
+        function factorial(n) {
+            if (n <= 1) return 1n;
+            let f = 1n;
+            for (let i = 2; i <= n; i++) f *= BigInt(i);
+            return f;
+        }
+
+        function getFreqMap(arr) {
+            const freq = {};
+            for (const v of arr) {
+                const key = v.toString();
+                freq[key] = (freq[key] || 0) + 1;
+            }
+            return freq;
+        }
+
+        function calculateRank(primes) {
+            const n = primes.length;
+            if (n === 0) return 0n;
+            const freq = getFreqMap(primes);
+            const uniqueKeys = Object.keys(freq).map(Number).sort((a, b) => a - b);
+            let rank = 0n;
+
+            for (let pos = 0; pos < n; pos++) {
+                const current = primes[pos];
+                for (const p of uniqueKeys) {
+                    const key = p.toString();
+                    if (freq[key] === 0) continue;
+                    if (p >= current) break;
+                    freq[key]--;
+                    let perms = factorial(n - pos - 1);
+                    for (const k in freq) {
+                        if (freq[k] > 1) perms /= factorial(freq[k]);
+                    }
+                    rank += perms;
+                    freq[key]++;
+                }
+                const key = current.toString();
+                freq[key]--;
+            }
+            return rank;
+        }
+
+        function reconstructFromRank(rank, multiset) {
+            const n = multiset.length;
+            if (n === 0) return [];
+            const freq = getFreqMap(multiset);
+            const uniqueKeys = Object.keys(freq).map(Number).sort((a, b) => a - b);
+            let remainingRank = rank;
+            const result = [];
+
+            for (let pos = 0; pos < n; pos++) {
+                let placed = false;
+                for (const p of uniqueKeys) {
+                    const key = p.toString();
+                    if (freq[key] === 0) continue;
+                    freq[key]--;
+                    let perms = factorial(n - pos - 1);
+                    for (const k in freq) {
+                        if (freq[k] > 1) perms /= factorial(freq[k]);
+                    }
+                    if (remainingRank < perms) {
+                        result.push(p);
+                        placed = true;
+                        break;
+                    } else {
+                        remainingRank -= perms;
+                        freq[key]++;
+                    }
+                }
+                if (!placed) break;
+            }
+            return result;
+        }
+
+        function factorizeS(S) {
+            const multiset = [];
+            let rest = S;
+            const sortedPrimes = Object.values(PRIME_ALPHABET).sort((a, b) => a - b);
+            for (const p of sortedPrimes) {
+                const bp = BigInt(p);
+                while (rest % bp === 0n) {
+                    multiset.push(p);
+                    rest = rest / bp;
+                }
+            }
+            if (rest !== 1n) throw new Error('S konnte nicht vollständig faktorisiert werden');
+            return multiset;
+        }
+
+        function calculateN(primes) {
+            const n = primes.length;
+            if (n === 0) return 0n;
+            const freq = getFreqMap(primes);
+            let N = factorial(n);
+            for (const key in freq) {
+                if (freq[key] > 1) N /= factorial(freq[key]);
+            }
+            return N;
+        }
+
+        function primesFromText(text) {
+            const primes = [];
+            for (const ch of text) {
+                const p = PRIME_ALPHABET[ch];
+                if (p) primes.push(BigInt(p));
+            }
+            return primes;
+        }
+
+        function fragmentMeta(fragmentText) {
+            const display = fragmentText || '';
+            const normalized = normalizeMorpheme(display);
+            const entry = morphemeIndex.get(normalized) || null;
+            const primes = primesFromText(normalized);
+            let S = 1n;
+            for (const p of primes) S *= p;
+            const I = calculateRank(primes);
+            const cycles = Number((BigInt(normalized.length) * 8n) + (I % 17n));
+            return {
+                text: display,
+                normalized,
+                S: S.toString(),
+                I: I.toString(),
+                cycles,
+                collision: !entry && normalized.length > 1,
+                lang: entry ? entry.lang : ['unk'],
+                type: entry ? entry.type : 'char',
+                source: entry ? entry.source : 'fallback'
+            };
+        }
+
+        // ============================================================
+        // INDEXEDDB MORPHEME STORE STORE
+        // ============================================================
+        const DB_NAME = 'gpm-morphemes-db';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'morphemes';
+        let dbPromise = null;
+
+        let libraryOpen = false;
+        let confirmModalAction = null;
+        let editTargetId = null;
+        let importPayload = null;
+        let importMode = 'merge';
+        let pendingUndo = null;
+        let undoTimer = null;
+
+        function safeText(v) {
+            return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+        function escapeHtml(str) { return safeText(str); }
+
+        function normalizeLanguages(value) {
+            const raw = Array.isArray(value) ? value : String(value || '').split(',');
+            return [...new Set(raw.map(v => String(v).trim().toLowerCase()).filter(Boolean))];
+        }
+
+        function normalizeType(value) {
+            const t = String(value || 'other').trim().toLowerCase();
+            const allowed = new Set(['prefix', 'stem', 'suffix', 'compound', 'particle', 'name', 'custom', 'other']);
+            return allowed.has(t) ? t : 'other';
+        }
+
+        function typeLabel(type) {
+            const map = { prefix: 'Prefix', stem: 'Stem', suffix: 'Suffix', compound: 'Compound', particle: 'Particle', name: 'Name', custom: 'Custom', other: 'Other' };
+            return map[normalizeType(type)] || 'Other';
+        }
+
+        function typeClass(type) { return `type-${normalizeType(type)}`; }
+
+        function uniqueLanguages(entries) {
+            const set = new Set();
+            for (const e of entries) for (const l of (e.lang || [])) set.add(String(l).toLowerCase());
+            return [...set].sort();
+        }
+
+        function computeLibraryStats(entries) {
+            const stats = { entries: entries.length, languages: uniqueLanguages(entries).length, prefix: 0, stem: 0, suffix: 0, compound: 0, particle: 0, name: 0, custom: 0, other: 0 };
+            for (const e of entries) {
+                const t = normalizeType(e.type);
+                stats[t] = (stats[t] || 0) + 1;
+            }
+            return stats;
+        }
+
+        function updateLibraryHeader(entries) {
+            const stats = computeLibraryStats(entries);
+            const summary = document.getElementById('librarySummary');
+            if (summary) summary.textContent = `${stats.entries} entries · ${stats.languages} languages`;
+            const statsEl = document.getElementById('libraryStats');
+            if (statsEl) {
+                const pill = (label, value) => `
+                    <div class="bg-[#050505] border border-zinc-800 rounded-lg p-2">
+                        <div class="text-[9px] uppercase tracking-widest text-zinc-500">${label}</div>
+                        <div class="mt-1 text-sm font-mono text-white font-semibold">${value}</div>
+                    </div>`;
+                statsEl.innerHTML = [
+                    pill('Entries', stats.entries), pill('Languages', stats.languages), pill('Prefixes', stats.prefix),
+                    pill('Stems', stats.stem), pill('Suffixes', stats.suffix), pill('Custom', stats.custom + stats.compound + stats.particle + stats.name + stats.other)
+                ].join('');
+            }
+        }
+
+        function toggleLibrary(force) {
+            const body = document.getElementById('libraryBody');
+            const arrow = document.getElementById('libraryToggleArrow');
+            if (!body || !arrow) return;
+            libraryOpen = typeof force === 'boolean' ? force : !libraryOpen;
+            body.classList.toggle('hidden', !libraryOpen);
+            arrow.textContent = libraryOpen ? '▼' : '▶';
+            if (libraryOpen) { setTimeout(() => document.getElementById('morphemeSearch')?.focus(), 0); }
+            renderMorphemeRegistry();
+        }
+
+        function clearMorphemeSearch() {
+            const s = document.getElementById('morphemeSearch');
+            if (s) s.value = '';
+            renderMorphemeRegistry();
+        }
+
+        function openConfirmModal({ title, body, confirmLabel, action }) {
+            const modal = document.getElementById('confirmModal');
+            document.getElementById('confirmModalTitle').textContent = title;
+            document.getElementById('confirmModalBody').textContent = body;
+            const actionBtn = document.getElementById('confirmModalAction');
+            actionBtn.textContent = confirmLabel || 'Delete';
+            confirmModalAction = action;
+            modal.style.display = 'flex';
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').style.display = 'none';
+            confirmModalAction = null;
+        }
+
+        function runConfirmModalAction() {
+            const action = confirmModalAction;
+            closeConfirmModal();
+            if (typeof action === 'function') action();
+        }
+
+        function openEditModal(entry) {
+            editTargetId = entry.id;
+            document.getElementById('editMorphemeId').value = entry.id;
+            document.getElementById('editMorphemeText').value = entry.text || '';
+            document.getElementById('editMorphemeLang').value = (entry.lang || []).join(',');
+            document.getElementById('editMorphemeType').value = normalizeType(entry.type);
+            document.getElementById('editMorphemeWeight').value = Number(entry.weight || 1).toFixed(1);
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+            editTargetId = null;
+        }
+
+        function showToast(title, body, canUndo) {
+            const toast = document.getElementById('undoToast');
+            document.getElementById('undoToastTitle').textContent = title;
+            document.getElementById('undoToastBody').textContent = body;
+            document.getElementById('undoToastAction').style.display = canUndo ? 'inline-flex' : 'none';
+            toast.style.display = 'block';
+        }
+
+        function hideUndoToast() {
+            document.getElementById('undoToast').style.display = 'none';
+            pendingUndo = null;
+            if (undoTimer) clearTimeout(undoTimer);
+            undoTimer = null;
+        }
+
+        function showUndoDelete(entry) {
+            pendingUndo = entry;
+            showToast(`${entry.text} deleted`, 'You can restore it for 5 seconds.', true);
+            if (undoTimer) clearTimeout(undoTimer);
+            undoTimer = setTimeout(() => { pendingUndo = null; hideUndoToast(); }, 5000);
+        }
+
+        async function undoLastDelete() {
+            if (!pendingUndo) return;
+            const entry = pendingUndo;
+            pendingUndo = null;
+            if (undoTimer) clearTimeout(undoTimer);
+            undoTimer = null;
+            await idbUpsert(entry);
+            await ensureMorphemeData();
+            hideUndoToast();
+            logStress(`↩️ Restored: ${entry.text}`);
+        }
+
+        function openDB() {
+            if (dbPromise) return dbPromise;
+            dbPromise = new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onupgradeneeded = () => {
+                    const db = request.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                        store.createIndex('normalized', 'normalized', { unique: true });
+                        store.createIndex('type', 'type', { unique: false });
+                    }
+                };
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+            return dbPromise;
+        }
+
+        async function idbGetAll() {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const req = tx.objectStore(STORE_NAME).getAll();
+                req.onsuccess = () => resolve(req.result || []);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        async function idbGetByNormalized(normalized) {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const req = tx.objectStore(STORE_NAME).index('normalized').get(normalized);
+                req.onsuccess = () => resolve(req.result || null);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        async function idbClear() {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                tx.objectStore(STORE_NAME).clear();
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        async function idbUpsert(entry) {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                const normalized = String(entry.normalized || '').trim();
+                const req = store.index('normalized').get(normalized);
+                req.onsuccess = () => {
+                    const existing = req.result;
+                    if (existing && existing.id !== entry.id) { entry.id = existing.id; }
+                    store.put(entry);
+                };
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        async function idbDelete(id) {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                tx.objectStore(STORE_NAME).delete(id);
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        function seedDefaultEntries() {
+            return DEFAULT_MORPHEMES.map(entry => ({
+                id: (crypto.randomUUID ? crypto.randomUUID() : `m_${Date.now()}_${Math.random().toString(16).slice(2)}`),
+                text: entry.text,
+                normalized: normalizeMorpheme(entry.text),
+                lang: normalizeLanguages(entry.lang),
+                type: normalizeType(entry.type),
+                weight: Number(entry.weight || 1.0),
+                source: 'default',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            }));
+        }
+
+        async function ensureMorphemeData() {
+            let entries = await idbGetAll();
+            if (!entries || entries.length === 0) {
+                const seeded = seedDefaultEntries();
+                for (const entry of seeded) await idbUpsert(entry);
+                entries = seeded;
+            }
+            buildMorphemeIndex(entries);
+            renderMorphemeRegistry();
+        }
+
+        async function reloadMorphemes() {
+            await ensureMorphemeData();
+            showToast('Reloaded', 'Morpheme library refreshed.', false);
+        }
+
+        function filteredMorphemes() {
+            const q = normalizeMorpheme(document.getElementById('morphemeSearch')?.value || '').trim();
+            let entries = [...morphemeEntries];
+            if (q) {
+                const query = q.toUpperCase();
+                entries = entries.filter(entry => {
+                    const hay = [ entry.text, entry.normalized, (entry.lang || []).join(','), entry.type, entry.weight ].join(' ').toUpperCase();
+                    return hay.includes(query);
+                });
+            }
+            entries.sort((a, b) => b.normalized.length - a.normalized.length || (b.weight - a.weight) || a.normalized.localeCompare(b.normalized));
+            return entries;
+        }
+
+        function resetMorphemeForm() {
+            const textEl = document.getElementById('morphemeText');
+            const langEl = document.getElementById('morphemeLang');
+            const typeEl = document.getElementById('morphemeType');
+            const weightEl = document.getElementById('morphemeWeight');
+            if (textEl) textEl.value = '';
+            if (langEl) langEl.value = '';
+            if (typeEl) typeEl.value = 'other';
+            if (weightEl) weightEl.value = '1.0';
+            editTargetId = null;
+        }
+
+        function confirmResetDefaults() {
+            openConfirmModal({
+                title: 'Reset defaults?',
+                body: 'This will delete the current local library and restore the built-in morpheme defaults.',
+                confirmLabel: 'Reset',
+                action: async () => {
+                    await idbClear();
+                    const seeded = seedDefaultEntries();
+                    for (const entry of seeded) await idbUpsert(entry);
+                    await ensureMorphemeData();
+                    resetMorphemeForm();
+                    showToast('Reset complete', 'Default morphemes restored.', false);
+                }
+            });
+        }
+
+        // ============================================================
+        // GPM STATE / CORE GLOBALS
+        // ============================================================
+        let currentTokens = [];
+
+        function updateStats() {
+            document.getElementById('testCount').innerText = testCount;
+            document.getElementById('successCount').innerText = successCount;
+            const rate = testCount === 0 ? 100 : (successCount / testCount * 100);
+            document.getElementById('rateDisplay').innerText = rate.toFixed(2) + '%';
+            document.getElementById('invarianceRate').innerText = rate.toFixed(2) + '%';
+        }
+
+        function runStressTest() {
+            const logDiv = document.getElementById('stressLog');
+            logDiv.innerHTML = '<div class="text-kernel-tensor">🧪 Stress test running…</div>';
+            const words = [
+                'BEWUSSTSEIN', 'VERKAUFEN', 'EINKAUFEN', 'BEZAHLEN', 'VERGEBEN',
+                'ENTWICKELN', 'GEHEIMNIS', 'FREUNDSCHAFT', 'BESCHREIBEN', 'VERSTEHT',
+                'MISSVERSTAND', 'GROSS', 'STRAßE', 'SCHLOSS', 'WISSEN',
+                'UNDERSTANDING', 'REVOLUTION', 'UNBELIEVABLE', 'INTERNATIONAL',
+                'MISUNDERSTANDING', 'OVERWHELMING', 'EXTRAORDINARY',
+                'REVOLUTIONNAIRE', 'INDISPENSABLE', 'FRANCESCO', 'HYPERRAUM', 'ZEROCOPY'
+            ];
+            const results = [];
+            const errors = [];
+            let localSuccess = 0;
+            let localTest = 0;
+
+            for (let t = 0; t < Math.min(100, words.length); t++) {
+                const word = words[t % words.length];
+                const normalized = normalizeWord(word);
+                const primes = primesFromText(normalized);
+                if (primes.length === 0) continue;
+                let S = 1n;
+                for (const p of primes) S *= p;
+                const I = calculateRank(primes);
+                let multiset;
+                try { multiset = factorizeS(S); } catch { results.push(false); continue; }
+                if (multiset.length === 0) { results.push(false); continue; }
+                const reconstructedPrimes = reconstructFromRank(I, multiset);
+                const charsRecon = reconstructedPrimes.map(p => PRIME_TO_CHAR[p.toString()] || '?');
+                const reconstructed = charsRecon.join('');
+                const valid = (reconstructed === word || reconstructed === normalized);
+                results.push(valid);
+                if (valid) localSuccess++;
+                localTest++;
+                if (!valid) errors.push(word);
+            }
+
+            successCount += localSuccess;
+            testCount += localTest;
+            updateStats();
+            const rate = testCount === 0 ? 100 : (successCount / testCount * 100);
+            logDiv.innerHTML = `
+                <div class="${rate === 100 ? 'text-kernel-succ' : 'text-kernel-alert'}">
+                    ${rate === 100 ? '✅' : '⚠️'} Stresstest: ${results.filter(r => r).length}/${results.length} korrekt (${rate.toFixed(2)}%)
+                </div>
+                ${errors.length > 0 ? `<div class="text-red-400 text-[8px]">Broken words: ${errors.slice(0,5).join(', ')}${errors.length > 5 ? ' …' : ''}</div>` : ''}
+                <div class="text-zinc-500 text-[8px] mt-1">
+                    ${rate === 100 ? '🎉 100% invariance – bijection proven!' : '⚠️ There are topological errors in the algorithm.'}
+                </div>
+            `;
+            if (rate === 100) {
+                const main = document.querySelector('main');
+                main.style.transition = 'background 0.5s ease';
+                main.style.background = 'rgba(0,255,102,0.03)';
+                setTimeout(() => { main.style.background = ''; }, 1000);
+            }
+        }
+
+        function setWord(w) {
+            document.getElementById('wordInput').value = w;
+            if(window.collapseWord) window.collapseWord();
+        }
+
+        function setGuideTab(tab) {
+            document.querySelectorAll('[data-guide-tab]').forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-guide-tab') === tab));
+            document.querySelectorAll('[data-guide-pane]').forEach(pane => pane.classList.toggle('active', pane.getAttribute('data-guide-pane') === tab));
+        }
+
+        function logStress(msg) {
+            const log = document.getElementById('stressLog');
+            if(!log) return;
+            const entry = document.createElement('div');
+            entry.className = 'text-zinc-400 text-[8px] truncate';
+            entry.innerText = msg;
+            log.appendChild(entry);
+            if (log.children.length > 20) log.removeChild(log.firstChild);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // ============================================================
+        // JS ENHANCEMENTS AND LOGIC WRAPPERS (Local Storage, UI, Sync)
+        // ============================================================
+        (function() {
+            const LS = {
+                favorites: 'gpm_favorites_v2', usage: 'gpm_usage_v2', history: 'gpm_history_v2',
+                selected: 'gpm_selected_morphemes_v2', lastView: 'gpm_view_v2', settings: 'gpm_settings_v2',
+                recent: 'gpm_recent_actions_v2', lastImport: 'gpm_last_import_v2'
+            };
+
+            let selectedTypeFilter = 'all';
+            let selectedIds = new Set(JSON.parse(localStorage.getItem(LS.selected) || '[]'));
+            let favorites = new Set(JSON.parse(localStorage.getItem(LS.favorites) || '[]'));
+            let usage = JSON.parse(localStorage.getItem(LS.usage) || '{}');
+            let history = JSON.parse(localStorage.getItem(LS.history) || '[]');
+            let recentActions = JSON.parse(localStorage.getItem(LS.recent) || '[]');
+            let settings = Object.assign({ beginner: false, tooltips: true, dense: false }, JSON.parse(localStorage.getItem(LS.settings) || '{}'));
+            let activeView = localStorage.getItem(LS.lastView) || 'audit';
+
+            const TYPE_ACCENT = {
+                prefix: 'var(--type-prefix)', stem: 'var(--type-stem)', suffix: 'var(--type-suffix)',
+                custom: 'var(--type-custom)', name: 'var(--type-name)', compound: 'var(--type-compound)',
+                particle: 'var(--type-particle)', other: 'var(--type-other)', char: 'var(--type-other)', unk: 'var(--type-other)'
+            };
+
+            function applySettings() {
+                document.body.classList.toggle('beginner', !!settings.beginner);
+                document.body.classList.toggle('dense', !!settings.dense);
+                document.body.classList.toggle('tooltips-off', settings.tooltips === false);
+                document.querySelectorAll('[title]').forEach(el => {
+                    const keep = el.dataset.keepTitle === '1';
+                    if (settings.tooltips === false && !keep) {
+                        if (!el.dataset.originalTitle) el.dataset.originalTitle = el.getAttribute('title') || '';
+                        el.removeAttribute('title');
+                    } else if (el.dataset.originalTitle) {
+                        el.setAttribute('title', el.dataset.originalTitle);
+                    }
+                });
+            }
+
+            function persist(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
+
+            function saveRecent(action) {
+                recentActions.unshift({ action, ts: new Date().toISOString() });
+                recentActions = recentActions.slice(0, 12);
+                persist(LS.recent, recentActions);
+                renderRecentActions();
+            }
+
+            function shortDate(ts) {
+                return new Date(ts).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            }
+
+            function setView(view) {
+                activeView = view;
+                persist(LS.lastView, view);
+                document.querySelectorAll('[data-view]').forEach(el => {
+                    el.classList.toggle('hidden', el.getAttribute('data-view') !== view);
+                });
+                document.querySelectorAll('[data-view-btn]').forEach(btn => {
+                    const on = btn.getAttribute('data-view-btn') === view;
+                    btn.classList.toggle('active', on);
+                    btn.classList.toggle('border-kernel-accent', on);
+                    btn.classList.toggle('text-white', on);
+                    btn.classList.toggle('bg-kernel-accent/10', on);
+                    btn.classList.toggle('shadow-[inset_3px_0_0_0_var(--accent)]', on);
+                });
+                if (view === 'morphemes') { toggleLibrary(true); }
+                if (view === 'audit') { updateLiveMetrics(); }
+            }
+            window.setView = setView;
+
+            function setUiMode(mode) {
+                settings.mode = mode;
+                persist(LS.settings, settings);
+                applySettings();
+                saveRecent(`UI mode: ${mode}`);
+                showSaveStatus('Saved');
+            }
+            window.setUiMode = setUiMode;
+
+            function setToggleSetting(name, value) {
+                settings[name] = !!value;
+                persist(LS.settings, settings);
+                applySettings();
+                saveRecent(`${name} ${value ? 'on' : 'off'}`);
+                showSaveStatus('Saved');
+            }
+            window.setToggleSetting = setToggleSetting;
+
+            function showSaveStatus(text) {
+                const el = document.getElementById('saveStatus');
+                if (!el) return;
+                el.textContent = `● ${text}`;
+                el.style.color = '#00ff66';
+                setTimeout(() => { el.textContent = '● saved'; el.style.color = ''; }, 1200);
+            }
+            window.showSaveStatus = showSaveStatus;
+
+            function usageCount(norm) { return Number(usage[norm] || 0); }
+
+            function bumpUsage(tokens) {
+                let changed = false;
+                tokens.forEach(t => {
+                    const norm = String(t.normalized || t.text || '').toUpperCase();
+                    if (!norm) return;
+                    usage[norm] = (usage[norm] || 0) + 1;
+                    changed = true;
+                });
+                if (changed) persist(LS.usage, usage);
+            }
+
+            function pushAnalysisHistory(item) {
+                history.unshift(item);
+                history = history.slice(0, 20);
+                persist(LS.history, history);
+                renderAnalysisHistory();
+            }
+
+            function renderAnalysisHistory() {
+                const root = document.getElementById('analysisHistory');
+                if (!root) return;
+                if (!history.length) {
+                    root.innerHTML = '<div class="text-zinc-600 text-sm italic">No analyses yet.</div>';
+                    return;
+                }
+                root.innerHTML = history.map(item => `
+                    <button onclick="setWord('${String(item.word).replace(/'/g, "\\'")}'); setView('audit');" class="w-full text-left rounded-lg border border-zinc-800 bg-[#050505] p-3 hover:border-kernel-accent/40 transition">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="font-mono text-sm text-white">${escapeHtml(item.word)}</div>
+                            <div class="text-[10px] ${item.valid ? 'text-kernel-succ' : 'text-kernel-alert'} font-bold">${item.valid ? 'VALID' : 'PANIC'}</div>
+                        </div>
+                        <div class="mt-2 flex flex-wrap gap-2">
+                            <span class="library-badge">${shortDate(item.ts)}</span>
+                            <span class="library-badge">${item.fragments} frags</span>
+                            <span class="library-badge">conf ${item.confidence}%</span>
+                        </div>
+                    </button>
+                `).join('');
+            }
+            window.renderAnalysisHistory = renderAnalysisHistory;
+
+            function renderRecentActions() {
+                const root = document.getElementById('recentActions');
+                if (!root) return;
+                if (!recentActions.length) {
+                    root.innerHTML = '<div class="text-zinc-600 text-sm italic">No recent actions.</div>';
+                    return;
+                }
+                root.innerHTML = recentActions.map(item => `
+                    <div class="rounded-lg border border-zinc-800 bg-[#050505] p-3">
+                        <div class="text-sm text-zinc-300">${escapeHtml(item.action)}</div>
+                        <div class="mt-1 text-[10px] text-zinc-600 font-mono">${shortDate(item.ts)}</div>
+                    </div>
+                `).join('');
+            }
+            window.renderRecentActions = renderRecentActions;
+
+            function updateStatsPanels() {
+                if (!morphemeEntries) return;
+                const entries = morphemeEntries || [];
+                const langSet = new Set();
+                const counts = { prefix:0, stem:0, suffix:0, compound:0, particle:0, name:0, custom:0, other:0 };
+                let totalWeight = 0;
+                entries.forEach(e => {
+                    (e.lang || []).forEach(l => langSet.add(String(l).toLowerCase()));
+                    const t = String(e.type || 'other').toLowerCase();
+                    counts[t] = (counts[t] || 0) + 1;
+                    totalWeight += Number(e.weight || 0);
+                });
+                const avgWeight = entries.length ? (totalWeight / entries.length) : 0;
+                const statsPanel = document.getElementById('statsPanel');
+                if (statsPanel) {
+                    const card = (label, value) => `
+                        <div class="stat-tile">
+                            <div class="stat-label">${label}</div>
+                            <div class="stat-value">${value}</div>
+                        </div>`;
+                    statsPanel.innerHTML = [
+                        card('Entries', entries.length), card('Languages', langSet.size), card('Prefixes', counts.prefix),
+                        card('Stems', counts.stem), card('Suffixes', counts.suffix), card('Custom', counts.custom + counts.compound + counts.particle + counts.name + counts.other),
+                        card('Average weight', avgWeight.toFixed(2)), card('Favorites', favorites.size), card('Selected', selectedIds.size)
+                    ].join('');
+                }
+                const storageSize = new Blob([localStorage.getItem(LS.favorites)||'', localStorage.getItem(LS.usage)||'', localStorage.getItem(LS.history)||'', localStorage.getItem(LS.settings)||'', localStorage.getItem(LS.recent)||'']).size;
+                const storage = document.getElementById('storageUsage');
+                if (storage) storage.textContent = `${(storageSize/1024).toFixed(1)} KB (local state)`;
+                const lastImport = document.getElementById('lastImportLabel');
+                if (lastImport) lastImport.textContent = localStorage.getItem(LS.lastImport) || '—';
+            }
+            window.updateStatsPanels = updateStatsPanels;
+
+            function setTypeFilter(type) {
+                selectedTypeFilter = type;
+                document.querySelectorAll('.filter-chip').forEach(el => { el.classList.toggle('border-kernel-accent', el.getAttribute('data-type-filter') === type); });
+                renderMorphemeRegistry();
+            }
+            window.setTypeFilter = setTypeFilter;
+
+            function sortEntries(entries) {
+                const sort = document.getElementById('morphemeSort')?.value || 'favorites';
+                const favScore = e => favorites.has(e.id) ? 1 : 0;
+                const usageScore = e => usageCount(e.normalized);
+                return [...entries].sort((a, b) => {
+                    switch (sort) {
+                        case 'alpha': return a.text.localeCompare(b.text);
+                        case 'type': return a.type.localeCompare(b.type) || a.text.localeCompare(b.text);
+                        case 'weight': return (Number(b.weight)||0) - (Number(a.weight)||0) || a.text.localeCompare(b.text);
+                        case 'newest': return new Date(b.createdAt||0) - new Date(a.createdAt||0);
+                        case 'oldest': return new Date(a.createdAt||0) - new Date(b.createdAt||0);
+                        case 'usage': return usageScore(b) - usageScore(a) || favScore(b) - favScore(a) || a.text.localeCompare(b.text);
+                        case 'favorites': return favScore(b) - favScore(a) || usageScore(b) - usageScore(a) || a.text.localeCompare(b.text);
+                        default: return a.text.localeCompare(b.text);
+                    }
+                });
+            }
+
+            function toggleFavorite(id) {
+                if (favorites.has(id)) favorites.delete(id); else favorites.add(id);
+                persist(LS.favorites, [...favorites]);
+                renderMorphemeRegistry();
+                saveRecent(`Favorite toggled`);
+            }
+            window.toggleFavorite = toggleFavorite;
+
+            function renderBulkToolbar() {
+                const root = document.getElementById('bulkToolbar');
+                const count = document.getElementById('bulkSelectionCount');
+                if (!root || !count) return;
+                count.textContent = String(selectedIds.size);
+                root.classList.toggle('hidden', selectedIds.size === 0);
+            }
+
+            function toggleSelection(id, checked) {
+                if (checked) selectedIds.add(id); else selectedIds.delete(id);
+                persist(LS.selected, [...selectedIds]);
+                renderBulkToolbar();
+            }
+            window.toggleSelection = toggleSelection;
+
+            function bulkFavoriteSelected() {
+                selectedIds.forEach(id => favorites.add(id));
+                persist(LS.favorites, [...favorites]);
+                saveRecent(`Favorited ${selectedIds.size} items`);
+                renderMorphemeRegistry();
+            }
+            window.bulkFavoriteSelected = bulkFavoriteSelected;
+
+            function bulkExportSelected() {
+                const entries = (morphemeEntries || []).filter(e => selectedIds.has(e.id));
+                const payload = { version: 1, created: new Date().toISOString(), entries };
+                const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `morphemes-selected-${new Date().toISOString().slice(0,10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+                showSaveStatus('Exported');
+            }
+            window.bulkExportSelected = bulkExportSelected;
+
+            async function bulkDeleteSelected() {
+                const n = selectedIds.size;
+                if (!n) return;
+                openConfirmModal({
+                    title: 'Delete selected?',
+                    body: `This will remove ${n} selected morpheme(s) from the local library.`,
+                    confirmLabel: 'Delete',
+                    action: async () => {
+                        for (const id of [...selectedIds]) await idbDelete(id);
+                        selectedIds.clear();
+                        persist(LS.selected, []);
+                        await ensureMorphemeData();
+                        showUndoDelete({ text: `${n} selected items`, id: `bulk-${Date.now()}` });
+                        saveRecent(`Deleted ${n} morphemes`);
+                    }
+                });
+            }
+            window.bulkDeleteSelected = bulkDeleteSelected;
+
+            // ==========================================
+            // UNIFIED RENDERING FOR REGISTRY & AUDIT
+            // ==========================================
+
+            function renderMorphemeRegistry() {
+                const list = document.getElementById('morphemeList');
+                if (!list || !morphemeEntries) return;
+
+                const query = (document.getElementById('morphemeSearch')?.value || '').trim().toUpperCase();
+                let entries = [...morphemeEntries];
+                if (selectedTypeFilter !== 'all') entries = entries.filter(e => String(e.type || 'other').toLowerCase() === selectedTypeFilter);
+                if (query) {
+                    entries = entries.filter(entry => {
+                        const hay = [entry.text, entry.normalized, (entry.lang || []).join(','), entry.type, entry.weight, usageCount(entry.normalized)].join(' ').toUpperCase();
+                        return hay.includes(query);
+                    });
+                }
+                entries = sortEntries(entries);
+
+                updateLibraryHeader(morphemeEntries);
+                updateStatsPanels();
+                renderBulkToolbar();
+
+                if (!entries.length) {
+                    list.innerHTML = '<div class="text-zinc-500 text-sm italic border border-zinc-800 rounded-lg p-4 bg-[#050505]">No matching morphemes found.</div>';
+                    return;
+                }
+
+                list.innerHTML = entries.map(entry => {
+                    const norm = entry.normalized;
+                    const uses = usageCount(norm);
+                    const heat = Math.min(100, uses ? Math.log2(uses + 1) * 22 : 0);
+                    const fav = favorites.has(entry.id);
+                    const selected = selectedIds.has(entry.id);
+                    const langText = (entry.lang || []).slice(0, 3).join(', ');
+                    const tooltip = `${typeLabel(entry.type)} • ${langText || 'n/a'} • weight ${Number(entry.weight || 0).toFixed(2)} • uses ${uses}`;
+                    
+                    return `
+                        <div class="morpheme-card transition hover:border-kernel-accent/30 ${settings.dense ? 'py-2' : ''}" title="${escapeHtml(tooltip)}">
+                            <div class="absolute left-0 top-0 bottom-0 w-[3px]" style="background-color: ${TYPE_ACCENT[String(entry.type || 'other').toLowerCase()] || 'var(--accent)'}"></div>
+                            <div class="flex items-start justify-between gap-3 pl-2">
+                                <div class="flex items-start gap-2 min-w-0 w-full">
+                                    <input type="checkbox" class="mt-1 accent-cyan-400 shrink-0" ${selected ? 'checked' : ''} onchange="toggleSelection('${escapeHtml(entry.id)}', this.checked)">
+                                    <div class="min-w-0 w-full">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <div class="title">${escapeHtml(entry.text)}</div>
+                                            ${fav ? '<span class="text-yellow-400 text-sm" title="Favorite">★</span>' : ''}
+                                        </div>
+                                        <div class="mt-2 flex flex-wrap gap-1">
+                                            <span class="type-chip ${typeClass(entry.type)}">${typeLabel(entry.type)}</span>
+                                            ${(entry.lang || []).slice(0,3).map(l => `<span class="lang-chip">${escapeHtml(l)}</span>`).join('')}
+                                            <span class="library-badge">w ${Number(entry.weight || 0).toFixed(2)}</span>
+                                            <span class="library-badge">${escapeHtml(entry.source || 'db')}</span>
+                                        </div>
+                                        <div class="mt-2 h-1.5 rounded-full bg-[#111] border border-zinc-800 overflow-hidden">
+                                            <div class="h-full bg-kernel-tensor/70" style="width:${heat}%"></div>
+                                        </div>
+                                        <div class="mt-1 text-[10px] text-zinc-500 font-mono">${uses} uses</div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-1 shrink-0">
+                                    <button class="icon-btn" title="Favorite" onclick="toggleFavorite('${escapeHtml(entry.id)}')">${fav ? '★' : '☆'}</button>
+                                    <button class="icon-btn" title="Edit" onclick="editMorphemeById('${escapeHtml(entry.id)}')">✎</button>
+                                    <button class="icon-btn danger" title="Delete" onclick="requestDeleteMorpheme('${escapeHtml(entry.id)}')">🗑</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            window.renderMorphemeRegistry = renderMorphemeRegistry;
+
+            function renderMorphemAudit(word) {
+                const chain = document.getElementById('morphemChain');
+                if (!chain) return;
+                const tokens = (window.splitMorphemes ? window.splitMorphemes(word) : []).map(t => t.text || t);
+                currentFragments = tokens.map(fragmentMeta);
+                bumpUsage(currentFragments);
+
+                chain.innerHTML = '';
+                chain.style.display = 'grid';
+                chain.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
+                chain.style.gap = '12px';
+                chain.style.alignItems = 'stretch';
+
+                currentFragments.forEach((f, index) => {
+                    const block = document.createElement('div');
+                    const uses = usageCount(f.normalized);
+                    const tooltip = `${typeLabel(f.type)} • ${(f.lang || []).join(', ') || 'n/a'} • weight ${Number(f.weight || 0).toFixed ? Number(f.weight || 0).toFixed(2) : '1.00'}`;
+                    const accentColor = TYPE_ACCENT[String(f.type || 'other').toLowerCase()] || 'var(--accent)';
+
+                    block.className = `morpheme-card transition ${f.collision ? 'border-red-500/40 ring-1 ring-red-500/20' : 'hover:border-kernel-accent/30'} ${settings.dense ? 'py-2' : ''}`;
+                    block.title = escapeHtml(tooltip);
+
+                    block.innerHTML = `
+                        <div class="absolute left-0 top-0 bottom-0 w-[3px]" style="background-color: ${accentColor};"></div>
+                        <div class="flex items-start justify-between gap-3 pl-2 h-full">
+                            <div class="flex items-start gap-2 min-w-0 w-full h-full">
+                                <div class="min-w-0 w-full flex flex-col h-full">
+                                    <div class="flex items-center justify-between gap-2 flex-wrap w-full">
+                                        <div class="title" style="color: ${f.collision ? 'var(--red)' : 'var(--accent)'}">${escapeHtml(f.text)}</div>
+                                        <div class="text-[10px] font-bold ${f.collision ? 'text-red-400' : 'text-green-400'} shrink-0">${f.collision ? 'COLLISION' : 'OK'}</div>
+                                    </div>
+                                    <div class="mt-2 flex flex-wrap gap-1">
+                                        <span class="type-chip ${typeClass(f.type)}">${typeLabel(f.type)}</span>
+                                        ${(f.lang || []).slice(0, 3).map(x => `<span class="lang-chip">${escapeHtml(x)}</span>`).join('')}
+                                        <span class="library-badge">${uses} uses</span>
+                                    </div>
+                                    
+                                    <div class="mt-auto pt-3 grid grid-cols-3 gap-2">
+                                        <div class="rounded-lg border border-zinc-800 bg-[#0a0a0a] p-2 flex flex-col">
+                                            <div class="text-[8px] uppercase tracking-widest text-zinc-500">S</div>
+                                            <div class="mt-auto font-mono text-[10px] text-kernel-accent break-all">${escapeHtml(f.S)}</div>
+                                        </div>
+                                        <div class="rounded-lg border border-zinc-800 bg-[#0a0a0a] p-2 flex flex-col">
+                                            <div class="text-[8px] uppercase tracking-widest text-zinc-500">I</div>
+                                            <div class="mt-auto font-mono text-[10px] text-kernel-accent break-all">${escapeHtml(f.I)}</div>
+                                        </div>
+                                        <div class="rounded-lg border border-zinc-800 bg-[#0a0a0a] p-2 flex flex-col">
+                                            <div class="text-[8px] uppercase tracking-widest text-zinc-500">CPU</div>
+                                            <div class="mt-auto font-mono text-[10px] text-white break-all">${escapeHtml(String(f.cycles))}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    chain.appendChild(block);
+                });
+
+                updateLiveMetrics();
+            }
+            window.renderMorphemAudit = renderMorphemAudit;
+
+            // ==========================================
+
+            function saveMorphemeFromUI() {
+                const textEl = document.getElementById('morphemeText');
+                const langEl = document.getElementById('morphemeLang');
+                const typeEl = document.getElementById('morphemeType');
+                const weightEl = document.getElementById('morphemeWeight');
+
+                const text = (textEl?.value || '').trim();
+                if (!text) return;
+
+                const normalized = normalizeMorpheme(text);
+                const existing = (morphemeEntries || []).find(e => e.normalized === normalized);
+                if (existing && !editTargetId) {
+                    openEditModal(existing);
+                    textEl.value = existing.text;
+                    langEl.value = (existing.lang || []).join(',');
+                    typeEl.value = existing.type;
+                    weightEl.value = String(existing.weight || '1.0');
+                    showToast('Already exists', 'Opened the existing morpheme for editing.', false);
+                    return;
+                }
+
+                const entry = {
+                    id: editTargetId || (crypto.randomUUID ? crypto.randomUUID() : `m_${Date.now()}_${Math.random().toString(16).slice(2)}`),
+                    text, normalized,
+                    lang: normalizeLanguages(langEl.value || 'mix'),
+                    type: normalizeType(typeEl.value),
+                    weight: Number.parseFloat(weightEl.value || '1.0') || 1.0,
+                    source: editTargetId ? 'user-edit' : 'user',
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+
+                idbUpsert(entry).then(async () => {
+                    await ensureMorphemeData();
+                    resetMorphemeForm();
+                    closeEditModal();
+                    showSaveStatus('Saved');
+                    saveRecent(`Saved morpheme: ${entry.text}`);
+                    if (textEl) textEl.value = '';
+                });
+            }
+            window.saveMorphemeFromUI = saveMorphemeFromUI;
+            window.addMorphemeFromUI = saveMorphemeFromUI;
+
+            function editMorphemeById(id) {
+                const entry = (morphemeEntries || []).find(e => e.id === id);
+                if (!entry) return;
+                editTargetId = id;
+                openEditModal(entry);
+            }
+            window.editMorphemeById = editMorphemeById;
+
+            function deleteMorphemeFromUI(id) { requestDeleteMorpheme(id); }
+            window.deleteMorphemeFromUI = deleteMorphemeFromUI;
+
+            function requestDeleteMorpheme(id) {
+                const entry = (morphemeEntries || []).find(e => e.id === id);
+                if (!entry) return;
+                openConfirmModal({
+                    title: 'Delete morpheme?',
+                    body: `${entry.text} (${typeLabel(entry.type)}) will be removed from the local library.`,
+                    confirmLabel: 'Delete',
+                    action: async () => {
+                        await idbDelete(entry.id);
+                        selectedIds.delete(entry.id);
+                        persist(LS.selected, [...selectedIds]);
+                        await ensureMorphemeData();
+                        showUndoDelete(entry);
+                        saveRecent(`Deleted morpheme: ${entry.text}`);
+                    }
+                });
+            }
+            window.requestDeleteMorpheme = requestDeleteMorpheme;
+
+            function toggleSystemGuide(show) {
+                const overlay = document.getElementById('systemGuideOverlay');
+                if (!overlay) return;
+                overlay.style.display = show ? 'flex' : 'none';
+                overlay.setAttribute('aria-hidden', show ? 'false' : 'true');
+            }
+            window.toggleSystemGuide = toggleSystemGuide;
+
+            function updateLiveMetrics() {
+                const word = (currentNormalized || '').toString();
+                const chars = word.length || ((document.getElementById('wordInput')?.value || '').trim().length);
+                const fragments = (currentFragments || []).length;
+                const known = (currentFragments || []).filter(f => !f.collision).length;
+                const confidence = fragments ? Math.round((known / fragments) * 100) : 100;
+                const entropy = fragments ? (Math.log2(fragments + 1) / 2).toFixed(2) : '0.00';
+                const grammar = fragments && !((currentFragments || []).some(f => f.collision)) ? 'Valid' : 'Review';
+                ['liveChars','liveCharsAudit'].map(id => document.getElementById(id)).filter(Boolean).forEach(el => el.textContent = String(chars));
+                ['liveFragments','liveFragmentsAudit'].map(id => document.getElementById(id)).filter(Boolean).forEach(el => el.textContent = String(fragments));
+                ['liveConfidence','liveConfidenceAudit'].map(id => document.getElementById(id)).filter(Boolean).forEach(el => el.textContent = `${confidence}%`);
+                ['liveEntropy','liveEntropyAudit'].map(id => document.getElementById(id)).filter(Boolean).forEach(el => el.textContent = entropy);
+                ['liveGrammar','liveGrammarAudit'].map(id => document.getElementById(id)).filter(Boolean).forEach(el => el.textContent = grammar);
+            }
+            window.updateLiveMetrics = updateLiveMetrics;
+
+            function collapseWord() {
+                const input = document.getElementById('wordInput');
+                const word = input ? input.value.trim() : '';
+                if (!word) return;
+                currentOriginal = word;
+                currentNormalized = normalizeWord(word);
+                const primes = primesFromText(currentNormalized);
+                window.currentPrimes = primes;
+                
+                if (primes.length === 0) {
+                    document.getElementById('displayS').innerText = '— (keine Zeichen im Alphabet) —';
+                    document.getElementById('displayI').innerText = '—';
+                    document.getElementById('displayN').innerText = '—';
+                    document.getElementById('primeCount').innerText = 'Prime factors: 0';
+                    document.getElementById('morphemChain').innerHTML = '';
+                    return;
+                }
+
+                let S = 1n;
+                for (const p of primes) S *= p;
+                currentS = S;
+                currentI = calculateRank(primes);
+                currentN = calculateN(primes);
+                document.getElementById('displayS').innerText = S.toString();
+                document.getElementById('displayI').innerText = currentI.toString();
+                document.getElementById('displayN').innerText = currentN.toString();
+                document.getElementById('primeCount').innerText = `Prime factors: ${primes.length}`;
+                
+                document.getElementById('displayReconstructed').innerHTML = '<span class="text-zinc-500 italic">— waiting for reconstruction —</span>';
+                document.getElementById('validationStatus').innerText = '⏳ nicht validiert';
+                document.getElementById('validationStatus').className = 'text-zinc-500';
+                document.getElementById('validationResult').className = 'mt-3 text-xs font-mono flex items-center gap-2';
+
+                renderMorphemAudit(currentNormalized);
+                updateLiveMetrics();
+            }
+            window.collapseWord = collapseWord;
+
+            function reconstructWord() {
+                if (currentS === 0n || currentI === 0n) return;
+                const original = currentOriginal || '';
+                const normalized = currentNormalized || '';
+
+                let multiset;
+                try {
+                    multiset = factorizeS(currentS);
+                } catch (err) {
+                    showSaveStatus('Factorization failed');
+                    return;
+                }
+
+                if (multiset.length === 0) return;
+
+                const reconstructedPrimes = reconstructFromRank(currentI, multiset);
+                const chars = reconstructedPrimes.map(p => PRIME_TO_CHAR[p.toString()] || '?');
+                const reconstructed = chars.join('');
+                const valid = (reconstructed === original || reconstructed === normalized);
+
+                const display = document.getElementById('displayReconstructed');
+                if (display) {
+                    display.innerHTML = `<span class="${valid ? 'text-kernel-succ' : 'text-kernel-alert'} font-bold text-base">${escapeHtml(reconstructed)}</span>`;
+                }
+                if (document.getElementById('validationStatus')) {
+                    document.getElementById('validationStatus').innerText = valid ? '✅ VALID – Original == Reconstructed' : '❌ PANIC – Original != Reconstructed';
+                    document.getElementById('validationStatus').className = valid ? 'text-kernel-succ font-bold' : 'text-kernel-alert font-bold';
+                }
+                if (document.getElementById('validationResult')) {
+                    document.getElementById('validationResult').className = 'mt-3 text-xs font-mono flex items-center gap-2 ' + (valid ? 'glow-succ p-2 rounded border border-kernel-succ/30' : 'glow-alert p-2 rounded border border-kernel-alert/30');
+                }
+                
+                renderMorphemAudit(reconstructed);
+                
+                if (valid) successCount++;
+                testCount++;
+                updateStats();
+
+                pushAnalysisHistory({
+                    word: original || normalized,
+                    valid,
+                    fragments: (currentFragments || []).length,
+                    confidence: (currentFragments || []).length ? Math.round(((currentFragments || []).filter(f => !f.collision).length / (currentFragments || []).length) * 100) : 100,
+                    ts: new Date().toISOString()
+                });
+                saveRecent(`Analysis: ${original || normalized} (${valid ? 'valid' : 'panic'})`);
+                updateLiveMetrics();
+                showSaveStatus(valid ? 'Saved' : 'Review');
+            }
+            window.reconstructWord = reconstructWord;
+
+            function openImportPicker() {
+                const input = document.getElementById('morphemeImportInput');
+                if (input) input.click();
+            }
+            window.openImportPicker = openImportPicker;
+
+            function prepareImportFromFile(file) {
+                return new Promise(async (resolve, reject) => {
+                    try {
+                        const raw = await file.text();
+                        const parsed = JSON.parse(raw);
+                        const entries = Array.isArray(parsed?.entries) ? parsed.entries : null;
+                        if (!entries) throw new Error('Invalid format: expected { version, created, entries: [] }.');
+                        const normalizedEntries = [];
+                        const seen = new Set();
+                        let invalid = 0, duplicatesInFile = 0;
+
+                        for (const item of entries) {
+                            if (!item || typeof item !== 'object' || !String(item.text || '').trim()) { invalid++; continue; }
+                            const normalized = normalizeMorpheme(item.text);
+                            if (!normalized || seen.has(normalized)) { duplicatesInFile++; continue; }
+                            seen.add(normalized);
+                            normalizedEntries.push({
+                                id: item.id || (crypto.randomUUID ? crypto.randomUUID() : `m_${Date.now()}_${Math.random().toString(16).slice(2)}`),
+                                text: String(item.text).trim(), normalized,
+                                lang: normalizeLanguages(item.lang || ['mix']),
+                                type: normalizeType(item.type),
+                                weight: Number.isFinite(+item.weight) ? +item.weight : 1.0,
+                                source: item.source || 'import',
+                                createdAt: item.createdAt || new Date().toISOString(),
+                                updatedAt: new Date().toISOString()
+                            });
+                        }
+                        importPayload = { fileName: file.name, created: parsed.created || null, version: parsed.version || 1, entries: normalizedEntries, invalid, duplicatesInFile };
+                        localStorage.setItem(LS.lastImport, new Date().toLocaleString());
+                        document.getElementById('importModal').style.display = 'flex';
+                        renderImportPreview();
+                        resolve();
+                    } catch (err) { reject(err); }
+                });
+            }
+
+            function getSelectedImportMode() {
+                const checked = document.querySelector('input[name="importMode"]:checked');
+                return checked ? checked.value : 'merge';
+            }
+
+            function renderImportPreview() {
+                const el = document.getElementById('importFileInfo');
+                const preview = document.getElementById('importPreview');
+                if (!importPayload) {
+                    if (el) el.textContent = 'No file selected yet.';
+                    if (preview) preview.textContent = 'Import preview will appear here after validation.';
+                    return;
+                }
+                const existingNorms = new Set((morphemeEntries || []).map(e => e.normalized));
+                const mode = getSelectedImportMode();
+                let wouldImport = 0, wouldSkip = 0;
+                if (mode === 'replace') {
+                    wouldImport = importPayload.entries.length;
+                } else if (mode === 'only-missing') {
+                    importPayload.entries.forEach(e => existingNorms.has(e.normalized) ? wouldSkip++ : wouldImport++);
+                } else {
+                    importPayload.entries.forEach(e => { wouldImport++; if (existingNorms.has(e.normalized)) wouldSkip++; });
+                }
+                if (el) el.innerHTML = `<div class="font-mono text-white">${escapeHtml(importPayload.fileName)}</div><div class="mt-2 text-zinc-400 text-sm">Version: ${escapeHtml(importPayload.version)} · Created: ${escapeHtml(importPayload.created || 'n/a')}</div><div class="mt-2 text-zinc-400 text-sm">Valid entries: ${importPayload.entries.length} · Invalid skipped: ${importPayload.invalid} · Duplicate rows in file skipped: ${importPayload.duplicatesInFile}</div>`;
+                if (preview) preview.innerHTML = `<div class="font-semibold text-white">Import mode: ${mode === 'replace' ? 'Replace' : mode === 'only-missing' ? 'Only missing' : 'Merge'}</div><div class="mt-2 text-zinc-300 text-sm">Would import: <strong>${wouldImport}</strong></div><div class="text-zinc-300 text-sm">Would skip: <strong>${wouldSkip}</strong></div><div class="mt-2 text-zinc-500 text-xs">Existing entries are matched by normalized morpheme text.</div>`;
+            }
+
+            async function executeImport() {
+                if (!importPayload) return;
+                const mode = getSelectedImportMode();
+                if (mode === 'replace') await idbClear();
+                let imported = 0, skipped = 0, duplicatesSkipped = 0;
+                const seen = new Set();
+                const existing = await idbGetAll();
+                const existingNorms = new Set(existing.map(e => e.normalized));
+                for (const entry of importPayload.entries) {
+                    if (seen.has(entry.normalized)) { duplicatesSkipped++; continue; }
+                    seen.add(entry.normalized);
+                    if (mode === 'only-missing' && existingNorms.has(entry.normalized)) { skipped++; continue; }
+                    if (mode === 'merge' && existingNorms.has(entry.normalized)) {
+                        const old = await idbGetByNormalized(entry.normalized);
+                        if (old) entry.id = old.id;
+                    }
+                    await idbUpsert(entry);
+                    imported++;
+                }
+                await ensureMorphemeData();
+                closeImportModal();
+                showToast('Import complete', `${imported} imported · ${skipped} skipped · ${duplicatesSkipped} duplicates skipped`, false);
+                saveRecent(`Imported ${imported} morphemes`);
+                updateStatsPanels();
+            }
+            window.executeImport = executeImport;
+
+            function closeImportModal() {
+                const modal = document.getElementById('importModal');
+                if (modal) modal.style.display = 'none';
+                importPayload = null;
+            }
+            window.closeImportModal = closeImportModal;
+
+            function startImportFromFile(file) {
+                prepareImportFromFile(file).then(() => renderImportPreview()).catch(err => showToast('Import failed', String(err.message || err), false));
+            }
+
+            function hookImportInput() {
+                const input = document.getElementById('morphemeImportInput');
+                if (!input) return;
+                input.onchange = () => {
+                    const file = input.files && input.files[0];
+                    if (file) startImportFromFile(file);
+                };
+            }
+
+            function wireDropzone() {
+                const dz = document.getElementById('importDropzone');
+                if (!dz) return;
+                dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('border-kernel-accent'); });
+                dz.addEventListener('dragleave', () => dz.classList.remove('border-kernel-accent'));
+                dz.addEventListener('drop', e => {
+                    e.preventDefault();
+                    dz.classList.remove('border-kernel-accent');
+                    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+                    if (file) startImportFromFile(file);
+                });
+                dz.addEventListener('click', openImportPicker);
+            }
+
+            function setToggleDefaults() {
+                const beginner = document.getElementById('toggleBeginner');
+                const tooltips = document.getElementById('toggleTooltips');
+                const density = document.getElementById('toggleDensity');
+                if (beginner) beginner.checked = !!settings.beginner;
+                if (tooltips) tooltips.checked = settings.tooltips !== false;
+                if (density) density.checked = !!settings.dense;
+                applySettings();
+            }
+
+            function keyboardShortcuts(e) {
+                if (e.key === 'Escape') {
+                    toggleSystemGuide(false);
+                    closeConfirmModal();
+                    closeEditModal();
+                    closeImportModal();
+                    hideUndoToast();
+                }
+                if (e.ctrlKey && e.key.toLowerCase() === 'f') {
+                    e.preventDefault();
+                    setView('morphemes');
+                    document.getElementById('morphemeSearch')?.focus();
+                }
+                if (e.ctrlKey && e.key.toLowerCase() === 'n') {
+                    e.preventDefault();
+                    setView('morphemes');
+                    document.getElementById('morphemeText')?.focus();
+                }
+                if (e.ctrlKey && e.key.toLowerCase() === 's') { e.preventDefault(); saveMorphemeFromUI(); }
+                if (e.ctrlKey && e.key.toLowerCase() === 'e') { e.preventDefault(); exportLibrary(); }
+                if (e.ctrlKey && e.key.toLowerCase() === 'i') { e.preventDefault(); openImportPicker(); }
+            }
+            document.addEventListener('keydown', keyboardShortcuts);
+
+            document.querySelectorAll('input[name="importMode"]').forEach(r => {
+                r.addEventListener('change', () => {
+                    importMode = getSelectedImportMode();
+                    renderImportPreview();
+                });
+            });
+
+            document.getElementById('confirmModal')?.addEventListener('click', function(e) { if (e.target === this) closeConfirmModal(); });
+            document.getElementById('editModal')?.addEventListener('click', function(e) { if (e.target === this) closeEditModal(); });
+            document.getElementById('importModal')?.addEventListener('click', function(e) { if (e.target === this) closeImportModal(); });
+
+            document.getElementById('wordInput')?.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') { e.preventDefault(); collapseWord(); }
+            });
+
+            function exportLibrary() {
+                const payload = {
+                    version: 1,
+                    created: new Date().toISOString(),
+                    entries: (morphemeEntries || []).map(e => ({
+                        id: e.id, text: e.text, normalized: e.normalized, lang: e.lang, type: e.type, weight: e.weight,
+                        source: e.source, createdAt: e.createdAt, updatedAt: e.updatedAt, favorite: favorites.has(e.id), uses: usageCount(e.normalized)
+                    }))
+                };
+                const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `morphemes-${new Date().toISOString().slice(0,10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+                showSaveStatus('Exported');
+                saveRecent(`Exported ${payload.entries.length} morphemes`);
+            }
+            window.exportLibrary = exportLibrary;
+
+            function initEnhancements() {
+                setToggleDefaults();
+                applySettings();
+                hookImportInput();
+                wireDropzone();
+                setView(activeView);
+                updateStatsPanels();
+                renderAnalysisHistory();
+                renderRecentActions();
+                saveRecent('UI loaded');
+                setTimeout(() => setGuideTab('overview'), 0);
+            }
+
+            document.addEventListener('DOMContentLoaded', async function() {
+                try {
+                    await ensureMorphemeData();
+                } catch (err) {
+                    console.error('Morpheme DB initialisation failed:', err);
+                    buildMorphemeIndex(seedDefaultEntries());
+                    renderMorphemeRegistry();
+                }
+                initEnhancements();
+                setTimeout(() => {
+                    collapseWord();
+                    document.getElementById('wordInput')?.focus();
+                }, 200);
+            });
+
+        })();
+    </script>
+</body>
+</html>

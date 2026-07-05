@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPM · Topologischer Resonanz-Emulator</title>
+    <script src="https://cdn.tailwindcss.com">
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #030303;
+            color: #e5e5e5;
+            font-family: 'Inter', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            --accent: #00e5ff;
+            --alert: #ff003c;
+            --panel: rgba(8, 8, 8, 0.88);
+            transition: background-color 1.2s ease;
+        }
+
+        body.resonant {
+            --accent: #eab308;
+            background-color: #0a0a04;
+        }
+
+        body.sys-idle {
+            --accent: #3f3f46;
+            background-color: #050506;
+        }
+
+        .glass {
+            background: var(--panel);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(31, 31, 34, 0.8);
+            border-radius: 0.75rem;
+        }
+
+        .mono {
+            font-family: 'Fira Code', monospace;
+        }
+
+        .glow-accent {
+            box-shadow: 0 0 30px rgba(0, 229, 255, 0.1);
+        }
+
+        .glow-resonant {
+            box-shadow: 0 0 40px rgba(234, 179, 8, 0.25), 0 0 80px rgba(234, 179, 8, 0.08);
+        }
+
+        #resonanceCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            border-radius: 0.5rem;
+            cursor: crosshair;
+        }
+
+        .input-resonance {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #1f1f22;
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8rem;
+            color: #e5e5e5;
+            width: 100%;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            font-family: 'Fira Code', monospace;
+            letter-spacing: 0.5px;
+        }
+        .input-resonance:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(0, 229, 255, 0.08);
+        }
+        .input-resonance::placeholder {
+            color: #3f3f46;
+        }
+
+        .resonance-bar {
+            height: 4px;
+            border-radius: 4px;
+            background: #1f1f22;
+            overflow: hidden;
+            transition: background 0.5s ease;
+        }
+        .resonance-bar .fill {
+            height: 100%;
+            width: 0%;
+            background: var(--accent);
+            transition: width 0.15s ease-out, background 0.5s ease;
+            border-radius: 4px;
+        }
+
+        .resonance-bar.resonant .fill {
+            background: #eab308;
+            box-shadow: 0 0 20px #eab308;
+        }
+
+        #gcdDisplay {
+            transition: color 0.3s ease;
+        }
+
+        .flash-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            border-radius: 0.5rem;
+            background: radial-gradient(circle at var(--flash-x, 50%) var(--flash-y, 50%), rgba(234, 179, 8, 0.25) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.08s ease;
+            z-index: 10;
+        }
+        .flash-overlay.active {
+            opacity: 1;
+        }
+
+        .badge-idle {
+            background: #18181b;
+            color: #52525b;
+            font-weight: 700;
+        }
+        .badge-active {
+            background: #0c4a6e;
+            color: #00e5ff;
+            font-weight: 700;
+        }
+        .badge-resonant {
+            background: #4a3a00;
+            color: #eab308;
+            font-weight: 700;
+            box-shadow: 0 0 20px rgba(234, 179, 8, 0.15);
+        }
+
+        ::-webkit-scrollbar {
+            width: 3px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #27272a;
+            border-radius: 2px;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                overflow-y: auto;
+                height: auto;
+                padding: 0.5rem;
+            }
+            .flex-col-reverse-sm {
+                flex-direction: column-reverse;
+            }
+        }
+    </style>
+</head>
+<body class="sys-idle flex flex-col h-screen">
+
+    <!-- ============================================================
+    HEADER
+    ============================================================ -->
+    <header class="glass border-b border-zinc-800/60 px-4 lg:px-6 py-2 lg:py-3 shrink-0 flex justify-between items-center z-20">
+        <div class="flex items-center gap-3">
+            <div class="h-2.5 w-2.5 rounded-full bg-zinc-600 transition-all duration-300" id="statusLed"></div>
+            <div>
+                <h1 class="text-xs lg:text-sm font-bold tracking-widest text-white flex items-center gap-2">
+                    GPM · RESONANZ-FILTER
+                    <span class="text-[8px] lg:text-[9px] px-1.5 py-0.5 rounded border border-zinc-700 text-zinc-400 mono">topologisch</span>
+                </h1>
+            </div>
+        </div>
+        <div class="flex items-center gap-3 text-[9px] lg:text-[10px] mono text-zinc-500">
+            <span id="sysStateLabel" class="text-zinc-400 font-medium">VACUUM</span>
+            <span class="hidden sm:inline">|</span>
+            <span id="gcdDisplay" class="text-zinc-500">GCD: 0</span>
+        </div>
+    </header>
+
+    <!-- ============================================================
+    MAIN
+    ============================================================ -->
+    <main class="flex-grow flex flex-col lg:flex-row gap-3 p-2 lg:p-4 h-full overflow-hidden">
+
+        <!-- LINKS: Dual-Input + Resonanz-Monitor -->
+        <div class="w-full lg:w-1/3 flex flex-col gap-3 h-full min-h-0">
+
+            <!-- Input A -->
+            <div class="glass p-3 lg:p-4 flex flex-col shrink-0">
+                <label class="text-[9px] lg:text-[10px] font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2 mb-1.5">
+                    <span class="w-1 h-3 bg-zinc-500 rounded"></span>
+                    Stream A
+                </label>
+                <input type="text" id="inputA" class="input-resonance" placeholder="z.B. TENSOR" autofocus>
+            </div>
+
+            <!-- Input B -->
+            <div class="glass p-3 lg:p-4 flex flex-col shrink-0">
+                <label class="text-[9px] lg:text-[10px] font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2 mb-1.5">
+                    <span class="w-1 h-3 bg-zinc-500 rounded"></span>
+                    Stream B
+                </label>
+                <input type="text" id="inputB" class="input-resonance" placeholder="z.B. RESONANZ">
+            </div>
+
+            <!-- Resonanz-Monitor -->
+            <div class="glass p-3 lg:p-4 flex flex-col gap-2 shrink-0">
+                <div class="flex justify-between items-center">
+                    <span class="text-[9px] lg:text-[10px] font-bold uppercase tracking-widest text-zinc-400">Resonanz (GCD)</span>
+                    <span id="gcdValue" class="text-sm font-bold mono text-zinc-300">0</span>
+                </div>
+                <div class="resonance-bar" id="resonanceBar">
+                    <div class="fill" id="resonanceFill"></div>
+                </div>
+                <div class="flex justify-between text-[8px] text-zinc-600 mono mt-0.5">
+                    <span>0</span>
+                    <span id="thresholdLabel">Schwelle 64</span>
+                </div>
+                <div class="flex flex-wrap gap-2 mt-1">
+                    <button onclick="injectTest('TEST','TET')" class="text-[8px] lg:text-[9px] bg-zinc-900 border border-zinc-800 hover:border-zinc-600 text-zinc-300 py-1 px-2 rounded mono transition-colors">
+                        Test: TEST / TET
+                    </button>
+                    <button onclick="injectTest('AX','BY')" class="text-[8px] lg:text-[9px] bg-zinc-900 border border-zinc-800 hover:border-zinc-600 text-zinc-300 py-1 px-2 rounded mono transition-colors">
+                        Test: AX / BY
+                    </button>
+                    <button onclick="injectTest('GEIST','MASCHINE')" class="text-[8px] lg:text-[9px] bg-zinc-900 border border-zinc-800 hover:border-zinc-600 text-zinc-300 py-1 px-2 rounded mono transition-colors">
+                        GEIST / MASCHINE
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- RECHTS: Tensor-Netz + Flash -->
+        <div class="w-full lg:w-2/3 flex-1 flex flex-col h-full min-h-0">
+            <div class="glass flex-1 relative overflow-hidden p-1" style="min-height: 200px;">
+                <div class="absolute top-2 lg:top-4 left-2 lg:left-4 z-10 pointer-events-none">
+                    <h2 class="text-[9px] lg:text-[10px] font-bold uppercase tracking-widest text-white/70 drop-shadow-md flex items-center gap-2">
+                        <span class="w-1 h-3 bg-zinc-500 rounded"></span>
+                        Resonanzfeld · topologische Kopplung
+                    </h2>
+                </div>
+                <div class="flash-overlay" id="flashOverlay"></div>
+                <canvas id="resonanceCanvas"></canvas>
+            </div>
+
+            <!-- kleine Statusleiste unter Canvas -->
+            <div class="flex justify-between items-center mt-1 text-[8px] lg:text-[9px] text-zinc-500 mono px-1">
+                <span>✦ Vektorfeld</span>
+                <span id="particleCount">Partikel: 0</span>
+                <span id="resonanceStatus" class="text-zinc-600">—</span>
+            </div>
+        </div>
+    </main>
+
+    <!-- ============================================================
+    JAVASCRIPT · GPM RESONANZ-ENGINE
+    ============================================================ -->
+    <script>
+        // ================================================================
+        // 1. PRIM-MATRIX & KERNEL
+        // ================================================================
+        const primeMap = {
+            'A': 2,
+            'B': 3,
+            'C': 5,
+            'D': 7,
+            'E': 11,
+            'F': 13,
+            'G': 17,
+            'H': 19,
+            'I': 23,
+            'J': 29,
+            'K': 31,
+            'L': 37,
+            'M': 41,
+            'N': 43,
+            'O': 47,
+            'P': 53,
+            'Q': 59,
+            'R': 61,
+            'S': 67,
+            'T': 71,
+            'U': 73,
+            'V': 79,
+            'W': 83,
+            'X': 89,
+            'Y': 97,
+            'Z': 101,
+            'ß': 103,
+            'Ä': 107,
+            'Ö': 109,
+            'Ü': 113
+        };
+
+        function getSubstanz(str) {
+            const upper = str.toUpperCase();
+            let result = 1n;
+            for (let i = 0; i < upper.length; i++) {
+                const char = upper[i];
+                const prime = primeMap[char] || 1;
+                result *= BigInt(prime);
+            }
+            return result;
+        }
+
+        function gcd(a, b) {
+            while (b !== 0n) {
+                const t = a % b;
+                a = b;
+                b = t;
+            }
+            return a;
+        }
+
+        function checkResonanz(strA, strB) {
+            const sA = getSubstanz(strA);
+            const sB = getSubstanz(strB);
+            return gcd(sA, sB);
+        }
+
+        // ================================================================
+        // 2. SYSTEM-ZUSTAND
+        // ================================================================
+        const RESONANCE_THRESHOLD = 64n;
+        let currentGCD = 0n;
+        let isResonant = false;
+        let idleTimer = null;
+        let lastActivity = Date.now();
+
+        // DOM-Refs
+        const inputA = document.getElementById('inputA');
+        const inputB = document.getElementById('inputB');
+        const gcdDisplay = document.getElementById('gcdDisplay');
+        const gcdValue = document.getElementById('gcdValue');
+        const resonanceFill = document.getElementById('resonanceFill');
+        const resonanceBar = document.getElementById('resonanceBar');
+        const sysStateLabel = document.getElementById('sysStateLabel');
+        const statusLed = document.getElementById('statusLed');
+        const flashOverlay = document.getElementById('flashOverlay');
+        const particleCountEl = document.getElementById('particleCount');
+        const resonanceStatus = document.getElementById('resonanceStatus');
+
+        // ================================================================
+        // 3. CANVAS · VECTOR FIELD + PARTICLES
+        // ================================================================
+        const canvas = document.getElementById('resonanceCanvas');
+        const ctx = canvas.getContext('2d');
+        let W = 0,
+            H = 0;
+
+        // Partikel-System
+        let particles = [];
+        const MAX_PARTICLES = 120;
+
+        class Particle {
+            constructor(x, y, intensity) {
+                this.x = x || W / 2;
+                this.y = y || H / 2;
+                this.vx = (Math.random() - 0.5) * 3;
+                this.vy = (Math.random() - 0.5) * 3;
+                this.life = 1.0;
+                this.decay = 0.008 + Math.random() * 0.015;
+                this.size = 2 + Math.random() * 4;
+                this.intensity = intensity || 0.8;
+                this.hue = 45; // golden
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vx *= 0.99;
+                this.vy *= 0.99;
+                this.life -= this.decay;
+                this.size *= 0.998;
+                return this.life > 0.02;
+            }
+
+            draw(ctx) {
+                const alpha = this.life * this.intensity * 0.8;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, Math.max(0.5, this.size), 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(234, 179, 8, ${alpha})`;
+                ctx.shadowColor = `rgba(234, 179, 8, ${alpha * 0.3})`;
+                ctx.shadowBlur = 15;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function emitResonance(x, y, count = 30) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 0.8 + Math.random() * 2.5;
+                const p = new Particle(x, y, 0.6 + Math.random() * 0.4);
+                p.vx = Math.cos(angle) * speed;
+                p.vy = Math.sin(angle) * speed;
+                p.size = 1.5 + Math.random() * 5;
+                p.decay = 0.006 + Math.random() * 0.02;
+                particles.push(p);
+            }
+            // Begrenzung
+            if (particles.length > MAX_PARTICLES * 1.5) {
+                particles = particles.slice(-MAX_PARTICLES);
+            }
+        }
+
+        // Hintergrund-Vektorfeld (Rauschen)
+        function drawBackground() {
+            const gradient = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * 0.6);
+            gradient.addColorStop(0, 'rgba(20,20,25,0.0)');
+            gradient.addColorStop(1, 'rgba(0,0,0,0.4)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, W, H);
+
+            // feines Gitter
+            ctx.strokeStyle = 'rgba(255,255,255,0.02)';
+            ctx.lineWidth = 0.5;
+            const step = 60;
+            for (let x = 0; x < W; x += step) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, H);
+                ctx.stroke();
+            }
+            for (let y = 0; y < H; y += step) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(W, y);
+                ctx.stroke();
+            }
+        }
+
+        // Verbindungslinien (von Partikeln zu "virtuellen" Knoten)
+        function drawResonanceLines() {
+            if (particles.length < 2) return;
+
+            const alpha = isResonant ? 0.15 : 0.04;
+            ctx.strokeStyle = `rgba(234, 179, 8, ${alpha})`;
+            ctx.lineWidth = 0.6;
+
+            // nur einige Verbindungen für Performance
+            const step = Math.max(1, Math.floor(particles.length / 30));
+            for (let i = 0; i < particles.length - step; i += step) {
+                const a = particles[i];
+                const b = particles[i + step];
+                if (a && b && a.life > 0.1 && b.life > 0.1) {
+                    const dist = Math.hypot(a.x - b.x, a.y - b.y);
+                    if (dist < 200) {
+                        ctx.globalAlpha = (1 - dist / 200) * (isResonant ? 0.5 : 0.15);
+                        ctx.beginPath();
+                        ctx.moveTo(a.x, a.y);
+                        ctx.lineTo(b.x, b.y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        // Haupt-Renderloop
+        function render() {
+            ctx.clearRect(0, 0, W, H);
+            drawBackground();
+
+            // Partikel updaten & zeichnen
+            particles = particles.filter(p => p.update());
+            particles.forEach(p => p.draw(ctx));
+
+            drawResonanceLines();
+
+            // Wenn resonant, zusätzliche "Aura"
+            if (isResonant && particles.length > 5) {
+                const cx = particles.reduce((s, p) => s + p.x, 0) / particles.length;
+                const cy = particles.reduce((s, p) => s + p.y, 0) / particles.length;
+                const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 120);
+                grad.addColorStop(0, 'rgba(234, 179, 8, 0.06)');
+                grad.addColorStop(1, 'rgba(234, 179, 8, 0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, W, H);
+            }
+
+            particleCountEl.textContent = `Partikel: ${particles.length}`;
+            requestAnimationFrame(render);
+        }
+
+        // Canvas-Resize
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            W = rect.width || 400;
+            H = rect.height || 300;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            canvas.style.width = W + 'px';
+            canvas.style.height = H + 'px';
+            ctx.scale(dpr, dpr);
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        // ================================================================
+        // 4. RESONANZ-LOGIK & UI-UPDATE
+        // ================================================================
+        function updateSystem(gcdVal) {
+            currentGCD = gcdVal;
+            const numGcd = Number(gcdVal);
+            gcdDisplay.textContent = `GCD: ${numGcd}`;
+            gcdValue.textContent = numGcd;
+
+            // Resonanz?
+            const newResonant = gcdVal > RESONANCE_THRESHOLD;
+            if (newResonant !== isResonant) {
+                isResonant = newResonant;
+                document.body.classList.toggle('resonant', isResonant);
+                resonanceBar.classList.toggle('resonant', isResonant);
+                if (isResonant) {
+                    sysStateLabel.textContent = '⚡ RESONANZ';
+                    sysStateLabel.className = 'text-yellow-400 font-bold';
+                    statusLed.style.backgroundColor = '#eab308';
+                    statusLed.style.boxShadow = '0 0 20px #eab308';
+                    resonanceStatus.textContent = '✦ GEKOPPELT';
+                    resonanceStatus.className = 'text-yellow-400';
+
+                    // Flash!
+                    const flash = flashOverlay;
+                    flash.style.setProperty('--flash-x', (W / 2) + 'px');
+                    flash.style.setProperty('--flash-y', (H / 2) + 'px');
+                    flash.classList.add('active');
+                    setTimeout(() => flash.classList.remove('active'), 120);
+
+                    // Partikel-Impuls
+                    const cx = W / 2 + (Math.random() - 0.5) * 100;
+                    const cy = H / 2 + (Math.random() - 0.5) * 100;
+                    emitResonance(cx, cy, 50);
+
+                    // zusätzlicher Impuls von den Rändern
+                    for (let i = 0; i < 4; i++) {
+                        setTimeout(() => {
+                            const x = Math.random() * W;
+                            const y = Math.random() * H;
+                            emitResonance(x, y, 15);
+                        }, i * 60);
+                    }
+                } else {
+                    sysStateLabel.textContent = 'IDLE';
+                    sysStateLabel.className = 'text-zinc-400';
+                    statusLed.style.backgroundColor = '#3f3f46';
+                    statusLed.style.boxShadow = 'none';
+                    resonanceStatus.textContent = '—';
+                    resonanceStatus.className = 'text-zinc-600';
+                }
+            }
+
+            // Bar-Update
+            const percent = Math.min(100, (Number(gcdVal) / Number(RESONANCE_THRESHOLD)) * 100);
+            resonanceFill.style.width = Math.min(100, percent) + '%';
+
+            // System-Idle Timer
+            clearTimeout(idleTimer);
+            document.body.classList.remove('sys-idle');
+            idleTimer = setTimeout(() => {
+                if (!isResonant) {
+                    document.body.classList.add('sys-idle');
+                    sysStateLabel.textContent = 'VACUUM';
+                    sysStateLabel.className = 'text-zinc-500';
+                }
+            }, 4000);
+        }
+
+        function evaluateResonance() {
+            const valA = inputA.value.trim();
+            const valB = inputB.value.trim();
+
+            if (valA.length === 0 || valB.length === 0) {
+                // Wenn eines leer: Zurücksetzen, aber GCD anzeigen
+                const gcdVal = 0n;
+                currentGCD = gcdVal;
+                gcdDisplay.textContent = `GCD: 0`;
+                gcdValue.textContent = '0';
+                resonanceFill.style.width = '0%';
+                if (!isResonant) {
+                    document.body.classList.add('sys-idle');
+                    sysStateLabel.textContent = 'VACUUM';
+                    sysStateLabel.className = 'text-zinc-500';
+                    statusLed.style.backgroundColor = '#3f3f46';
+                    statusLed.style.boxShadow = 'none';
+                    resonanceStatus.textContent = '—';
+                    resonanceStatus.className = 'text-zinc-600';
+                }
+                return;
+            }
+
+            const gcdVal = checkResonanz(valA, valB);
+            updateSystem(gcdVal);
+        }
+
+        // ================================================================
+        // 5. EVENTS & INJECTION
+        // ================================================================
+
+        // Beide Inputs triggern bei jeder Änderung
+        inputA.addEventListener('input', evaluateResonance);
+        inputB.addEventListener('input', evaluateResonance);
+
+        // Enter in einem Feld triggert den anderen
+        inputA.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault();
+                inputB.focus(); } });
+        inputB.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault();
+                inputA.focus();
+                evaluateResonance(); } });
+
+        function injectTest(a, b) {
+            inputA.value = a;
+            inputB.value = b;
+            evaluateResonance();
+            // Fokus auf Canvas für visuelles Feeling
+            canvas.focus();
+        }
+
+        // ================================================================
+        // 6. INITIALISIERUNG
+        // ================================================================
+
+        function init() {
+            resizeCanvas();
+            render();
+
+            // Demo-Start: leise initialisieren
+            setTimeout(() => {
+                injectTest('GPM', 'PRIME');
+            }, 300);
+
+            // Fokus auf A
+            setTimeout(() => inputA.focus(), 100);
+
+            // System-IDLE nach Start setzen
+            setTimeout(() => {
+                if (!isResonant) {
+                    document.body.classList.add('sys-idle');
+                }
+            }, 800);
+        }
+
+        // Canvas-Klick erzeugt kleinen Partikel-Impuls
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (W / rect.width);
+            const y = (e.clientY - rect.top) * (H / rect.height);
+            emitResonance(x, y, 20);
+        });
+
+        init();
+
+        console.log('[GPM] Resonanz-Emulator geladen | Schwelle:', RESONANCE_THRESHOLD);
+        console.log('🔮 Teste: TEST / TET → Resonanz, AX / BY → Stille');
+    </script>
+
+</body>
+</html>

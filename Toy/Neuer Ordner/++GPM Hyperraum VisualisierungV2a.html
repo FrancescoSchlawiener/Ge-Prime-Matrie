@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPM - Zero-Copy Ring-0 Kernel Visualizer (Vollendung)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=Inter:wght@300;400;600;700&display=swap\" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { mono: ['Fira Code', 'monospace'], sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        kernel: { bg: '#030303', panel: '#0a0a0a', border: '#1f1f22', accent: '#00e5ff', alert: '#ff003c', succ: '#00ff66', tensor: '#eab308' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { 
+            background-color: #030303; 
+            color: #e5e5e5;
+            --accent-color: #00e5ff;
+            --panel-bg: rgba(10, 10, 10, 0.7);
+            transition: background-color 1.5s ease;
+        }
+        body.sys-idle {
+            --accent-color: #3f3f46;
+            background-color: #050506;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: #1f1f22; rounded: 2px; }
+        
+        /* Grid-Glow System */
+        .bar-cell {
+            background-color: #0f0f11;
+            border: 1px solid #1f1f22;
+            transition: background-color 1s ease-out, box-shadow 1s ease-out;
+        }
+        .bar-cell.dma-active {
+            background-color: #eab308 !important;
+            box-shadow: 0 0 10px #eab308;
+            transition: none; /* Sofortiges Aufblitzen */
+        }
+        .bg-entropy-canvas {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.15;
+        }
+    </style>
+</head>
+<body class="overflow-hidden h-screen w-screen p-4 font-mono select-none">
+
+    <canvas id="entropyCanvas" class="bg-entropy-canvas"></canvas>
+
+    <div class="relative z-10 grid grid-cols-12 h-full w-full gap-4 overflow-hidden">
+        
+        <div class="col-span-3 flex flex-col bg-kernel-panel/80 backdrop-blur border border-kernel-border rounded p-3">
+            <div class="text-xs font-bold text-zinc-500 mb-2 border-b border-kernel-border pb-1 tracking-wider">1. I/O GATE (INPUT_STREAM)</div>
+            <div class="mb-2">
+                <input type="text" id="streamInput" placeholder="Datenstrom injizieren..." class="w-full bg-zinc-900 border border-kernel-border rounded p-2 text-xs text-white focus:outline-none focus:border-kernel-accent">
+            </div>
+            <div id="ioGateTicker" class="flex-1 overflow-y-auto text-xs text-kernel-accent space-y-1 pr-1">
+                <div class="text-zinc-600 italic">Warte auf Hardware-Signal...</div>
+            </div>
+        </div>
+
+        <div class="col-span-6 flex flex-col gap-4">
+            <div class="flex-1 bg-kernel-panel/80 backdrop-blur border border-kernel-border rounded relative overflow-hidden" id="canvasContainer">
+                <div class="absolute top-2 left-3 text-xs font-bold text-zinc-500 z-10 tracking-wider">2. GPM HYPERRAUM (TENSOR_NETWORK)</div>
+                <canvas id="tensorCanvas" class="absolute inset-0 w-full h-full"></canvas>
+                <div id="tensorTooltip" class="hidden absolute bg-black/95 border border-kernel-border text-[11px] p-2 rounded pointer-events-none z-20 shadow-2xl font-mono text-zinc-400"></div>
+            </div>
+            
+            <div class="h-32 bg-kernel-panel/80 backdrop-blur border border-kernel-border rounded p-2 relative">
+                <div class="absolute top-1 left-2 text-[10px] font-bold text-zinc-600 tracking-wider">4. TOPOLOGISCHER GRAPH (I-KURVE)</div>
+                <svg class="w-full h-full" id="iCurveSvg" preserveAspectRatio="none">
+                    <path id="iCurvePath" fill="none" stroke="#00e5ff" stroke-width="1.5" d="M 0 100" />
+                </svg>
+            </div>
+        </div>
+
+        <div class="col-span-3 flex flex-col gap-4">
+            <div class="bg-kernel-panel/80 backdrop-blur border border-kernel-border rounded p-3">
+                <div class="text-xs font-bold text-zinc-500 mb-3 border-b border-kernel-border pb-1 tracking-wider">3. STATUS SYSTEM_STATE</div>
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <label class="text-[10px] text-zinc-500 block font-bold">BIG_PRIME</label>
+                            <span class="text-md font-bold text-yellow-500 drop-shadow-[0_0_8px_rgba(234,179,8,0.2)]">16000103</span>
+                        </div>
+                        <div class="text-right">
+                            <label class="text-[10px] text-zinc-500 block font-bold">CPU_STATE</label>
+                            <span id="cpuStateBadge" class="text-[10px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 font-bold">HLT (0%)</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-zinc-500 block font-bold">FIREWALL_MASK</label>
+                        <span class="text-xs font-bold text-kernel-alert tracking-widest">0xFFFFFFFF00000000</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex-1 bg-kernel-panel/80 backdrop-blur border border-kernel-border rounded p-3 flex flex-col">
+                <div class="text-xs font-bold text-zinc-500 mb-2 border-b border-kernel-border pb-1 tracking-wider">MMIO BAR_REGISTERS (256-BIT BLOCK)</div>
+                <div id="barGpmGrid" class="flex-1 grid grid-cols-16 gap-0.5 p-1 bg-zinc-950/50 rounded border border-zinc-900">
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Systemkonstanten und Zustandsvariablen
+        const BIG_PRIME = 16000103n;
+        let isActive = false;
+        let lastSignalTime = Date.now();
+        
+        // Phase 1 Setup: Entropie-Welle
+        const entropyCanvas = document.getElementById('entropyCanvas');
+        const eCtx = entropyCanvas.getContext('2d');
+        let wavePhase = 0;
+        let currentAmplitude = 0;
+        let currentFrequency = 0;
+
+        // Phase 2 Setup: Tensor-Hyperraum
+        const tensorCanvas = document.getElementById('tensorCanvas');
+        const tCtx = tensorCanvas.getContext('2d');
+        let tensorNodes = [];
+        let prevX = null, prevY = null;
+
+        // Phase 3 Setup: BAR-Register Grid
+        const barGrid = document.getElementById('barGpmGrid');
+        const totalCells = 256;
+        for (let i = 0; i < totalCells; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'bar-cell rounded-sm';
+            cell.id = `cell-${i}`;
+            barGrid.appendChild(cell);
+        }
+
+        // Phase 4 Setup: I-Kurve
+        let indexHistory = [];
+        const iCurvePath = document.getElementById('iCurvePath');
+        const iCurveSvg = document.getElementById('iCurveSvg');
+
+        // Primzahl-Alphabet für GPM-Simulation (S-Wert-Generierung)
+        const primeAlphabet = {
+            'A': 2, 'B': 3, 'C': 5, 'D': 7, 'E': 11, 'F': 13, 'G': 17, 'H': 19,
+            'I': 23, 'J': 29, 'K': 31, 'L': 37, 'M': 41, 'N': 43, 'O': 47, 'P': 53,
+            'Q': 59, 'R': 61, 'S': 67, 'T': 71, 'U': 73, 'V': 79, 'W': 83, 'X': 89,
+            'Y': 97, 'Z': 101, '_': 103, ' ': 107
+        };
+
+        // Canvas-Dimensionen anpassen
+        function resizeCanvases() {
+            entropyCanvas.width = window.innerWidth;
+            entropyCanvas.height = window.innerHeight;
+            const container = document.getElementById('canvasContainer');
+            tensorCanvas.width = container.clientWidth;
+            tensorCanvas.height = container.clientHeight;
+            redrawTensorNetwork();
+        }
+        window.addEventListener('resize', resizeCanvases);
+
+        // Phase 1: Mathematische Entropie-Welle (Schlafzustand-Steuerung)
+        function renderEntropyWave() {
+            eCtx.clearRect(0, 0, entropyCanvas.width, entropyCanvas.height);
+            
+            // System-Idle-Check (Länger als 1,5 Sekunden kein Wort = System schläft ein)
+            if (Date.now() - lastSignalTime > 1500) {
+                if (isActive) {
+                    isActive = false;
+                    document.body.classList.add('sys-idle');
+                    document.getElementById('cpuStateBadge').innerText = 'HLT (0%)';
+                    document.getElementById('cpuStateBadge').className = 'text-[10px] px-2 py-0.5 rounded bg-zinc-900 text-zinc-600 font-bold';
+                }
+            }
+
+            // H(X) -> 0 Dämpfungskalkulation
+            let targetAmp = isActive ? 35 : 0;
+            let targetFreq = isActive ? 0.04 : 0;
+            
+            currentAmplitude += (targetAmp - currentAmplitude) * 0.05;
+            currentFrequency += (targetFreq - currentFrequency) * 0.05;
+            wavePhase += isActive ? 0.05 : 0.01;
+
+            if (currentAmplitude > 0.1) {
+                eCtx.beginPath();
+                eCtx.moveTo(0, entropyCanvas.height / 2);
+                for (let x = 0; x < entropyCanvas.width; x++) {
+                    let y = entropyCanvas.height / 2 + Math.sin(x * currentFrequency + wavePhase) * currentAmplitude;
+                    eCtx.lineTo(x, y);
+                }
+                eCtx.strokeStyle = isActive ? '#00e5ff' : '#27272a';
+                eCtx.lineWidth = 1.5;
+                eCtx.stroke();
+            }
+
+            requestAnimationFrame(renderEntropyWave);
+        }
+
+        // GPM-Kern-Arithmetik für die Datenverarbeitung
+        function processGpmToken(word) {
+            isActive = true;
+            lastSignalTime = Date.now();
+            document.body.classList.remove('sys-idle');
+            document.getElementById('cpuStateBadge').innerText = 'RUNNING';
+            document.getElementById('cpuStateBadge').className = 'text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-kernel-accent font-bold glow-succ';
+
+            let word_S = 1n;
+            let computed_I = 0n;
+
+            // Arithmetische Substanz-Masse bestimmen
+            for (let i = 0; i < word.length; i++) {
+                let char = word[i].toUpperCase();
+                if (primeAlphabet[char]) {
+                    let p = BigInt(primeAlphabet[char]);
+                    word_S = (word_S * p) % BIG_PRIME;
+                    computed_I += p * BigInt(i + 1);
+                }
+            }
+
+            // Masken-Audit (Simulierte bitweise Firewall-Schranke)
+            let maskTriggered = (word_S & 0xFFFFFFFF00000000n) !== 0n;
+
+            // Ticker aktualisieren
+            const ticker = document.getElementById('ioGateTicker');
+            if (ticker.innerHTML.includes('Warte auf Hardware-Signal...')) ticker.innerHTML = '';
+            
+            const timeStr = new Date().toISOString().slice(11, 19);
+            const logEntry = document.createElement('div');
+            logEntry.className = maskTriggered ? 'text-kernel-alert border-l-2 border-kernel-alert pl-1' : 'text-zinc-400';
+            logEntry.innerHTML = `[${timeStr}] DMA: ${word} -> S:${word_S} I:${computed_I}`;
+            ticker.insertBefore(logEntry, ticker.firstChild);
+
+            // Phase 2: Geometrisches Mapping auf das Canvas anwenden
+            drawTensorNode(word_S, computed_I, maskTriggered, word);
+
+            // Phase 3: Hardware BAR-Register via Pseudo-Hash ansprechen
+            flashHardwareRegisters(word_S);
+
+            // Phase 4: Oszilloskop aktualisieren
+            updateIKurve(computed_I);
+        }
+
+        // Phase 2: Knotengraph auf Canvas zeichnen
+        function drawTensorNode(substanz, index, mask, rawWord) {
+            // Modulo-Projektion auf die Container-Pixel-Größe
+            const x = Number(BigInt(substanz) % BigInt(tensorCanvas.width));
+            const y = Number(BigInt(index) % BigInt(tensorCanvas.height));
+
+            // Vektorverbindung zum Vorgänger (tensor_next-Kette)
+            if (prevX !== null) {
+                tCtx.beginPath();
+                tCtx.moveTo(prevX, prevY);
+                tCtx.lineTo(x, y);
+                tCtx.strokeStyle = 'rgba(0, 229, 255, 0.25)';
+                tCtx.lineWidth = 1;
+                tCtx.stroke();
+            }
+
+            // Knotenpunkt physisch rendern
+            tCtx.beginPath();
+            tCtx.arc(x, y, 5, 0, 2 * Math.PI);
+            tCtx.fillStyle = mask ? '#ff003c' : '#00e5ff';
+            tCtx.fill();
+            tCtx.strokeStyle = '#030303';
+            tCtx.lineWidth = 1.5;
+            tCtx.stroke();
+
+            // Array für Hover-Check befüllen
+            tensorNodes.push({x, y, substanz: substanz.toString(), index: index.toString(), mask, word: rawWord});
+
+            prevX = x;
+            prevY = y;
+        }
+
+        function redrawTensorNetwork() {
+            tCtx.clearRect(0, 0, tensorCanvas.width, tensorCanvas.height);
+            if (tensorNodes.length === 0) return;
+            
+            // Kette neu zeichnen
+            tCtx.beginPath();
+            tCtx.moveTo(tensorNodes[0].x, tensorNodes[0].y);
+            for(let i=1; i<tensorNodes.length; i++) {
+                tCtx.lineTo(tensorNodes[i].x, tensorNodes[i].y);
+            }
+            tCtx.strokeStyle = 'rgba(0, 229, 255, 0.15)';
+            tCtx.stroke();
+
+            // Punkte neu zeichnen
+            tensorNodes.forEach(node => {
+                tCtx.beginPath();
+                tCtx.arc(node.x, node.y, 5, 0, 2 * Math.PI);
+                tCtx.fillStyle = node.mask ? '#ff003c' : '#00e5ff';
+                tCtx.fill();
+            });
+        }
+
+        // Phase 3: Bit-Matrix Register-Flash via DMA-Simulation
+        function flashHardwareRegisters(substanz) {
+            // Bestimme deterministisch 4 Zellen basierend auf dem S-Wert
+            let baseIndex = Number(substanz % BigInt(totalCells));
+            for (let i = 0; i < 4; i++) {
+                let targetCellId = (baseIndex + (i * 7)) % totalCells;
+                let cell = document.getElementById(`cell-${targetCellId}`);
+                if (cell) {
+                    cell.classList.add('dma-active');
+                    // Nach dem Flash schlägt die CSS-Transition zum automatischen Ausfaden zu
+                    setTimeout(() => {
+                        cell.classList.remove('dma-active');
+                    }, 50);
+                }
+            }
+        }
+
+        // Phase 4: Interaktive I-Kurve über SVG-Vektoren
+        function updateIKurve(currentI) {
+            indexHistory.push(currentI);
+            if (indexHistory.length > 80) indexHistory.shift();
+
+            const svgWidth = iCurveSvg.clientWidth;
+            const svgHeight = iCurveSvg.clientHeight;
+
+            let dStr = indexHistory.map((val, idx) => {
+                let x = (idx / (indexHistory.length - 1)) * svgWidth;
+                // Skalierung des Werts für die SVG-Box-Höhe
+                let y = svgHeight - Number(val % BigInt(svgHeight)); 
+                return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`;
+            }).join(' ');
+
+            iCurvePath.setAttribute('d', dStr);
+        }
+
+        // Interaktivität: Hover-Check auf dem GPM-Hyperraum
+        const tooltip = document.getElementById('tensorTooltip');
+        tensorCanvas.addEventListener('mousemove', function(e) {
+            const rect = tensorCanvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            let hit = null;
+            // Radius-Check für Trefferzone
+            for (let node of tensorNodes) {
+                let dist = Math.hypot(node.x - mouseX, node.y - mouseY);
+                if (dist < 8) {
+                    hit = node;
+                    break;
+                }
+            }
+
+            if (hit) {
+                tooltip.style.left = `${mouseX + 15}px`;
+                tooltip.style.top = `${mouseY + 15}px`;
+                tooltip.innerHTML = `
+                    <span class="text-kernel-accent font-bold">struct fpm_object_t {</span><br>
+                    &nbsp;&nbsp;word: <span class="text-white">"${hit.word}"</span>,<br>
+                    &nbsp;&nbsp;substanz: <span class="text-yellow-500">${hit.substanz}</span>,<br>
+                    &nbsp;&nbsp;index: <span class="text-purple-400">${hit.index}</span>,<br>
+                    &nbsp;&nbsp;mask: <span class="${hit.mask ? 'text-kernel-alert':'text-zinc-500'}">${hit.mask ? '0x1 (ALERT)':'0x0'}</span><br>
+                    <span class="text-kernel-accent font-bold">};</span>
+                `;
+                tooltip.classList.remove('hidden');
+            } else {
+                tooltip.classList.add('hidden');
+            }
+        });
+
+        // Eingabe-Verarbeitung aktivieren
+        document.getElementById('streamInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                let text = this.value.trim();
+                if (text) {
+                    let tokens = text.split(/\s+/);
+                    tokens.forEach(token => processGpmToken(token));
+                }
+                this.value = '';
+            }
+        });
+
+        // Initialisierung
+        setTimeout(() => {
+            resizeCanvases();
+            renderEntropyWave();
+            // Start-Injektion zur visuellen Demonstration
+            const demo = ["_START", "FPM_INIT", "NVME_DMA", "GE_PRIME", "CORE_ACTIVE"];
+            demo.forEach((t, i) => setTimeout(() => processGpmToken(t), i * 300));
+        }, 100);
+    </script>
+</body>
+</html>

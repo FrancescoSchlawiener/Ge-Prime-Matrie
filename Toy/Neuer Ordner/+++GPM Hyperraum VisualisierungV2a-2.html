@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPM - Zero-Copy Ring-0 Kernel Visualizer</title>
+    <script src="https://cdn.tailwindcss.com">
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { mono: ['Fira Code', 'monospace'], sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        kernel: {
+                            bg: '#030303',
+                            panel: '#0a0a0a',
+                            border: '#1f1f22',
+                            accent: '#00e5ff',
+                            alert: '#ff003c',
+                            succ: '#00ff66',
+                            tensor: '#eab308'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* --- Globale Reset- und Basis-Styles --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #030303;
+            color: #e5e5e5;
+            font-family: 'Inter', sans-serif;
+            --accent-color: #00e5ff;
+            --panel-bg: rgba(10, 10, 10, 0.85);
+            transition: background-color 1.5s ease;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            padding: 0.75rem;
+        }
+
+        body.sys-idle {
+            --accent-color: #3f3f46;
+            background-color: #050506;
+        }
+
+        /* --- Custom Scrollbar --- */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0a0a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1f1f22;
+            border-radius: 2px;
+        }
+
+        /* --- Grid-Glow System für BAR-Cells --- */
+        .bar-cell {
+            background-color: #0f0f11;
+            border: 1px solid #1f1f22;
+            transition: background-color 1s ease-out, box-shadow 1s ease-out;
+            aspect-ratio: 1 / 1;
+            min-width: 6px;
+            min-height: 6px;
+        }
+        .bar-cell.dma-active {
+            background-color: #eab308 !important;
+            box-shadow: 0 0 12px #eab308, 0 0 24px rgba(234, 179, 8, 0.3);
+            transition: none;
+        }
+
+        /* --- Entropy Canvas (Hintergrundwelle) --- */
+        .bg-entropy-canvas {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.12;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* --- Panels --- */
+        .kernel-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid #1f1f22;
+            border-radius: 0.5rem;
+        }
+
+        /* --- Input-Feld --- */
+        #streamInput {
+            background: #0f0f11;
+            border: 1px solid #1f1f22;
+            border-radius: 0.375rem;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+            color: #e5e5e5;
+            width: 100%;
+            transition: border-color 0.3s ease;
+        }
+        #streamInput:focus {
+            outline: none;
+            border-color: #00e5ff;
+            box-shadow: 0 0 0 2px rgba(0, 229, 255, 0.15);
+        }
+        #streamInput::placeholder {
+            color: #3f3f46;
+        }
+
+        /* --- I/O Gate Ticker --- */
+        #ioGateTicker {
+            scroll-behavior: smooth;
+            max-height: 100%;
+            overflow-y: auto;
+        }
+        #ioGateTicker .log-entry {
+            border-left: 2px solid transparent;
+            padding-left: 0.5rem;
+            margin-bottom: 0.125rem;
+            font-size: 0.7rem;
+            line-height: 1.4;
+            animation: fadeIn 0.2s ease;
+        }
+        #ioGateTicker .log-entry.alert {
+            border-left-color: #ff003c;
+            color: #ff003c;
+        }
+        #ioGateTicker .log-entry.normal {
+            color: #a1a1aa;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-4px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* --- Tooltip --- */
+        #tensorTooltip {
+            position: fixed;
+            background: rgba(0, 0, 0, 0.95);
+            border: 1px solid #1f1f22;
+            border-radius: 0.375rem;
+            padding: 0.6rem 0.8rem;
+            font-size: 0.65rem;
+            line-height: 1.6;
+            color: #a1a1aa;
+            pointer-events: none;
+            z-index: 50;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            max-width: 260px;
+            backdrop-filter: blur(8px);
+            font-family: 'Fira Code', monospace;
+            display: none;
+        }
+        #tensorTooltip .highlight {
+            color: #00e5ff;
+        }
+        #tensorTooltip .value {
+            color: #ffffff;
+        }
+        #tensorTooltip .substanz {
+            color: #eab308;
+        }
+        #tensorTooltip .index {
+            color: #a78bfa;
+        }
+        #tensorTooltip .alert-text {
+            color: #ff003c;
+        }
+
+        /* --- Status-Badges --- */
+        .badge-running {
+            background: #0c4a6e;
+            color: #00e5ff;
+            font-weight: 700;
+        }
+        .badge-hlt {
+            background: #18181b;
+            color: #52525b;
+            font-weight: 700;
+        }
+
+        /* --- I-Curve SVG --- */
+        #iCurveSvg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        #iCurvePath {
+            stroke: #00e5ff;
+            stroke-width: 1.5;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            transition: stroke 0.5s ease;
+        }
+        body.sys-idle #iCurvePath {
+            stroke: #27272a;
+        }
+
+        /* --- Responsive Anpassungen --- */
+        @media (max-width: 1024px) {
+            body {
+                padding: 0.5rem;
+            }
+            .grid-cols-12 {
+                gap: 0.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .grid-cols-12 {
+                grid-template-columns: 1fr !important;
+                gap: 0.5rem;
+                height: auto !important;
+                overflow-y: auto;
+                padding-bottom: 1rem;
+            }
+            .col-span-3,
+            .col-span-6 {
+                grid-column: span 1 !important;
+            }
+            #canvasContainer {
+                min-height: 300px;
+            }
+            .h-32 {
+                height: 80px;
+            }
+            #barGpmGrid {
+                grid-template-columns: repeat(16, 1fr);
+            }
+        }
+
+        /* --- Glow-Effekt für CPU-Status --- */
+        .glow-succ {
+            text-shadow: 0 0 20px rgba(0, 229, 255, 0.3);
+        }
+
+        /* --- Smooth Transitions --- */
+        .panel-transition {
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Hintergrund-Entropie-Welle -->
+    <canvas id="entropyCanvas" class="bg-entropy-canvas"></canvas>
+
+    <!-- Hauptlayout -->
+    <div class="relative z-10 grid grid-cols-12 h-full w-full gap-3">
+
+        <!-- 1. I/O GATE (INPUT_STREAM) -->
+        <div class="col-span-3 flex flex-col kernel-panel p-3 min-h-0">
+            <div class="text-[0.6rem] font-bold text-zinc-500 uppercase tracking-wider border-b border-kernel-border pb-1.5 mb-2">
+                ⚡ I/O Gate · Input Stream
+            </div>
+            <div class="mb-2">
+                <input type="text" id="streamInput" placeholder="Datenstrom injizieren..." autofocus>
+            </div>
+            <div id="ioGateTicker" class="flex-1 overflow-y-auto text-xs space-y-0.5 pr-1 min-h-0">
+                <div class="text-zinc-600 italic text-[0.65rem]">⏳ Warte auf Hardware-Signal...</div>
+            </div>
+        </div>
+
+        <!-- 2. GPM HYPERRAUM + 4. I-KURVE -->
+        <div class="col-span-6 flex flex-col gap-3 min-h-0">
+            <!-- Tensor Canvas -->
+            <div class="flex-1 kernel-panel relative overflow-hidden min-h-[200px]" id="canvasContainer">
+                <div class="absolute top-2 left-3 text-[0.6rem] font-bold text-zinc-500 uppercase tracking-wider z-10">
+                    🧠 GPM Hyperraum · Tensor Network
+                </div>
+                <canvas id="tensorCanvas" class="absolute inset-0 w-full h-full"></canvas>
+                <div id="tensorTooltip"></div>
+            </div>
+
+            <!-- I-Kurve (Oszilloskop) -->
+            <div class="h-28 kernel-panel p-2 relative">
+                <div class="absolute top-1 left-2 text-[0.55rem] font-bold text-zinc-600 uppercase tracking-wider z-10">
+                    📈 Topologischer Graph · I-Kurve
+                </div>
+                <svg id="iCurveSvg" preserveAspectRatio="none" class="w-full h-full">
+                    <path id="iCurvePath" d="M 0 100" />
+                </svg>
+            </div>
+        </div>
+
+        <!-- 3. STATUS + MMIO BAR_REGISTERS -->
+        <div class="col-span-3 flex flex-col gap-3 min-h-0">
+            <!-- Status -->
+            <div class="kernel-panel p-3">
+                <div class="text-[0.6rem] font-bold text-zinc-500 uppercase tracking-wider border-b border-kernel-border pb-1.5 mb-3">
+                    🔧 System State
+                </div>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <span class="text-[0.55rem] text-zinc-500 block font-bold uppercase tracking-wider">Big Prime</span>
+                            <span class="text-sm font-bold text-yellow-500 drop-shadow-[0_0_12px_rgba(234,179,8,0.15)]">16000103</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[0.55rem] text-zinc-500 block font-bold uppercase tracking-wider">CPU State</span>
+                            <span id="cpuStateBadge" class="text-[0.6rem] px-2 py-0.5 rounded badge-hlt font-bold">HLT (0%)</span>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="text-[0.55rem] text-zinc-500 block font-bold uppercase tracking-wider">Firewall Mask</span>
+                        <span class="text-[0.7rem] font-bold text-kernel-alert tracking-widest break-all">0xFFFFFFFF00000000</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MMIO BAR_REGISTERS -->
+            <div class="flex-1 kernel-panel p-3 flex flex-col min-h-0">
+                <div class="text-[0.6rem] font-bold text-zinc-500 uppercase tracking-wider border-b border-kernel-border pb-1.5 mb-2">
+                    📊 MMIO BAR Registers · 256-Bit Block
+                </div>
+                <div id="barGpmGrid" class="flex-1 grid grid-cols-16 gap-0.5 p-1 bg-zinc-950/50 rounded border border-zinc-900 min-h-[100px]">
+                    <!-- Wird dynamisch mit JS befüllt -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // SYSTEMKONSTANTEN & ZUSTAND
+        // ============================================================
+        const BIG_PRIME = 16000103n;
+        let isActive = false;
+        let lastSignalTime = Date.now();
+
+        // Prime-Alphabet für S-Wert-Generierung
+        const primeAlphabet = {
+            'A': 2,
+            'B': 3,
+            'C': 5,
+            'D': 7,
+            'E': 11,
+            'F': 13,
+            'G': 17,
+            'H': 19,
+            'I': 23,
+            'J': 29,
+            'K': 31,
+            'L': 37,
+            'M': 41,
+            'N': 43,
+            'O': 47,
+            'P': 53,
+            'Q': 59,
+            'R': 61,
+            'S': 67,
+            'T': 71,
+            'U': 73,
+            'V': 79,
+            'W': 83,
+            'X': 89,
+            'Y': 97,
+            'Z': 101,
+            '_': 103,
+            ' ': 107
+        };
+
+        // ============================================================
+        // DOM-REFERENZEN
+        // ============================================================
+        const entropyCanvas = document.getElementById('entropyCanvas');
+        const eCtx = entropyCanvas.getContext('2d');
+        const tensorCanvas = document.getElementById('tensorCanvas');
+        const tCtx = tensorCanvas.getContext('2d');
+        const barGrid = document.getElementById('barGpmGrid');
+        const iCurvePath = document.getElementById('iCurvePath');
+        const iCurveSvg = document.getElementById('iCurveSvg');
+        const tooltip = document.getElementById('tensorTooltip');
+        const streamInput = document.getElementById('streamInput');
+        const ticker = document.getElementById('ioGateTicker');
+        const cpuBadge = document.getElementById('cpuStateBadge');
+
+        // ============================================================
+        // STATE-VARIABLEN
+        // ============================================================
+        let tensorNodes = [];
+        let prevX = null,
+            prevY = null;
+        let indexHistory = [];
+        let wavePhase = 0;
+        let currentAmplitude = 0;
+        let currentFrequency = 0;
+        let totalCells = 256;
+        let animationId = null;
+        let resizeTimeout = null;
+
+        // ============================================================
+        // BAR-GRID INITIALISIEREN
+        // ============================================================
+        function initBarGrid() {
+            barGrid.innerHTML = '';
+            for (let i = 0; i < totalCells; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'bar-cell rounded-sm';
+                cell.dataset.index = i;
+                barGrid.appendChild(cell);
+            }
+        }
+        initBarGrid();
+
+        // ============================================================
+        // CANVAS-GRÖSSEN ANPASSEN
+        // ============================================================
+        function resizeCanvases() {
+            // Entropy Canvas
+            entropyCanvas.width = window.innerWidth;
+            entropyCanvas.height = window.innerHeight;
+
+            // Tensor Canvas
+            const container = document.getElementById('canvasContainer');
+            if (container) {
+                const rect = container.getBoundingClientRect();
+                tensorCanvas.width = rect.width || container.clientWidth || 400;
+                tensorCanvas.height = rect.height || container.clientHeight || 300;
+                redrawTensorNetwork();
+            }
+        }
+
+        // ============================================================
+        // ENTROPIE-WELLE (Hintergrund-Animation)
+        // ============================================================
+        function renderEntropyWave() {
+            const w = entropyCanvas.width;
+            const h = entropyCanvas.height;
+
+            eCtx.clearRect(0, 0, w, h);
+
+            // System-Idle-Check
+            if (Date.now() - lastSignalTime > 1500 && isActive) {
+                isActive = false;
+                document.body.classList.add('sys-idle');
+                cpuBadge.textContent = 'HLT (0%)';
+                cpuBadge.className = 'text-[0.6rem] px-2 py-0.5 rounded badge-hlt font-bold';
+            }
+
+            // Entropie-Dämpfung
+            const targetAmp = isActive ? 30 : 0;
+            const targetFreq = isActive ? 0.035 : 0;
+
+            currentAmplitude += (targetAmp - currentAmplitude) * 0.04;
+            currentFrequency += (targetFreq - currentFrequency) * 0.04;
+            wavePhase += isActive ? 0.045 : 0.008;
+
+            // Welle zeichnen
+            if (currentAmplitude > 0.5) {
+                eCtx.beginPath();
+                const midY = h / 2;
+                for (let x = 0; x < w; x++) {
+                    const y = midY + Math.sin(x * currentFrequency + wavePhase) * currentAmplitude;
+                    x === 0 ? eCtx.moveTo(x, y) : eCtx.lineTo(x, y);
+                }
+                eCtx.strokeStyle = isActive ? 'rgba(0, 229, 255, 0.6)' : 'rgba(39, 39, 42, 0.4)';
+                eCtx.lineWidth = 1.5;
+                eCtx.stroke();
+            }
+
+            animationId = requestAnimationFrame(renderEntropyWave);
+        }
+
+        // ============================================================
+        // TENSOR-NETWORK ZEICHNEN
+        // ============================================================
+        function redrawTensorNetwork() {
+            const w = tensorCanvas.width;
+            const h = tensorCanvas.height;
+
+            tCtx.clearRect(0, 0, w, h);
+
+            if (tensorNodes.length === 0) return;
+
+            // Pfad zwischen Knoten
+            tCtx.beginPath();
+            tCtx.moveTo(tensorNodes[0].x, tensorNodes[0].y);
+            for (let i = 1; i < tensorNodes.length; i++) {
+                tCtx.lineTo(tensorNodes[i].x, tensorNodes[i].y);
+            }
+            tCtx.strokeStyle = 'rgba(0, 229, 255, 0.12)';
+            tCtx.lineWidth = 1;
+            tCtx.stroke();
+
+            // Knotenpunkte
+            tensorNodes.forEach(node => {
+                tCtx.beginPath();
+                tCtx.arc(node.x, node.y, 4, 0, 2 * Math.PI);
+                tCtx.fillStyle = node.mask ? '#ff003c' : '#00e5ff';
+                tCtx.fill();
+                tCtx.shadowColor = node.mask ? '#ff003c' : '#00e5ff';
+                tCtx.shadowBlur = 8;
+                tCtx.fill();
+                tCtx.shadowBlur = 0;
+            });
+        }
+
+        // ============================================================
+        // NEUEN KNOTEN HINZUFÜGEN
+        // ============================================================
+        function drawTensorNode(substanz, index, mask, rawWord) {
+            const w = tensorCanvas.width || 400;
+            const h = tensorCanvas.height || 300;
+
+            const x = Number(BigInt(substanz) % BigInt(w));
+            const y = Number(BigInt(index) % BigInt(h));
+
+            // Verbindung zum Vorgänger
+            if (prevX !== null && prevY !== null) {
+                tCtx.beginPath();
+                tCtx.moveTo(prevX, prevY);
+                tCtx.lineTo(x, y);
+                tCtx.strokeStyle = 'rgba(0, 229, 255, 0.2)';
+                tCtx.lineWidth = 1.2;
+                tCtx.stroke();
+            }
+
+            // Knoten zeichnen
+            tCtx.beginPath();
+            tCtx.arc(x, y, 5, 0, 2 * Math.PI);
+            tCtx.fillStyle = mask ? '#ff003c' : '#00e5ff';
+            tCtx.fill();
+            tCtx.shadowColor = mask ? '#ff003c' : '#00e5ff';
+            tCtx.shadowBlur = 10;
+            tCtx.fill();
+            tCtx.shadowBlur = 0;
+
+            // Speichern für Hover
+            tensorNodes.push({ x, y, substanz: substanz.toString(), index: index.toString(), mask, word: rawWord });
+
+            // Begrenzung der Knotenanzahl
+            if (tensorNodes.length > 200) {
+                tensorNodes.shift();
+            }
+
+            prevX = x;
+            prevY = y;
+        }
+
+        // ============================================================
+        // GPM-KERN-ARITHMETIK
+        // ============================================================
+        function processGpmToken(word) {
+            // System aktivieren
+            isActive = true;
+            lastSignalTime = Date.now();
+            document.body.classList.remove('sys-idle');
+            cpuBadge.textContent = 'RUNNING';
+            cpuBadge.className = 'text-[0.6rem] px-2 py-0.5 rounded badge-running font-bold glow-succ';
+
+            // S-Wert und I-Wert berechnen
+            let word_S = 1n;
+            let computed_I = 0n;
+
+            for (let i = 0; i < word.length; i++) {
+                const char = word[i].toUpperCase();
+                if (primeAlphabet[char]) {
+                    const p = BigInt(primeAlphabet[char]);
+                    word_S = (word_S * p) % BIG_PRIME;
+                    computed_I += p * BigInt(i + 1);
+                }
+            }
+
+            // Firewall-Mask-Check
+            const maskTriggered = (word_S & 0xFFFFFFFF00000000n) !== 0n;
+
+            // Ticker aktualisieren
+            const timeStr = new Date().toISOString().slice(11, 19);
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${maskTriggered ? 'alert' : 'normal'}`;
+            logEntry.textContent = `[${timeStr}] DMA: ${word} → S:${word_S} I:${computed_I}`;
+
+            // Platzhalter entfernen
+            const placeholder = ticker.querySelector('.text-zinc-600');
+            if (placeholder) placeholder.remove();
+
+            ticker.insertBefore(logEntry, ticker.firstChild);
+
+            // Max 50 Einträge
+            while (ticker.children.length > 50) {
+                ticker.removeChild(ticker.lastChild);
+            }
+
+            // Tensor-Netzwerk aktualisieren
+            drawTensorNode(word_S, computed_I, maskTriggered, word);
+
+            // BAR-Register flashen
+            flashHardwareRegisters(word_S);
+
+            // I-Kurve aktualisieren
+            updateIKurve(computed_I);
+        }
+
+        // ============================================================
+        // BAR-REGISTER FLASHEN
+        // ============================================================
+        function flashHardwareRegisters(substanz) {
+            const baseIndex = Number(substanz % BigInt(totalCells));
+            const cells = barGrid.querySelectorAll('.bar-cell');
+
+            for (let i = 0; i < 5; i++) {
+                const idx = (baseIndex + i * 13) % totalCells;
+                const cell = cells[idx];
+                if (cell) {
+                    cell.classList.add('dma-active');
+                    setTimeout(() => cell.classList.remove('dma-active'), 80);
+                }
+            }
+        }
+
+        // ============================================================
+        // I-KURVE AKTUALISIEREN
+        // ============================================================
+        function updateIKurve(currentI) {
+            indexHistory.push(currentI);
+            if (indexHistory.length > 100) indexHistory.shift();
+
+            const svgWidth = iCurveSvg.clientWidth || 400;
+            const svgHeight = iCurveSvg.clientHeight || 80;
+
+            if (indexHistory.length < 2) {
+                iCurvePath.setAttribute('d', `M 0 ${svgHeight}`);
+                return;
+            }
+
+            const maxVal = Number(indexHistory.reduce((a, b) => a > b ? a : b, 0n) || 1n);
+
+            const points = indexHistory.map((val, idx) => {
+                const x = (idx / (indexHistory.length - 1)) * svgWidth;
+                const normalized = Number(val) / (maxVal || 1);
+                const y = svgHeight - (normalized * svgHeight * 0.9 + svgHeight * 0.05);
+                return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`;
+            });
+
+            iCurvePath.setAttribute('d', points.join(' '));
+        }
+
+        // ============================================================
+        // TOOLTIP (Hover-Interaktion)
+        // ============================================================
+        tensorCanvas.addEventListener('mousemove', function(e) {
+            const rect = tensorCanvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            let hit = null;
+            for (const node of tensorNodes) {
+                if (Math.hypot(node.x - mouseX, node.y - mouseY) < 10) {
+                    hit = node;
+                    break;
+                }
+            }
+
+            if (hit) {
+                tooltip.style.display = 'block';
+                tooltip.style.left = Math.min(e.clientX + 14, window.innerWidth - 280) + 'px';
+                tooltip.style.top = Math.min(e.clientY + 10, window.innerHeight - 180) + 'px';
+                tooltip.innerHTML = `
+                    <span class="highlight">struct fpm_object_t {</span><br>
+                    &nbsp;&nbsp;word: <span class="value">"${hit.word}"</span>,<br>
+                    &nbsp;&nbsp;substanz: <span class="substanz">${hit.substanz}</span>,<br>
+                    &nbsp;&nbsp;index: <span class="index">${hit.index}</span>,<br>
+                    &nbsp;&nbsp;mask: <span class="${hit.mask ? 'alert-text' : 'text-zinc-500'}">${hit.mask ? '0x1 (ALERT)' : '0x0'}</span><br>
+                    <span class="highlight">};</span>
+                `;
+            } else {
+                tooltip.style.display = 'none';
+            }
+        });
+
+        tensorCanvas.addEventListener('mouseleave', () => {
+            tooltip.style.display = 'none';
+        });
+
+        // ============================================================
+        // INPUT-EINGABE
+        // ============================================================
+        streamInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const text = this.value.trim();
+                if (text) {
+                    const tokens = text.split(/\s+/);
+                    tokens.forEach(token => processGpmToken(token));
+                }
+                this.value = '';
+            }
+        });
+
+        // Fokus automatisch
+        streamInput.focus();
+
+        // ============================================================
+        // RESIZE-HANDLER (entprellt)
+        // ============================================================
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(resizeCanvases, 150);
+        });
+
+        // ============================================================
+        // INITIALISIERUNG
+        // ============================================================
+        function init() {
+            resizeCanvases();
+            renderEntropyWave();
+
+            // Demo-Injektion mit Verzögerung
+            const demoWords = ['_START', 'FPM_INIT', 'NVME_DMA', 'GE_PRIME', 'CORE_ACTIVE', 'ZERO_COPY'];
+            demoWords.forEach((word, i) => {
+                setTimeout(() => processGpmToken(word), i * 350 + 200);
+            });
+        }
+
+        // Start nach kurzer Verzögerung
+        setTimeout(init, 100);
+    </script>
+
+</body>
+</html>

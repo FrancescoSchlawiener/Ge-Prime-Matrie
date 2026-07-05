@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPM - Audio-Impuls · Tensor-Kollaps</title>
+    <script src="https://cdn.tailwindcss.com">
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #030303;
+            color: #e5e5e5;
+            font-family: 'Inter', sans-serif;
+            --accent: #00e5ff;
+            --alert: #ff003c;
+            --panel: #0a0a0a;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            padding: 0.75rem;
+        }
+
+        .glass {
+            background: rgba(10, 10, 10, 0.88);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid #1f1f22;
+            border-radius: 0.5rem;
+        }
+
+        .mono {
+            font-family: 'Fira Code', monospace;
+        }
+
+        #spectrumCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            border-radius: 4px;
+        }
+
+        #barGrid {
+            display: grid;
+            grid-template-columns: repeat(32, 1fr);
+            gap: 1px;
+            padding: 2px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 4px;
+            border: 1px solid #1a1a1e;
+            min-height: 40px;
+        }
+
+        .bar-cell {
+            background: #121215;
+            border-radius: 1px;
+            aspect-ratio: 1/1;
+            transition: background-color 0.15s ease-out, box-shadow 0.15s ease-out;
+        }
+
+        .bar-cell.active {
+            background: #eab308 !important;
+            box-shadow: 0 0 12px #eab308, 0 0 24px rgba(234, 179, 8, 0.25);
+        }
+
+        .bar-cell.error {
+            background: #ff003c !important;
+            box-shadow: 0 0 20px #ff003c, 0 0 40px rgba(255, 0, 60, 0.3);
+        }
+
+        #tooltip {
+            position: fixed;
+            background: rgba(0, 0, 0, 0.95);
+            border: 1px solid #1f1f22;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 10px;
+            font-family: 'Fira Code', monospace;
+            color: #a1a1aa;
+            pointer-events: none;
+            z-index: 50;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            display: none;
+            max-width: 260px;
+            line-height: 1.6;
+        }
+
+        #tooltip .label {
+            color: #00e5ff;
+        }
+        #tooltip .value {
+            color: #ffffff;
+        }
+        #tooltip .alert {
+            color: #ff003c;
+        }
+
+        #logArea {
+            height: 100%;
+            overflow-y: auto;
+            font-size: 10px;
+            line-height: 1.5;
+        }
+        #logArea::-webkit-scrollbar {
+            width: 3px;
+        }
+        #logArea::-webkit-scrollbar-thumb {
+            background: #27272a;
+            border-radius: 2px;
+        }
+
+        .log-entry {
+            border-left: 2px solid transparent;
+            padding-left: 8px;
+            margin-bottom: 2px;
+            animation: fadeIn 0.15s ease;
+        }
+        .log-entry.info {
+            border-left-color: #00e5ff;
+            color: #a1a1aa;
+        }
+        .log-entry.alert {
+            border-left-color: #ff003c;
+            color: #ff003c;
+        }
+        .log-entry.tensor {
+            border-left-color: #eab308;
+            color: #eab308;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-4px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .typing-cursor::after {
+            content: '█';
+            animation: blink 0.8s step-start infinite;
+            color: #00e5ff;
+            margin-left: 2px;
+        }
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+
+        .pulse-ring {
+            animation: pulse-ring 0.3s ease-out;
+        }
+        @keyframes pulse-ring {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1.8);
+                opacity: 0;
+            }
+        }
+
+        #audioIndicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #3f3f46;
+            transition: all 0.2s ease;
+        }
+        #audioIndicator.active {
+            background: #00ff66;
+            box-shadow: 0 0 20px #00ff66;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 0.4rem;
+            }
+            .grid-cols-12 {
+                grid-template-columns: 1fr !important;
+                gap: 0.4rem;
+                height: auto !important;
+                overflow-y: auto;
+            }
+            .col-span-4,
+            .col-span-8 {
+                grid-column: span 1 !important;
+            }
+            #barGrid {
+                min-height: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="h-full w-full grid grid-cols-12 gap-3">
+
+        <!-- Linke Spalte: Eingabe, Log, BAR -->
+        <div class="col-span-4 flex flex-col gap-3 h-full min-h-0">
+
+            <!-- Input -->
+            <div class="glass p-3 shrink-0">
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="text-[9px] font-bold uppercase tracking-widest text-zinc-400 mono">⏣ Datenstrom</span>
+                    <span class="text-[8px] text-zinc-600 mono">Token: <span id="tokenCount">0</span></span>
+                </div>
+                <input type="text" id="streamInput"
+                class="w-full bg-black/50 border border-zinc-800 rounded px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-[#00e5ff] placeholder-zinc-700 mono"
+                placeholder="Token eingeben (Enter/Leerzeichen feuert)..." autofocus>
+                <div class="flex gap-2 mt-2 flex-wrap">
+                    <button onclick="injectBurst('_START FPM KERNEL _END')"
+                    class="text-[8px] px-2 py-1 rounded bg-zinc-900 border border-zinc-800 hover:border-zinc-600 text-zinc-400 mono transition-colors">
+                    Burst: Legit
+                </button>
+                <button onclick="injectBurst('SYS_CRASH NOISE ERROR')"
+                class="text-[8px] px-2 py-1 rounded bg-zinc-900 border border-zinc-800 hover:border-red-800/60 hover:text-red-400 text-zinc-400 mono transition-colors">
+                Burst: Noise
+            </button>
+        </div>
+    </div>
+
+    <!-- Log -->
+    <div class="glass p-3 flex-1 flex flex-col min-h-0">
+        <span class="text-[9px] font-bold uppercase tracking-widest text-zinc-400 mono mb-1.5">▸ Kernel Log</span>
+        <div id="logArea" class="flex-1 overflow-y-auto pr-1">
+            <div class="text-zinc-600 italic text-[9px]">— Warte auf Impuls —</div>
+        </div>
+    </div>
+
+    <!-- BAR Grid -->
+    <div class="glass p-3 shrink-0">
+        <div class="flex items-center justify-between mb-1.5">
+            <span class="text-[9px] font-bold uppercase tracking-widest text-zinc-400 mono">⌨ MMIO BAR (32×8)</span>
+            <span class="text-[8px] text-zinc-600 mono" id="barStatus">idle</span>
+        </div>
+        <div id="barGrid"></div>
+    </div>
+</div>
+
+<!-- Rechte Spalte: Spektrum + Status -->
+<div class="col-span-8 flex flex-col gap-3 h-full min-h-0">
+
+    <!-- Spektrum Canvas -->
+    <div class="glass p-1 flex-1 relative overflow-hidden min-h-[200px]">
+        <div class="absolute top-2 left-3 z-10 pointer-events-none">
+            <span class="text-[9px] font-bold uppercase tracking-widest text-white/70 mono flex items-center gap-2">
+                <span class="w-1 h-3 bg-[#00e5ff]"></span>
+                Frequenz-Spektrum · S(I)-Kollaps
+            </span>
+        </div>
+        <canvas id="spectrumCanvas" class="w-full h-full block rounded"></canvas>
+        <div id="tooltip"></div>
+    </div>
+
+    <!-- Status & Audio-Indikator -->
+    <div class="glass p-3 shrink-0 flex items-center justify-between flex-wrap gap-2">
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
+                <div id="audioIndicator"></div>
+                <span class="text-[9px] text-zinc-500 mono">AUDIO</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-[8px] text-zinc-600 mono">SYS:</span>
+                <span id="sysState" class="text-[9px] text-zinc-400 mono font-bold">HLT / VACUUM</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-[8px] text-zinc-600 mono">TENSOR:</span>
+                <span id="tensorCount" class="text-[9px] text-[#eab308] mono font-bold">0</span>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <span class="text-[8px] text-zinc-600 mono">BIG_PRIME:</span>
+            <span class="text-[9px] text-yellow-500/80 mono font-bold">100000000000000003</span>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<!-- ============================================================
+JAVASCRIPT — GPM AUDIO IMPULS CORE
+============================================================ -->
+<script>
+    /**
+     * ================================================================
+     * KONSTANTEN & PRIME-MATRIX
+     * ================================================================
+     */
+    const BIG_PRIME = 100000000000000003n;
+
+    const primeMatrix = {
+        'E': 2,
+        'A': 3,
+        'O': 5,
+        'I': 7,
+        'T': 11,
+        'N': 13,
+        'R': 17,
+        'S': 19,
+        'L': 23,
+        'C': 29,
+        'D': 31,
+        'U': 37,
+        'M': 41,
+        'P': 43,
+        'H': 47,
+        'G': 53,
+        'B': 59,
+        'F': 61,
+        'Y': 67,
+        'W': 71,
+        'K': 73,
+        'V': 79,
+        'X': 83,
+        'Z': 89,
+        'J': 97,
+        'Q': 101,
+        'ß': 103
+    };
+
+    /**
+     * ================================================================
+     * AUDIO-CONTEXT (global, nur beim ersten Klick)
+     * ================================================================
+     */
+    let audioCtx = null;
+    let isAudioReady = false;
+
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume().then(() => {
+                isAudioReady = true;
+                document.getElementById('audioIndicator').classList.add('active');
+            });
+        } else {
+            isAudioReady = true;
+            document.getElementById('audioIndicator').classList.add('active');
+        }
+    }
+
+    /**
+     * ================================================================
+     * AUDIO-IMPULS (rein physikalisch, kein Buffer, kein Rauschen)
+     * ================================================================
+     */
+    function playGpmPulse(S, I) {
+        if (!audioCtx) return;
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        try {
+            const freq = (Number(S) % 880) + 110; // 110 – 990 Hz
+            const amp = ((Number(I) % 100) / 300) + 0.05; // 0.05 – 0.383
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(amp, audioCtx.currentTime);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start();
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+            osc.stop(audioCtx.currentTime + 0.08);
+
+            // Sofortige Freigabe nach Stop
+            setTimeout(() => {
+                try { osc.disconnect();
+                    gain.disconnect(); } catch (e) {}
+            }, 150);
+
+            // LED-Feedback
+            const indicator = document.getElementById('audioIndicator');
+            indicator.classList.add('active');
+            indicator.style.boxShadow = '0 0 30px #00ff66';
+            setTimeout(() => {
+                indicator.style.boxShadow = '0 0 20px #00ff66';
+            }, 100);
+
+            return { freq, amp };
+        } catch (e) {
+            console.warn('[GPM Audio] Impuls fehlgeschlagen:', e);
+            return null;
+        }
+    }
+
+    /**
+     * ================================================================
+     * MUTE (System in HLT)
+     * ================================================================
+     */
+    function muteAudio() {
+        if (audioCtx && audioCtx.state === 'running') {
+            // Wir schalten nichts stumm, aber wir setzen den Indikator zurück
+            document.getElementById('audioIndicator').classList.remove('active');
+            document.getElementById('audioIndicator').style.boxShadow = 'none';
+        }
+    }
+
+    /**
+     * ================================================================
+     * GPM KERN-ARITHMETIK
+     * ================================================================
+     */
+    let tokenCounter = 0;
+    let tensorCounter = 0;
+    let lastSignalTime = Date.now();
+    let idleTimer = null;
+
+    function factorial(n) {
+        if (n <= 1) return 1n;
+        let f = 1n;
+        for (let i = 2; i <= n; i++) f *= BigInt(i);
+        return f;
+    }
+
+    function calculateMockI(primes) {
+        if (!primes.length) return 0n;
+        const sum = primes.reduce((a, b) => a + b, 0n);
+        return (sum * BigInt(primes.length)) % (factorial(primes.length) || 1n);
+    }
+
+    function processGpmToken(word) {
+        if (!word || word.length === 0) return;
+
+        // Audio-Init bei erstem Token
+        if (!audioCtx) initAudio();
+
+        tokenCounter++;
+        document.getElementById('tokenCount').innerText = tokenCounter;
+
+        // System aktiv setzen
+        lastSignalTime = Date.now();
+        document.getElementById('sysState').innerText = 'PROCESSING';
+        document.getElementById('sysState').style.color = '#00e5ff';
+
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+            document.getElementById('sysState').innerText = 'HLT / VACUUM';
+            document.getElementById('sysState').style.color = '#a1a1aa';
+            muteAudio();
+        }, 1200);
+
+        // Prime-Multiplikation
+        let word_S = 1n;
+        const primes = [];
+        for (let i = 0; i < word.length; i++) {
+            const char = word[i].toUpperCase();
+            const prime = primeMatrix[char] || primeMatrix[char === 'ß' ? 'ß' : 'E'];
+            if (prime) {
+                const p = BigInt(prime);
+                primes.push(p);
+                word_S = (word_S * p) % BIG_PRIME;
+            }
+        }
+
+        if (primes.length === 0) return;
+
+        const word_I = calculateMockI(primes);
+
+        // ============================================================
+        // AUDIO-IMPULS (direkt nach Tensor-Erstellung)
+        // ============================================================
+        const pulse = playGpmPulse(word_S, word_I);
+
+        // ============================================================
+        // VISUELLE FEEDBACKS
+        // ============================================================
+
+        // 1. Log
+        const log = document.getElementById('logArea');
+        const placeholder = log.querySelector('.text-zinc-600');
+        if (placeholder) placeholder.remove();
+
+        const entry = document.createElement('div');
+        const isError = word.includes('ERROR') || word.includes('CRASH') || word.includes('NOISE');
+        entry.className = `log-entry ${isError ? 'alert' : 'tensor'}`;
+        const time = new Date().toISOString().slice(11, 19);
+        entry.innerHTML =
+            `[${time}] <b>${word}</b> → S:${word_S} I:${word_I} ${pulse ? `⚡${Math.round(pulse.freq)}Hz` : '🔇'}`;
+        log.insertBefore(entry, log.firstChild);
+        while (log.children.length > 80) log.removeChild(log.lastChild);
+
+        // 2. BAR-Grid flashen
+        flashBar(word_S, isError);
+
+        // 3. Spektrum zeichnen
+        drawSpectrum(word_S, word_I, isError);
+
+        // 4. Tensor-Counter
+        tensorCounter++;
+        document.getElementById('tensorCount').innerText = tensorCounter;
+    }
+
+    /**
+     * ================================================================
+     * BAR-GRID (32×8 = 256 Zellen)
+     * ================================================================
+     */
+    const barGrid = document.getElementById('barGrid');
+    const barCells = [];
+
+    function initBarGrid() {
+        barGrid.innerHTML = '';
+        for (let i = 0; i < 256; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'bar-cell';
+            barGrid.appendChild(cell);
+            barCells.push(cell);
+        }
+    }
+    initBarGrid();
+
+    function flashBar(S, isError) {
+        const idx = Number(S % 256n);
+        const cell = barCells[idx];
+        if (!cell) return;
+
+        cell.className = `bar-cell ${isError ? 'error' : 'active'}`;
+        document.getElementById('barStatus').innerText = isError ? '⚠️ ALERT' : '⚡ DMA';
+
+        setTimeout(() => {
+            cell.className = 'bar-cell';
+            if (!document.querySelector('.bar-cell.active, .bar-cell.error')) {
+                document.getElementById('barStatus').innerText = 'idle';
+            }
+        }, isError ? 350 : 80);
+    }
+
+    /**
+     * ================================================================
+     * SPEKTRUM-CANVAS (Frequenz-Impuls-Visualisierung)
+     * ================================================================
+     */
+    const canvas = document.getElementById('spectrumCanvas');
+    const ctx = canvas.getContext('2d');
+    const tooltip = document.getElementById('tooltip');
+
+    let spectrumData = [];
+    let camX = 0,
+        camY = 0;
+    let targetCamX = 0,
+        targetCamY = 0;
+
+    function resizeCanvas() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = rect.width || 400;
+        canvas.height = rect.height || 300;
+        drawSpectrumLoop();
+    }
+
+    function drawSpectrum(S, I, isError) {
+        const x = Number(S % BigInt(canvas.width || 1000));
+        const y = Number(I % BigInt(canvas.height || 800));
+
+        spectrumData.push({ x, y, S: S.toString(), I: I.toString(), error: isError });
+        if (spectrumData.length > 250) spectrumData.shift();
+
+        // Kamera folgt dem Schwerpunkt der letzten 15 Nodes
+        const recent = spectrumData.slice(-15);
+        if (recent.length > 5) {
+            const avgX = recent.reduce((s, n) => s + n.x, 0) / recent.length;
+            const avgY = recent.reduce((s, n) => s + n.y, 0) / recent.length;
+            targetCamX = (canvas.width / 2) - avgX;
+            targetCamY = (canvas.height / 2) - avgY;
+        }
+    }
+
+    function drawSpectrumLoop() {
+        const w = canvas.width || 400;
+        const h = canvas.height || 300;
+
+        camX += (targetCamX - camX) * 0.06;
+        camY += (targetCamY - camY) * 0.06;
+
+        ctx.clearRect(0, 0, w, h);
+
+        // Hintergrund-Gitter
+        ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+        ctx.lineWidth = 0.5;
+        for (let i = 0; i < 2000; i += 150) {
+            ctx.beginPath();
+            const sx = i + camX;
+            const sy = i + camY;
+            ctx.moveTo(sx % 2000, 0);
+            ctx.lineTo(sx % 2000, 2000);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(0, sy % 2000);
+            ctx.lineTo(2000, sy % 2000);
+            ctx.stroke();
+        }
+
+        ctx.save();
+        ctx.translate(camX, camY);
+
+        // Pfad
+        if (spectrumData.length > 1) {
+            ctx.beginPath();
+            ctx.moveTo(spectrumData[0].x, spectrumData[0].y);
+            for (let i = 1; i < spectrumData.length; i++) {
+                ctx.lineTo(spectrumData[i].x, spectrumData[i].y);
+            }
+            ctx.strokeStyle = 'rgba(0, 229, 255, 0.15)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
+
+        // Punkte
+        spectrumData.forEach(node => {
+            const radius = node.error ? 7 : 4;
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
+            ctx.fillStyle = node.error ? '#ff003c' : '#00e5ff';
+            ctx.shadowColor = node.error ? '#ff003c' : '#00e5ff';
+            ctx.shadowBlur = node.error ? 20 : 10;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        });
+
+        ctx.restore();
+
+        requestAnimationFrame(drawSpectrumLoop);
+    }
+
+    // Tooltip
+    canvas.addEventListener('mousemove', function(e) {
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left - camX;
+        const my = e.clientY - rect.top - camY;
+
+        let hit = null;
+        for (const node of spectrumData) {
+            if (Math.hypot(node.x - mx, node.y - my) < 12) {
+                hit = node;
+                break;
+            }
+        }
+
+        if (hit) {
+            tooltip.style.display = 'block';
+            const x = Math.min(e.clientX + 14, window.innerWidth - 280);
+            const y = Math.min(e.clientY + 10, window.innerHeight - 120);
+            tooltip.style.left = x + 'px';
+            tooltip.style.top = y + 'px';
+            tooltip.innerHTML = `
+                <span class="label">tensor_t {</span><br>
+                &nbsp;&nbsp;S: <span class="value">${hit.S}</span><br>
+                &nbsp;&nbsp;I: <span class="value">${hit.I}</span><br>
+                &nbsp;&nbsp;status: <span class="${hit.error ? 'alert' : 'value'}">${hit.error ? '⚠️ FIREWALL' : '✅ OK'}</span><br>
+                <span class="label">}</span>
+            `;
+        } else {
+            tooltip.style.display = 'none';
+        }
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+        tooltip.style.display = 'none';
+    });
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    /**
+     * ================================================================
+     * EINGABE-STEUERUNG
+     * ================================================================
+     */
+    const inputField = document.getElementById('streamInput');
+
+    inputField.addEventListener('keydown', function(e) {
+        if (e.key === ' ' || e.key === 'Enter') {
+            e.preventDefault();
+            const token = this.value.trim();
+            if (token) {
+                processGpmToken(token);
+            }
+            this.value = '';
+        }
+    });
+
+    function injectBurst(str) {
+        const tokens = str.split(' ');
+        let i = 0;
+
+        function fireNext() {
+            if (i < tokens.length) {
+                processGpmToken(tokens[i]);
+                i++;
+                setTimeout(fireNext, Math.random() * 100 + 30);
+            }
+        }
+        fireNext();
+    }
+
+    // Fokus & Audio-Init bei Klick
+    document.addEventListener('click', () => {
+        inputField.focus();
+        if (!audioCtx) initAudio();
+    });
+
+    inputField.focus();
+
+    // Demo-Burst nach Start
+    setTimeout(() => {
+        injectBurst('_BOOT FPM_INIT NVME_DMA GE_PRIME CORE_ACTIVE');
+    }, 400);
+
+    console.log('[GPM Audio] System bereit | BIG_PRIME=' + BIG_PRIME);
+</script>
+</body>
+</html>

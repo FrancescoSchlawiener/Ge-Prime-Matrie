@@ -48,6 +48,12 @@ Ge-Prime-Matrix/**/*.egg-info/
 Ge-Prime-Matrix/.venv/
 Ge-Prime-Matrix/venv/
 
+# GPM Neuaufbau (alles unter GPM/functions/)
+GPM/functions/**/__pycache__/
+GPM/functions/**/*.pyc
+GPM/functions/.pytest_cache/
+GPM/functions/data/*.db
+
 # OS
 .DS_Store
 Thumbs.db
