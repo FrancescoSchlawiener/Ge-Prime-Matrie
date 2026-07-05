@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import Counter
 
 from alphabets.profiles import AlphabetProfile
-from alphabets.roman.map import prime_map_for_profile
+from alphabets.registry import prime_map_for_profile
 from perm.lut import (
     PermutationLut,
     build_permutation_lut_for_sequence,
@@ -26,12 +26,18 @@ def sequence_identity(sequence: str) -> tuple[str, ...]:
     return tuple(sequence)
 
 
-def permutation_lut_for_sequence(sequence: str) -> PermutationLut:
-    return build_permutation_lut_for_sequence(sequence)
+def permutation_lut_for_sequence(
+    sequence: str,
+    profile: AlphabetProfile | str = AlphabetProfile.ROMAN,
+) -> PermutationLut:
+    return build_permutation_lut_for_sequence(sequence, profile)
 
 
-def sequence_key_via_lut(sequence: str) -> tuple[PermutationLut, int]:
-    lut = get_permutation_lut(Counter(sequence))
+def sequence_key_via_lut(
+    sequence: str,
+    profile: AlphabetProfile | str = AlphabetProfile.ROMAN,
+) -> tuple[PermutationLut, int]:
+    lut = get_permutation_lut(Counter(sequence), profile)
     return lut, lut_index_of_sequence(lut, sequence)
 
 
@@ -58,8 +64,11 @@ def Sk(sequence: str) -> tuple[str, ...]:
     return sequence_identity(sequence)
 
 
-def Sk_lut(sequence: str) -> tuple[str, ...]:
-    lut, idx = sequence_key_via_lut(sequence)
+def Sk_lut(
+    sequence: str,
+    profile: AlphabetProfile | str = AlphabetProfile.ROMAN,
+) -> tuple[str, ...]:
+    lut, idx = sequence_key_via_lut(sequence, profile)
     return sequence_identity_from_lut(lut, idx)
 
 
@@ -67,5 +76,8 @@ def Sp(sequence: str, profile: AlphabetProfile | str = AlphabetProfile.ROMAN) ->
     return substance_positional(sequence, profile)
 
 
-def Lut(sequence: str) -> PermutationLut:
-    return permutation_lut_for_sequence(sequence)
+def Lut(
+    sequence: str,
+    profile: AlphabetProfile | str | None = None,
+) -> PermutationLut:
+    return build_permutation_lut_for_sequence(sequence, profile)

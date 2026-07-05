@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math as _stdlib_math
 from collections import Counter
-from typing import Hashable, TypeVar
+from typing import Hashable, Sequence, TypeVar
 
 _WIDTH_CLASSES = (2, 4, 8, 16)
 T = TypeVar("T", bound=Hashable)
@@ -39,7 +39,33 @@ def perm_space(counts: Counter[T]) -> int:
     return calc_total_perms(counts)
 
 
-def perm_index(sequence: list[T], counts: Counter[T]) -> int:
+def _rank_map(lex_order: Sequence[T] | None) -> dict[T, int] | None:
+    if lex_order is None:
+        return None
+    return {sym: i for i, sym in enumerate(lex_order)}
+
+
+def _symbols_by_rank(keys: set[T], rank: dict[T, int] | None) -> list[T]:
+    if rank is None:
+        return sorted(keys)
+    missing = keys - rank.keys()
+    if missing:
+        raise ValueError(f"Symbole fehlen in lex_order: {sorted(missing)!r}")
+    return sorted(keys, key=lambda s: rank[s])
+
+
+def _is_lex_smaller(a: T, b: T, rank: dict[T, int] | None) -> bool:
+    if rank is None:
+        return a < b  # type: ignore[operator]
+    return rank[a] < rank[b]
+
+
+def perm_index(
+    sequence: list[T],
+    counts: Counter[T],
+    lex_order: Sequence[T] | None = None,
+) -> int:
+    rank = _rank_map(lex_order)
     working = Counter(counts)
     if sum(working.values()) != len(sequence):
         raise ValueError("Sequenzlänge passt nicht zur Multimenge.")
@@ -47,8 +73,11 @@ def perm_index(sequence: list[T], counts: Counter[T]) -> int:
     for symbol in sequence:
         if working[symbol] <= 0:
             raise ValueError(f"Symbol {symbol!r} nicht in Multimenge verfügbar.")
-        smaller = sorted(s for s in working.keys() if s < symbol)
-        for sc in smaller:
+        smaller = [
+            s for s in working.keys()
+            if s != symbol and _is_lex_smaller(s, symbol, rank)
+        ]
+        for sc in sorted(smaller, key=lambda s: rank[s] if rank else s):
             working[sc] -= 1
             index += calc_total_perms(working)
             working[sc] += 1
@@ -58,9 +87,14 @@ def perm_index(sequence: list[T], counts: Counter[T]) -> int:
     return index
 
 
-def perm_decode(counts: Counter[T], index: int) -> list[T]:
+def perm_decode(
+    counts: Counter[T],
+    index: int,
+    lex_order: Sequence[T] | None = None,
+) -> list[T]:
     if index < 1:
         raise ValueError("Index muss >= 1 sein.")
+    rank = _rank_map(lex_order)
     working = Counter(counts)
     total_len = sum(working.values())
     if total_len == 0:
@@ -73,7 +107,7 @@ def perm_decode(counts: Counter[T], index: int) -> list[T]:
     result: list[T] = []
     remaining = index
     for _ in range(total_len):
-        for symbol in sorted(working.keys()):
+        for symbol in _symbols_by_rank(set(working.keys()), rank):
             working[symbol] -= 1
             block = calc_total_perms(working)
             if remaining > block:

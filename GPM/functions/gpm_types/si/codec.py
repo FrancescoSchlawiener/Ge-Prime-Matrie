@@ -4,26 +4,44 @@ from __future__ import annotations
 
 from collections import Counter
 
+from alphabets.lex import lex_order_for_profile
+from alphabets.normalize import is_valid_substrate, prepare_substrate
 from alphabets.profiles import AlphabetProfile
-from alphabets.roman.normalize import is_valid_substrate, prepare_substrate
 from perm.lut import get_permutation_lut, lut_index_of_sequence, lut_sequence_at_index
 from perm.multiset import perm_decode, perm_index, perm_space
-from gpm_types.si.substance import ingredients_og_alpha, substance_og_alpha
+from gpm_types.si.substance import ingredients_for_profile, ingredients_og_alpha, substance_og_alpha
 
 
 def permutation_index_og(sequence: str) -> int:
     counts = Counter(sequence)
-    return perm_index(list(sequence), counts)
+    lex = lex_order_for_profile(AlphabetProfile.OG)
+    return perm_index(list(sequence), counts, lex_order=lex)
 
 
-def permutation_index_via_lut(sequence: str) -> int:
-    lut = get_permutation_lut(Counter(sequence))
+def permutation_index_for_profile(
+    sequence: str,
+    profile: AlphabetProfile | str,
+) -> int:
+    counts = Counter(sequence)
+    lex = lex_order_for_profile(profile)
+    return perm_index(list(sequence), counts, lex_order=lex)
+
+
+def permutation_index_via_lut(
+    sequence: str,
+    profile: AlphabetProfile | str = AlphabetProfile.OG,
+) -> int:
+    lut = get_permutation_lut(Counter(sequence), profile)
     return lut_index_of_sequence(lut, sequence)
 
 
-def decode_via_lut(substance: int, index: int) -> str:
-    counts = ingredients_og_alpha(substance)
-    lut = get_permutation_lut(counts)
+def decode_via_lut(
+    substance: int,
+    index: int,
+    profile: AlphabetProfile | str = AlphabetProfile.OG,
+) -> str:
+    counts = ingredients_for_profile(substance, profile)
+    lut = get_permutation_lut(counts, profile)
     return lut_sequence_at_index(lut, index)
 
 
@@ -48,8 +66,17 @@ def encode_si_og(raw: str) -> tuple[int, int]:
 
 
 def decode_si_og(substance: int, index: int) -> str:
-    counts = ingredients_og_alpha(substance)
-    return "".join(perm_decode(counts, index))
+    return decode_si(substance, index, AlphabetProfile.OG)
+
+
+def decode_si(
+    substance: int,
+    index: int,
+    profile: AlphabetProfile | str = AlphabetProfile.OG,
+) -> str:
+    counts = ingredients_for_profile(substance, profile)
+    lex = lex_order_for_profile(profile)
+    return "".join(perm_decode(counts, index, lex_order=lex))
 
 
 def encode_si(
@@ -61,7 +88,9 @@ def encode_si(
         raise ValueError(f"Keine gültige Substrat-Sequenz ({profile!r}): {seq!r}")
     from gpm_types.si.substance import substance_for_profile
 
-    return substance_for_profile(raw, profile), perm_index(list(seq), Counter(seq))
+    counts = Counter(seq)
+    lex = lex_order_for_profile(profile)
+    return substance_for_profile(seq, profile), perm_index(list(seq), counts, lex_order=lex)
 
 
 get_index = permutation_index_og

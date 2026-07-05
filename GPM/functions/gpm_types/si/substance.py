@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections import Counter
 
 from alphabets.profiles import AlphabetProfile
-from alphabets.roman.map import char_map_for_profile, prime_map_for_profile
-from alphabets.roman.normalize import prepare_substrate
+from alphabets.registry import char_map_for_profile, prime_map_for_profile
+from alphabets.normalize import prepare_substrate
 
 
 def substance_for_profile(sequence: str, profile: AlphabetProfile | str) -> int:
