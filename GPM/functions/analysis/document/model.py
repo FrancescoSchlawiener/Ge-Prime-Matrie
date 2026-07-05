@@ -47,3 +47,8 @@ class GpmDocument:
     gaps: list[str]
     explicit: list[tuple[int, str]] = field(default_factory=list)
     case_policy: CaseStoragePolicy = DEFAULT_CASE_POLICY
+    registry: DocumentRegistry | None = None  # noqa: F821
+    root_block: BlockNode | None = None  # noqa: F821
+    cells: list[CellGeometry] = field(default_factory=list)  # noqa: F821
+    hierarchy: DocumentHierarchy | None = None  # noqa: F821
+    gap_rle: dict[int, str] | None = None

@@ -1,10 +1,24 @@
 # GPM Grundfunktionen
 
-Referenz für die SI/Perm-Pipeline in `GPM/functions/`. Alle Pfade relativ zu `GPM/functions/`.
+Referenz für die **S/I-Kernpipeline** in `GPM/functions/`. Alle Pfade relativ zu `GPM/functions/`.
 
-## Überblick
+## In 60 Sekunden
 
-GPM kodiert Text als Paar **(S, I)**:
+Jedes Wort wird als Paar **(S, I)** gespeichert:
+
+- **S (Substanz)** — Produkt aus Primzahlen der Buchstaben. **Reihenfolge egal:** Anagramme haben dasselbe S.
+- **I (Index)** — Rang im Permutationsraum. **Reihenfolge wichtig:** Anagramme haben verschiedenes I.
+
+Beispiel (Profil OG):
+
+| Wort | S | I |
+|------|---|---|
+| `LISTEN` | gleich | z. B. 1234 |
+| `SILENT` | **gleich** wie LISTEN | **anders** als LISTEN |
+
+Mit S und I zusammen ist das Wort **eindeutig rekonstruierbar** — `decode_si(S, I, profile)` liefert den Originaltext zurück (nach Profil-Normalisierung).
+
+## Überblick: Symbole und Module
 
 | Symbol | Name | Eigenschaft | Modul |
 |--------|------|-------------|-------|
@@ -22,13 +36,26 @@ Zusätzliche Identitätsmodi (Reihenfolge):
 
 ## Pipeline (End-to-End)
 
+```mermaid
+flowchart LR
+  raw[Rohtext] --> prep[prepare_substrate]
+  prep --> sub[substance_for_profile]
+  sub --> S["S Substanz"]
+  prep --> perm[perm_index]
+  perm --> I["I Index"]
+  S --> enc[encode_si]
+  I --> enc
+  enc --> pair["(S, I)"]
+  pair --> dec[decode_si]
+  dec --> back[Rekonstruierter Text]
 ```
-raw Text
-  → prepare_substrate(raw, profile)     [alphabets/normalize.py]
-  → substance_for_profile(seq, profile) [gpm_types/si/substance.py]  → S
-  → perm_index(seq, counts, lex_order)  [perm/multiset.py]             → I
-  → encode_si / decode_si                 [gpm_types/si/codec.py]
-```
+
+Schritt für Schritt:
+
+1. **`prepare_substrate(raw, profile)`** — Text normalisieren (Groß/Klein, Diakritika, Whitelist je Profil)
+2. **`substance_for_profile(seq, profile)`** → **S** — Primzahlprodukt der Zeichen
+3. **`perm_index(seq, counts, lex_order)`** → **I** — Rang in der Permutationsreihenfolge
+4. **`encode_si` / `decode_si`** — S und I als Ganzzahlen kodieren/dekodieren
 
 **Decode:** `ingredients_for_profile(S, profile)` rekonstruiert die Multimenge (Zeichenhäufigkeiten), `perm_decode(counts, I, lex_order)` rekonstruiert die Zeichenfolge.
 
@@ -41,7 +68,16 @@ Für zwei Strings A, B mit gleicher Multimenge nach Normalisierung, aber untersc
 - `decode_si(S(A), I(A), profile) = A`
 - `Sp(A) ≠ Sp(B)` (positionsabhängig)
 
-Tests: `tests/alphabets/test_perm_identity_all_profiles.py` (alle 33 Profile).
+## Wann brauche ich welche API?
+
+| Ziel | API | Hinweis |
+|------|-----|---------|
+| Wort eindeutig speichern & zurückholen | `encode_si` / `decode_si` | Standard für Wörter und Token |
+| Nur prüfen, ob zwei Wörter Anagramme sind | `substance_for_profile` vergleichen | Gleiches S → gleiche Buchstabenmenge |
+| Reihenfolge explizit im Index | `perm_index` / `perm_decode` | Intern in `encode_si` |
+| Rohe Zeichenfolge als Tuple | `Sk(seq)` | Ohne Profil |
+| Profil-aware Tuple über LUT | `Sk_lut`, `sequence_key_via_lut` | Gleiches Profil wie `encode_si` |
+| Positions-abhängige „Substanz“ | `Sp(seq, profile)` | Nicht kommutativ |
 
 ## Kernmodule
 
@@ -53,6 +89,8 @@ Tests: `tests/alphabets/test_perm_identity_all_profiles.py` (alle 33 Profile).
 | `normalize.py` | `prepare_substrate()` — profil-spezifische Normalisierung |
 | `lex.py` | `build_lex_order()` — selten oben, häufig unten |
 | `profiles.py` | `AlphabetProfile` Enum (33 Werte) |
+
+Details zu jedem Profil: [profile/README.md](../profile/README.md).
 
 ### `perm/`
 
@@ -96,7 +134,7 @@ Betroffene Funktionen (Default `AlphabetProfile.ROMAN`):
 | D(I) | `gpm_types/di/` | Dezimalbrüche |
 | H(I) | `gpm_types/hi/` | Segmentierte Hybrid-Identität |
 
-OG-Parität: `encode()` / `decode()` in `codec.py` — nur AlphabetProfile.OG.
+OG-Parität: `encode()` / `decode()` in `codec.py` — nur `AlphabetProfile.OG`.
 
 ## Grenzen (Kurzreferenz)
 
@@ -107,18 +145,15 @@ OG-Parität: `encode()` / `decode()` in `codec.py` — nur AlphabetProfile.OG.
 | Index-Breite | `perm_fits_width(n, 16)` | 16 Byte Register |
 | Perm-Index-Schutz | `MAX_PERM_INDEX_BENCHMARK_N` | N_perm ≤ 1.000.000 |
 
-Details: [benchmark/README.md](../benchmark/README.md).
+Ausführlich: [benchmark/README.md](../benchmark/README.md).
 
 ## Tests & Audits
 
 ```bash
 cd GPM/functions
 
-# Vollständige Testsuite (327 Tests)
 python run_tests.py
-
-# Perm-Invarianten manuell (33 Profile)
-python -m tools.perm_audit
+python -m tools.perm_audit    # Perm-Invarianten aller 33 Profile
 ```
 
 | Testmodul | Prüft |
@@ -132,5 +167,6 @@ python -m tools.perm_audit
 ## Siehe auch
 
 - [Profile](../profile/README.md) — alle 33 AlphabetProfile
-- [Benchmark](../benchmark/README.md) — Performance-Grenzen und Tiefenanalyse
-- [agent.md](../agent.md) — kompakte Agent-Referenz
+- [Analyse](../analyse/README.md) — Text kompilieren, vergleichen, `.gpm`
+- [Benchmark](../benchmark/README.md) — Performance-Grenzen
+- [Doku-Hub](../README.md) — Gesamtübersicht

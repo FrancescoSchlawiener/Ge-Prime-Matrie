@@ -11,6 +11,7 @@ from analysis.case.codes import CASE_EXPLICIT, CASE_LOWER
 from analysis.case.detect import detect_case
 from analysis.case.policy import CaseStoragePolicy, DEFAULT_CASE_POLICY
 from analysis.compile.tokenize import split_segments
+from analysis.blocks.build import materialize_geometry
 from analysis.document.invariants import assert_gap_symmetry
 from analysis.document.model import CompileStats, GpmDocument, GpmHeaderEntry, GpmToken
 from gpm_types.classify import PayloadKind, classify_token
@@ -156,6 +157,7 @@ def compile_text_to_gpm(
     from analysis.binary.int_codec import genome_substance_field_bytes, perm_width_bytes
 
     document, stats = compile_text(text, profile, case_policy=case_policy)
+    materialize_geometry(document)
     blob = write_gpm(document, version=version, use_gap_rle=use_gap_rle)
 
     genome_bytes = sum(

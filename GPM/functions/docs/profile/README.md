@@ -1,14 +1,36 @@
-# GPM Alphabet-Profile (33)
+# GPM Alphabet-Profile
 
-Alle implementierten Schriftprofile in `GPM/functions/alphabets/`. Jedes Profil definiert:
+Alle implementierten Schriftprofile in `GPM/functions/alphabets/`. Ein Profil legt fest, **welche Zeichen** in einem Text erlaubt sind und **wie** sie in S/I kodiert werden.
 
-- **Prime-Map** — injektive Zuordnung Symbol → Primzahl (disjunkte Blöcke)
-- **LEX-Order** — Permutations-Rangfolge (selten oben, häufig unten)
-- **Normalisierung** — `prepare_substrate(raw, profile)` in `normalize.py`
+## Was ist ein AlphabetProfile?
 
-Registry: `alphabets/registry.py` — `all_profiles()`, `prime_map_for_profile()`, `lex_order_for_profile()`.
+Jedes der **33 Profile** definiert drei Säulen:
 
-## Profil-Liste
+| Säule | Bedeutung | Beispiel |
+|-------|-----------|----------|
+| **Prime-Map** | Jedes erlaubte Zeichen → eigene Primzahl (injektiv, disjunkte Blöcke pro Profil) | `A → 3`, `B → 5` (OG) |
+| **Normalisierung** | Rohtext → gültige Zeichenfolge (`prepare_substrate`) | NFC, Großschreibung, Matra-Strip |
+| **LEX-Order** | Reihenfolge für Permutations-Rang (selten oben, häufig unten) | Frequenz-LEX bei ROMAN |
+
+```mermaid
+flowchart LR
+  raw[Rohtext] --> norm[prepare_substrate]
+  norm --> valid[Gültige Zeichenfolge]
+  valid --> enc[encode_si]
+  enc --> SI["(S, I)"]
+```
+
+Registry-Zentralstelle: `alphabets/registry.py` — `all_profiles()`, `prime_map_for_profile()`, `lex_order_for_profile()`.
+
+### Beispiele nach Profil-Familie
+
+**Latin (OG / ROMAN):** 27 Buchstaben A–Z (+ ß nur OG). ROMAN nutzt frequenzbasierte LEX-Reihenfolge für deutsche Texte.
+
+**Indisch (Bengali, Telugu, Gurmukhi, Tamil):** Nur **Basis-Konsonanten** bleiben — Matras, Vokale und combining marks werden entfernt. 35 Zeichen statt voller Silbenschriften.
+
+**Hieroglyphen (Aesthetic Hieroglyphs):** Über 800 Gardiner-Glyphen werden auf **24 Uniliterale** gemappt; unbekannte Glyphen werden still verworfen (kein Pass-Through).
+
+## Profil-Liste (Nachschlag)
 
 | Profil | `.value` | Zeichen | Normalisierung / Besonderheit |
 |--------|----------|---------|-------------------------------|
@@ -69,14 +91,16 @@ Ideogramme, Götterfiguren, Gebäude und unbekannte Glyphen werden **silent disc
 
 Für Phoenician, Ugaritic, Gothic, Old Persian, Old Italic, Old Turkic, Aesthetic Hieroglyphs: `alphabets/unicode_utils.py` verbindlich (atomare Codepoints, keine Surrogate).
 
-## Verbotene Zeichensätze
+## Design-Grenzen (nicht unterstützte Zeichensätze)
 
-Niemals als `AlphabetProfile` implementieren:
+Diese Schriftsysteme sind **bewusst nicht** als `AlphabetProfile` implementiert — aus technischen Gründen, nicht als zeitliche Roadmap:
 
-- Volles Gardiner-Set (800+ Hieroglyphen als Profil)
-- CJK / Kanji
-- Tibetan / Khmer
-- Burmese / Sinhala
+| Zeichensatz | Grund |
+|-------------|-------|
+| Volles Gardiner-Set (800+ Hieroglyphen) | Nur 24-Uniliteral-Reduktion ist definiert |
+| CJK / Kanji | Prime-Allocator-Explosion |
+| Tibetan / Khmer | Ligatur-Cluster ohne Rendering-Engine |
+| Burmese / Sinhala | Kombinatorische Sonderformen |
 
 ## API-Nutzung
 
@@ -97,7 +121,7 @@ assert decode_si(s, i, profile) == prepare_substrate(raw, profile)
 Jedes Profil unterscheidet Permutationen über **eigenes LEX** (`lex_order_for_profile`). Die Anagramm-Invariante (gleiches S, verschiedenes I) gilt für alle 33 Profile.
 
 ```bash
-python -m tools.perm_audit   # → 33/33 OK
+python -m tools.perm_audit
 ```
 
 Tests: `tests/alphabets/test_perm_identity_all_profiles.py`, `tests/alphabets/test_profiles_multiscript.py`.
@@ -131,5 +155,6 @@ alphabets/
 
 ## Siehe auch
 
-- [Grundfunktionen](../grundfunktionen/README.md) — SI/Perm-Pipeline
+- [Grundfunktionen](../grundfunktionen/README.md) — S/I-Pipeline
 - [Benchmark](../benchmark/README.md) — empirische Grenzwerte pro Profil
+- [Doku-Hub](../README.md) — Gesamtübersicht

@@ -28,10 +28,15 @@ from gpm_types.classify import PayloadKind
 
 MAGIC_PREFIX = b"GPM"
 VERSION_V4 = 4
-VERSION = 8
+VERSION_V8 = 8
+VERSION = 9
 
+FLAG_BODY_CELL = 0x01
+FLAG_BODY_HIER = 0x02
+FLAG_STRUCT = 0x04
 FLAG_GAP_RLE = 0x08
 FLAG_PROFILE = 0x10
+FLAG_FRACTAL = 0x20
 
 FILE_HEADER_SIZE = 29
 
@@ -123,15 +128,66 @@ def _build_explicit(document: GpmDocument) -> bytes:
     return bytes(explicit)
 
 
+def _build_registry_c(document: GpmDocument) -> bytes:
+    from analysis.blocks.context import COrigin
+
+    if document.registry is None:
+        return struct.pack("<H", 0)
+    block = bytearray()
+    entries = document.registry.c_entries
+    block += struct.pack("<H", len(entries))
+    for entry in entries:
+        origin_byte = 0 if entry.origin is COrigin.GEOM else 1
+        block += struct.pack("<B", origin_byte)
+        key = entry.key_bytes
+        block += struct.pack("<H", len(key)) + key
+        s_class = substance_width_class(max(1, entry.substance))
+        s_bytes = width_bytes_for_class(s_class)
+        block += struct.pack("<B", s_class & 0x03)
+        block += encode_fixed_int(max(1, entry.substance), s_bytes)
+        i_bytes = 2
+        if entry.perm_space > 1:
+            i_bytes = perm_width_bytes("A" * min(20, entry.perm_space))
+        block += encode_fixed_int(max(1, entry.perm_index), i_bytes)
+    return bytes(block)
+
+
+def _read_registry_c(data: bytes, offset: int, body_end: int) -> int:
+    if offset + 2 > body_end:
+        raise GpmFormatError("Registry-C fehlt.")
+    (c_count,) = struct.unpack_from("<H", data, offset)
+    offset += 2
+    for _ in range(c_count):
+        if offset + 3 > body_end:
+            raise GpmFormatError("C-Eintrag abgeschnitten.")
+        offset += 1  # origin
+        (klen,) = struct.unpack_from("<H", data, offset)
+        offset += 2
+        if offset + klen + 1 > body_end:
+            raise GpmFormatError("C-Key abgeschnitten.")
+        offset += klen
+        s_class = data[offset] & 0x03
+        offset += 1
+        s_bytes = width_bytes_for_class(s_class)
+        if offset + s_bytes > body_end:
+            raise GpmFormatError("C-Substanz abgeschnitten.")
+        offset += s_bytes
+        i_bytes = 2
+        if offset + i_bytes > body_end:
+            raise GpmFormatError("C-Perm-Index abgeschnitten.")
+        offset += i_bytes
+    return offset
+
+
 def write_gpm(
     document: GpmDocument,
     *,
     version: int | None = None,
     use_gap_rle: bool = False,
 ) -> bytes:
-    """Schreibt .gpm (Standard: v8 mit Profil)."""
+    """Schreibt .gpm (Standard: v9 mit Geometrie; v8/v4 weiter unterstützt)."""
     target_version = VERSION if version is None else version
-    if target_version not in (VERSION, VERSION_V4):
+    if target_version not in (VERSION, VERSION_V8, VERSION_V4):
         raise GpmFormatError(f"Schreiben für Version {target_version} nicht unterstützt.")
 
     assert_gap_symmetry(document)
@@ -143,9 +199,21 @@ def write_gpm(
 
     profile_block = b""
     flags = 0
-    if target_version == VERSION:
+    registry_c_block = b""
+    if target_version in (VERSION, VERSION_V8):
         profile_block = _profile_to_bytes(document.profile)
         flags |= FLAG_PROFILE
+
+    if target_version == VERSION:
+        from analysis.blocks.build import materialize_geometry
+        from analysis.reconstruct.derive_gaps import ensure_lossless_gaps
+
+        materialize_geometry(document)
+        flags |= FLAG_FRACTAL | FLAG_BODY_CELL | FLAG_BODY_HIER
+        registry_c_block = _build_registry_c(document)
+        if document.hierarchy is not None:
+            gap_map = ensure_lossless_gaps(document)
+            document.gap_rle = gap_map
 
     genome = _build_genome(document)
     body = _build_body(document)
@@ -155,6 +223,12 @@ def write_gpm(
         middle_blob = encode_full_gaps(document.gaps)
         flags |= FLAG_GAP_RLE
         perm = 0
+    elif target_version == VERSION and document.gap_rle:
+        from analysis.binary.gap_rle import encode_gap_rle
+
+        middle_blob = encode_gap_rle(document.gap_rle)
+        flags |= FLAG_GAP_RLE
+        perm = 0
     else:
         perm = scan_perm_code(document.gaps)
         middle_blob = encode_gaps(document.gaps, perm)
@@ -162,7 +236,7 @@ def write_gpm(
     if len(middle_blob) > MAX_MIDDLE_BYTES:
         raise GpmFormatError("Separator/GAP-Block zu groß.")
 
-    payload = profile_block + genome + body + middle_blob + explicit
+    payload = profile_block + registry_c_block + genome + body + middle_blob + explicit
 
     file_header = MAGIC_PREFIX + struct.pack(
         "<BBIIIIII",
@@ -332,10 +406,87 @@ def read_gpm(data: bytes) -> GpmDocument:
 
     version = data[3]
     if version == VERSION:
+        return _read_v9(data)
+    if version == VERSION_V8:
         return _read_v8(data)
     if version == VERSION_V4:
         return _read_v4(data)
     raise GpmFormatError(f"Nicht unterstützte Version: {version}.")
+
+
+def _read_v9(data: bytes) -> GpmDocument:
+    (
+        version,
+        flags,
+        header_count,
+        body_count,
+        separator_perm,
+        explicit_count,
+        middle_len,
+        body_end,
+    ) = _read_header_payload(data)
+
+    if version != VERSION:
+        raise GpmFormatError(f"Versionskonflikt: {version}.")
+
+    offset = FILE_HEADER_SIZE
+    profile = AlphabetProfile.OG
+    if flags & FLAG_PROFILE:
+        profile, offset = _profile_from_bytes(data, offset)
+
+    if flags & FLAG_FRACTAL:
+        offset = _read_registry_c(data, offset, body_end)
+
+    header, offset = _read_genome(data, offset, body_end, header_count)
+    tokens, offset = _read_tokens(data, offset, body_end, header, body_count)
+
+    if offset + middle_len > body_end:
+        raise GpmFormatError("Middle-Block abgeschnitten.")
+    middle_blob = data[offset : offset + middle_len]
+    offset += middle_len
+
+    gap_count = body_count + 1
+    if flags & FLAG_GAP_RLE:
+        from analysis.binary.gap_rle import decode_gap_rle
+        from analysis.hierarchy.geom import build_document_hierarchy
+        from analysis.reconstruct.derive_gaps import derive_gaps, merge_gaps
+
+        gap_rle = decode_gap_rle(middle_blob)
+        if flags & (FLAG_BODY_HIER | FLAG_FRACTAL) and len(gap_rle) < gap_count:
+            temp_doc = GpmDocument(
+                profile=profile,
+                header=header,
+                tokens=tokens,
+                gaps=[""] * gap_count,
+                explicit=[],
+                case_policy=DEFAULT_CASE_POLICY,
+            )
+            hierarchy = build_document_hierarchy(temp_doc)
+            derived = derive_gaps(body_count, hierarchy)
+            gaps = merge_gaps(derived, gap_rle)
+        else:
+            gaps = [gap_rle.get(i, "") for i in range(gap_count)]
+    else:
+        gaps = decode_gaps(middle_blob, separator_perm, gap_count)
+
+    explicit, offset = _read_explicit(data, offset, body_end, explicit_count, tokens)
+
+    if offset != body_end:
+        raise GpmFormatError("Überhängende Bytes im Payload.")
+
+    document = GpmDocument(
+        profile=profile,
+        header=header,
+        tokens=tokens,
+        gaps=gaps,
+        explicit=explicit,
+        case_policy=DEFAULT_CASE_POLICY,
+    )
+    from analysis.blocks.build import materialize_geometry
+
+    materialize_geometry(document)
+    assert_gap_symmetry(document)
+    return document
 
 
 def _read_v8(data: bytes) -> GpmDocument:
@@ -350,7 +501,7 @@ def _read_v8(data: bytes) -> GpmDocument:
         body_end,
     ) = _read_header_payload(data)
 
-    if version != VERSION:
+    if version != VERSION_V8:
         raise GpmFormatError(f"Versionskonflikt: {version}.")
 
     offset = FILE_HEADER_SIZE
