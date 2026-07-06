@@ -22,6 +22,15 @@ flowchart LR
 
 Registry-Zentralstelle: `alphabets/registry.py` — `all_profiles()`, `prime_map_for_profile()`, `lex_order_for_profile()`.
 
+## Deep Dive
+
+| Thema | Seite |
+|-------|-------|
+| Normalisierung pro Schriftfamilie | [normalisierung.md](normalisierung.md) |
+| Primzahl-Blöcke & Registry | [prime-blocks.md](prime-blocks.md) |
+| S/I-API im Detail | [../referenz/gpm_types/si.md](../referenz/gpm_types/si.md) |
+| API-Index | [../referenz/index.md](../referenz/index.md) |
+
 ### Beispiele nach Profil-Familie
 
 **Latin (OG / ROMAN):** 27 Buchstaben A–Z (+ ß nur OG). ROMAN nutzt frequenzbasierte LEX-Reihenfolge für deutsche Texte.
@@ -155,6 +164,9 @@ alphabets/
 
 ## Siehe auch
 
+- [Normalisierung](normalisierung.md) — Regeln pro Schriftfamilie
+- [Primzahl-Blöcke](prime-blocks.md) — disjunkte Registry
 - [Grundfunktionen](../grundfunktionen/README.md) — S/I-Pipeline
 - [Benchmark](../benchmark/README.md) — empirische Grenzwerte pro Profil
+- [Referenz-Index](../referenz/index.md)
 - [Doku-Hub](../README.md) — Gesamtübersicht

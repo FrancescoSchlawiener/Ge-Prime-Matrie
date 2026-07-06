@@ -37,6 +37,7 @@ FLAG_STRUCT = 0x04
 FLAG_GAP_RLE = 0x08
 FLAG_PROFILE = 0x10
 FLAG_FRACTAL = 0x20
+FLAG_BLOCK_TREE = 0x40
 
 FILE_HEADER_SIZE = 29
 
@@ -200,6 +201,7 @@ def write_gpm(
     profile_block = b""
     flags = 0
     registry_c_block = b""
+    block_tree_block = b""
     if target_version in (VERSION, VERSION_V8):
         profile_block = _profile_to_bytes(document.profile)
         flags |= FLAG_PROFILE
@@ -211,6 +213,12 @@ def write_gpm(
         materialize_geometry(document)
         flags |= FLAG_FRACTAL | FLAG_BODY_CELL | FLAG_BODY_HIER
         registry_c_block = _build_registry_c(document)
+        if document.root_block is not None:
+            from analysis.blocks.codec import encode_block_tree
+
+            block_tree_block = encode_block_tree(document.root_block)
+            block_tree_block = struct.pack("<I", len(block_tree_block)) + block_tree_block
+            flags |= FLAG_BLOCK_TREE
         if document.hierarchy is not None:
             gap_map = ensure_lossless_gaps(document)
             document.gap_rle = gap_map
@@ -236,7 +244,7 @@ def write_gpm(
     if len(middle_blob) > MAX_MIDDLE_BYTES:
         raise GpmFormatError("Separator/GAP-Block zu groß.")
 
-    payload = profile_block + registry_c_block + genome + body + middle_blob + explicit
+    payload = profile_block + registry_c_block + block_tree_block + genome + body + middle_blob + explicit
 
     file_header = MAGIC_PREFIX + struct.pack(
         "<BBIIIIII",
@@ -401,6 +409,12 @@ def _read_explicit(
 
 
 def read_gpm(data: bytes) -> GpmDocument:
+    from analysis.binary.gpc import GpcFormatError, is_encrypted_gpm_blob
+
+    if is_encrypted_gpm_blob(data):
+        raise GpmFormatError(
+            "Verschlüsselte GPC-Datei — Entschlüsselung via analysis.binary.gpc.decrypt_gpm_file erforderlich."
+        )
     if len(data) < 5 or data[:3] != MAGIC_PREFIX:
         raise GpmFormatError("Keine gültige .gpm-Datei (Magic fehlt).")
 
@@ -436,6 +450,19 @@ def _read_v9(data: bytes) -> GpmDocument:
 
     if flags & FLAG_FRACTAL:
         offset = _read_registry_c(data, offset, body_end)
+
+    root_block = None
+    if flags & FLAG_BLOCK_TREE:
+        if offset + 4 > body_end:
+            raise GpmFormatError("Block-Tree-Länge fehlt.")
+        (tree_len,) = struct.unpack_from("<I", data, offset)
+        offset += 4
+        if offset + tree_len > body_end:
+            raise GpmFormatError("Block-Tree abgeschnitten.")
+        from analysis.blocks.codec import decode_block_tree
+
+        root_block = decode_block_tree(data[offset : offset + tree_len])
+        offset += tree_len
 
     header, offset = _read_genome(data, offset, body_end, header_count)
     tokens, offset = _read_tokens(data, offset, body_end, header, body_count)
@@ -481,10 +508,13 @@ def _read_v9(data: bytes) -> GpmDocument:
         gaps=gaps,
         explicit=explicit,
         case_policy=DEFAULT_CASE_POLICY,
+        root_block=root_block,
     )
     from analysis.blocks.build import materialize_geometry
 
     materialize_geometry(document)
+    if root_block is not None:
+        document.root_block = root_block
     assert_gap_symmetry(document)
     return document
 

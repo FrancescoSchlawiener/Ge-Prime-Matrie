@@ -4,6 +4,21 @@ Die Analyse-Schicht in `GPM/functions/analysis/` verarbeitet **Natürlichsprache
 
 **Kernregel:** Ähnlichkeit wird über **Substanz (S), Index (I), ggT, kgV und DTW auf Substanz-Ketten** gemessen — nicht über `text1 == text2`.
 
+## Deep Dive — Detaildokumentation
+
+| Thema | Detailseite |
+|-------|-------------|
+| Navigation & Paket-Karte | [index.md](index.md) |
+| Datenmodell | [../referenz/datenmodell.md](../referenz/datenmodell.md) |
+| NL kompilieren | [../referenz/compile.md](../referenz/compile.md) |
+| `.gpm`-Format | [../referenz/binary-format.md](../referenz/binary-format.md) |
+| Geometrie & Hierarchie | [../referenz/geometrie.md](../referenz/geometrie.md) |
+| Vergleich & Kurven | [../referenz/vergleich.md](../referenz/vergleich.md) |
+| Algebra-Layer (Schicht 0) | [../analysis/algebra-layer.md](../analysis/algebra-layer.md) |
+| Basis-Layer (Tiered Compare) | [../analysis/basis-layer.md](../analysis/basis-layer.md) |
+| Code & Hybrid | [../referenz/code/index.md](../referenz/code/index.md) |
+| Vollständige API | [../referenz/index.md](../referenz/index.md) |
+
 ## Begriffe kurz erklärt
 
 | Begriff | Was es ist |
@@ -80,11 +95,31 @@ assert verify_reversibility(src, "py", reg)
 
 | Sprache | Block-Stil | Kommentare | Dateien |
 |---------|------------|------------|---------|
-| Python | Einrückung | `#` bis Zeilenende | `.py`, `.pyw` |
-| JavaScript/TS | geschweifte Klammern | `//`, `/* */` | `.js`, `.ts`, `.jsx`, `.tsx` |
-| HTML | Tags | `<!-- -->` | `.html`, `.htm` |
+| Python | Einrückung | `#` | `.py`, `.pyw`, `.pyi` |
+| JavaScript/TS | Klammern | `//`, `/* */` | `.js`, `.ts`, `.jsx`, `.tsx`, `.mjs`, `.cjs` |
+| HTML / XML | Tags | `<!-- -->` (HTML) | `.html`, `.htm`, `.xhtml`, `.xml` |
+| C, Java, Go, Rust, PHP, C#, Swift, Kotlin, CSS | Klammern | `//`, `/* */` | `.c`, `.java`, `.go`, `.rs`, … |
+| Ruby, Shell, SQL | Keywords | `#` / `#` / `--` + `/* */` | `.rb`, `.sh`, `.sql` |
+| JSON, TOML, Markdown | flat (keine `{`-Blöcke) | je nach Spec | `.json`, `.toml`, `.md` |
 
-Keywords und Sprachregeln: `analysis/code/languages.py`.
+Keywords und Sprachregeln: `analysis/code/languages.py`. Fence-Aliases (`javascript` → `js`, `python3` → `py`) in derselben Datei.
+
+### Tokenizer-Guards (bitgenaue Code-Pipeline)
+
+| Guard | Regel |
+|-------|--------|
+| **A — Case** | SQL/Ruby/Shell: Keyword-Erkennung intern case-insensitive (`keywords_lower`); **Quelltext-Slice unverändert** in Token und Registry |
+| **B — Blockkommentare** | `/* … */` (mehrzeilig): ein C-Token; inneres `\n` zählt **nicht** als `nl` des folgenden Tokens — Gap nur **nach** `*/` |
+
+Tests: `tests/analysis/test_code_tokenizer_guards.py`.
+
+### Toy vs GPM
+
+| | **Toy v35** | **GPM/functions** |
+|---|-------------|-------------------|
+| Ziel | Normalisierte Redundanz-Analyse (Uppercase, Kommentare weg) | Bitgenaue Rekonstruktion + Analyse |
+| Kanonisierung | Default | **Optional** — `canonicalize_for_analysis()` in `analysis/code/canonicalize.py` |
+| Block-Stile | indent, brace, tag, keyword, flat | gleiche Stile; Toy-Uppercase **nicht** im Default-Compile |
 
 ### Kommentare
 
@@ -159,6 +194,39 @@ result = analyze_pair(d1, d2)
 
 ---
 
+## Gestaffelter Vergleich & Korpus
+
+Für große Korpora oder schnelle Vorfilterung ohne O(n²)-Voll-DTW: **Basis-Layer** (Tier 0–4).
+
+| Tier | Name | Inhalt |
+|------|------|--------|
+| 0 | GATE | Profil-Symmetrie, Prim-Disjunktion |
+| 1 | BASIS | Log-Profil ggT/kgV, Jaccard, Relations-Sketch |
+| 2 | STRUCTURE | Meta-Genom, Relations-Profil |
+| 3 | CURVES | substance_align, i_curve |
+| 4 | FULL | `analyze_pair_full` (Voll-DTW) |
+
+Default für Korpus-Suche: `max_tier=CompareTier.BASIS`. Mathematik und Gewichte: [algebra-layer.md](../analysis/algebra-layer.md). API-Details: [basis-layer.md](../analysis/basis-layer.md).
+
+```python
+from analysis.basis import (
+    build_basis_index,
+    compare_documents_tiered,
+    find_similar_documents,
+    CompareTier,
+)
+from analysis.compile.compiler import compile_text
+from alphabets import AlphabetProfile
+
+docs = [compile_text(t, AlphabetProfile.OG)[0] for t in ("Hello world", "World hello")]
+index = build_basis_index(docs, profile=AlphabetProfile.OG)
+results = find_similar_documents(docs[0], index, top_k=5, max_tier=CompareTier.BASIS)
+```
+
+`analyze_pair` akzeptiert optional `basis_prefilter=True` (Tier-1-Gate) oder eine vorberechnete Basis-Signatur — siehe [basis-layer.md](../analysis/basis-layer.md).
+
+---
+
 ## .gpm-Dateien
 
 Das Binärformat speichert kompilierte Dokumente. Varianten nach **Zweck**:
@@ -168,10 +236,13 @@ Das Binärformat speichert kompilierte Dokumente. Varianten nach **Zweck**:
 | **Flach** | Wortliste + Gaps — kompatibel mit älteren Lesern |
 | **Mit Profil** | AlphabetProfile + erweiterte Separator/GAP-Kodierung |
 | **Mit Hierarchie** | Fraktale Satz-/Absatz-Struktur + GAP-RLE |
+| **v9 + Block-Tree** | Code-`BlockNode` optional eingebettet (`FLAG_BLOCK_TREE`) |
 
-**GAP-RLE:** Abweichungen von der Standard-Hierarchie (z. B. spezielle `\n`-Abstände) werden als kompakte Deltas gespeichert — verlustfrei relativ zur rekonstruierbaren Basis-Hierarchie.
+**OG-Kompatibilität:** v4/v8/v9 nativ via `read_gpm`; v7 best-effort via `analysis/binary/compat.read_gpm_any`. OG-Web-Features (Meta-Genom, Spectroscope) bleiben in Ge-Prime-Matrix OG — Bibliothek portiert selektiv Page-Spans und `substance_align`.
 
-Module: `analysis/binary/write_gpm.py`, `read_gpm.py`, `format.py`.
+**Hybrid-Export:** `compile_hybrid_to_gpm()` schreibt NL-Body + Code-Registry/Block-Tree als v9.
+
+Module: `analysis/binary/format.py`, `compat.py`.
 
 ---
 
@@ -179,10 +250,15 @@ Module: `analysis/binary/write_gpm.py`, `read_gpm.py`, `format.py`.
 
 ```
 analysis/
+  algebra/        Schicht 0 — Gates, substance_kernel, fusion, window_fold
+  basis/          Signaturen, Index, Tiered Compare, Korpus-API
   blocks/         Registry, BlockNode, PointerRef, Codec
   cell/           Zell-Geometrie
   hierarchy/      Sätze, Absätze
   curves/         I-Kurve, analyze_pair (DTW-Fusion)
+  meta/           Meta-Genom, Relations-Profil
+  search/         Spectroscope, hierarchy_search
+  corpus/         Anagramm-Korpus-Protokoll (Stub)
   code/           Tokenizer, Compile, Decompile, Hybrid
   compile/        compile_text, reconstruct_text
   binary/         .gpm lesen/schreiben
@@ -193,18 +269,31 @@ analysis/
 
 ## API-Kurzreferenz
 
-| Funktion | Beschreibung |
-|----------|--------------|
-| `compile_text` | NL-Text → `GpmDocument` |
-| `reconstruct_text` | `GpmDocument` → Quelltext (1:1) |
-| `compile_source` | Code → `BlockNode` |
-| `reconstruct_source` | `BlockNode` → Quelltext (1:1) |
-| `verify_reversibility` | Code-Round-Trip-Check |
-| `compile_hybrid` | Markdown + Fences → `HybridDocument` |
-| `reconstruct_hybrid` | `HybridDocument` → Markdown (1:1) |
-| `verify_hybrid_reversibility` | Hybrid-Round-Trip-Check |
-| `analyze_pair` | Zwei Dokumente vergleichen (DTW-Fusion) |
-| `compile_source_file` | Datei per Endung → Code-Modul |
+Vollständiger Index mit Signaturen: [../referenz/index.md](../referenz/index.md).
+
+| Funktion | Beschreibung | Detail |
+|----------|--------------|--------|
+| `compile_text` | NL-Text → `GpmDocument` | [compile.md](../referenz/compile.md) |
+| `reconstruct_text` | `GpmDocument` → Quelltext (1:1) | [compile.md](../referenz/compile.md) |
+| `compile_text_to_gpm` | NL → `.gpm`-Bytes | [compile.md](../referenz/compile.md) |
+| `write_gpm` / `read_gpm` | Binär I/O | [binary-format.md](../referenz/binary-format.md) |
+| `compile_source` | Code → `BlockNode` | [code/index.md](../referenz/code/index.md) |
+| `reconstruct_source` | `BlockNode` → Quelltext (1:1) | [code/index.md](../referenz/code/index.md) |
+| `verify_reversibility` | Code-Round-Trip-Check | [code/tokenizer.md](../referenz/code/tokenizer.md) |
+| `compile_hybrid` | Markdown + Fences → `HybridDocument` | [code/compile-hybrid.md](../referenz/code/compile-hybrid.md) |
+| `compile_hybrid_to_gpm` | Hybrid → v9-`.gpm`-Bytes | [code/compile-hybrid.md](../referenz/code/compile-hybrid.md) |
+| `reconstruct_hybrid` | `HybridDocument` → Markdown (1:1) | [code/compile-hybrid.md](../referenz/code/compile-hybrid.md) |
+| `verify_hybrid_reversibility` | Hybrid-Round-Trip-Check | [code/compile-hybrid.md](../referenz/code/compile-hybrid.md) |
+| `canonicalize_for_analysis` | Optional Toy-ähnliche Normalisierung | [code/compile-hybrid.md](../referenz/code/compile-hybrid.md) |
+| `read_gpm_any` | v4/v7/v8/v9 lesen | [binary-format.md](../referenz/binary-format.md) |
+| `analyze_pair` | Zwei Dokumente vergleichen (DTW-Fusion) | [vergleich.md](../referenz/vergleich.md) |
+| `compare_documents_tiered` | Gestaffelter Paar-Vergleich (Tier 0–4) | [basis-layer.md](../analysis/basis-layer.md) |
+| `find_similar_documents` | Korpus-Suche mit Basis-Index | [basis-layer.md](../analysis/basis-layer.md) |
+| `build_basis_index` | Invertierter Basis-Index für Korpus | [basis-layer.md](../analysis/basis-layer.md) |
+| `query_candidates` | Kandidaten-Vorfilter (Postings + MinHash) | [basis-layer.md](../analysis/basis-layer.md) |
+| `analyze_word_pair` | Ein Wortpaar analysieren | [vergleich.md](../referenz/vergleich.md) |
+| `materialize_geometry` | Zellen + Hierarchie + Blockbaum | [geometrie.md](../referenz/geometrie.md) |
+| `compile_source_file` | Datei per Endung → Code-Modul | [code/index.md](../referenz/code/index.md) |
 
 ---
 
@@ -214,8 +303,8 @@ analysis/
 |-------|--------|
 | JSX in JavaScript | nicht unterstützt |
 | Python `\` Zeilenfortsetzung | nicht unterstützt |
-| Ruby, SQL, Shell (Keyword-Sprachen) | nicht implementiert |
 | CRLF (`\r\n`) | wird vor dem Lexer zu `\n` normalisiert |
+| Binärdateien (`.min.js`, …) | `IGNORED_SUFFIXES` — kein Auto-Compile |
 
 ---
 
@@ -226,10 +315,16 @@ cd GPM/functions
 python run_tests.py
 ```
 
-Relevante Testmodule: `test_code_nl_invariant`, `test_code_languages`, `test_code_hybrid_gaps`, `test_code_interference`, `test_curves_fusion`.
+Relevante Testmodule: `test_code_tokenizer_guards`, `test_code_languages`, `test_tokenize_keyword`, `test_fence_aliases`, `test_v9_hybrid`, `test_code_hybrid_gaps`, `test_code_interference`, `test_curves_fusion`.
+
+**Algebra / Basis (Phase D–F):** `test_substance_kernel_imports`, `test_exponent_window_lcm`, `test_log_jaccard_blend`, `test_weight_literal_audit`, `test_tier_fusion_blends`, `test_fingerprint_log_invariant`, `test_i_ratio_invariant`, `test_typed_sketch_weight`, `test_compare_tiered`, `test_corpus_compare`, `test_basis_corpus_smoke` — vollständige Matrix: [referenz/tests.md](../referenz/tests.md).
 
 ## Siehe auch
 
+- [Algebra-Layer](../analysis/algebra-layer.md) — Schicht 0, Invarianten D–F
+- [Basis-Layer](../analysis/basis-layer.md) — Tiered Compare, Korpus
+- [Analyse-Navigation](index.md) — Deep Dives nach Paket
 - [Grundfunktionen](../grundfunktionen/README.md) — S/I-Kodierung
 - [Profile](../profile/README.md) — Schriftprofile
+- [Referenz-Index](../referenz/index.md) — alle APIs
 - [Doku-Hub](../README.md) — Gesamtübersicht

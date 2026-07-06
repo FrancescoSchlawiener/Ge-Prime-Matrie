@@ -18,6 +18,16 @@ Beispiel (Profil OG):
 
 Mit S und I zusammen ist das Wort **eindeutig rekonstruierbar** — `decode_si(S, I, profile)` liefert den Originaltext zurück (nach Profil-Normalisierung).
 
+## Deep Dive — Typen & Referenz
+
+| Thema | Seite |
+|-------|-------|
+| S(I) im Detail | [../referenz/gpm_types/si.md](../referenz/gpm_types/si.md) |
+| N(I), D(I), H(I) | [../referenz/gpm_types/ni.md](../referenz/gpm_types/ni.md), [di.md](../referenz/gpm_types/di.md), [hi.md](../referenz/gpm_types/hi.md) |
+| Permutation & LUT | [../referenz/perm.md](../referenz/perm.md) |
+| Vollständiger API-Index | [../referenz/index.md](../referenz/index.md) |
+| Tutorials | [../tutorials/erstes-gpm-dokument.md](../tutorials/erstes-gpm-dokument.md), [listen-vs-silent.md](../tutorials/listen-vs-silent.md) |
+
 ## Überblick: Symbole und Module
 
 | Symbol | Name | Eigenschaft | Modul |
@@ -168,5 +178,6 @@ python -m tools.perm_audit    # Perm-Invarianten aller 33 Profile
 
 - [Profile](../profile/README.md) — alle 33 AlphabetProfile
 - [Analyse](../analyse/README.md) — Text kompilieren, vergleichen, `.gpm`
+- [Referenz-Index](../referenz/index.md) — alle APIs
 - [Benchmark](../benchmark/README.md) — Performance-Grenzen
 - [Doku-Hub](../README.md) — Gesamtübersicht

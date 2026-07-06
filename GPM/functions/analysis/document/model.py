@@ -51,4 +51,5 @@ class GpmDocument:
     root_block: BlockNode | None = None  # noqa: F821
     cells: list[CellGeometry] = field(default_factory=list)  # noqa: F821
     hierarchy: DocumentHierarchy | None = None  # noqa: F821
+    interval_index: IntervalIndex | None = None  # noqa: F821
     gap_rle: dict[int, str] | None = None

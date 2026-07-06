@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 from analysis.blocks.context import ParseContext, ParseDomain
 from analysis.code.hybrid import FenceBoundary
+from analysis.code.languages import resolve_fence_language
 
 _FENCE_RE = re.compile(r"^(```|~~~)([\w+-]*)\s*$")
 
@@ -71,7 +72,7 @@ def scan_fences_hybrid(source: str) -> list[ScannedSegment]:
                         source_end=start,
                     )
                 )
-            lang = m.group(2) or "py"
+            lang = resolve_fence_language(m.group(2) or "py")
             fence_open = FenceBoundary(prefix_gap=prefix, fence_line=fence_line)
             in_code = True
             code_body_start = end + 1 if end < len(source) else end
@@ -133,7 +134,7 @@ def scan_fences(lines: list[str]) -> list[tuple[str, str | None, list[str]]]:
                     segments.append(("nl", None, buf))
                     buf = []
                 in_code = True
-                lang = m.group(2) or "py"
+                lang = resolve_fence_language(m.group(2) or "py")
             else:
                 segments.append(("code", lang, buf))
                 buf = []

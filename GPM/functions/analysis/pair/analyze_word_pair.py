@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from alphabets import AlphabetProfile
-from analysis.substance.compare import compare_substances
+from analysis.algebra.substance_kernel import compare_substances
 from analysis.substance.diff import classify_word_pair
 from alphabets.normalize import prepare_substrate
 from gpm_types.si import encode_si

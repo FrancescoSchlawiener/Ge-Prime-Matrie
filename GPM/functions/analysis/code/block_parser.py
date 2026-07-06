@@ -19,12 +19,15 @@ def _intern_token(
     if tok.block == "open":
         value = tok.value or "OPEN"
         ptr = registry.intern(PointerKind.C, value, context=context, origin=COrigin.CODE)
+        meta = {"open_syntax": tok.open_syntax or tok.value}
+        if tok.meta.get("expectedCloser"):
+            meta["expectedCloser"] = tok.meta["expectedCloser"]
         return PointerRef(
             kind=PointerKind.C,
             ptr_id=ptr,
             nl=tok.nl,
             col_prefix=tok.col_prefix,
-            meta={"open_syntax": tok.open_syntax or tok.value},
+            meta=meta,
         )
     if tok.block == "close":
         value = tok.value or "CLOSE"
@@ -56,8 +59,16 @@ def parse_code_blocks(
     root.meta["trailing_whitespace"] = result.trailing_whitespace
     stack: list[BlockNode] = [root]
     block_id = 1
+    tail_attach: BlockNode | None = None
 
     for tok in result.tokens:
+        if tail_attach is not None:
+            if tok.nl == 0 and tok.block is None:
+                tail_attach.sequence.append(_intern_token(tok, registry, context))
+                tail_attach = None
+                continue
+            tail_attach = None
+
         if tok.block == "open":
             child = BlockNode(
                 block_id=block_id,
@@ -82,7 +93,7 @@ def parse_code_blocks(
                 if tok.value or tok.visual_style != "indent":
                     ref = _intern_token(tok, registry, context)
                     stack[-1].sequence.append(ref)
-                stack.pop()
+                tail_attach = stack.pop()
             continue
         ref = _intern_token(tok, registry, context)
         stack[-1].sequence.append(ref)

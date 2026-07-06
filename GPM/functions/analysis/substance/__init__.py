@@ -7,7 +7,6 @@ from analysis.substance.compare import (
     union_letters,
 )
 from analysis.substance.diff import classify_word_pair, diff_substances
-from analysis.substance.transition import transition_fields
 
 __all__ = [
     "compare_substances",
@@ -20,3 +19,11 @@ __all__ = [
     "classify_word_pair",
     "transition_fields",
 ]
+
+
+def __getattr__(name: str):
+    if name == "transition_fields":
+        from analysis.substance.transition import transition_fields
+
+        return transition_fields
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

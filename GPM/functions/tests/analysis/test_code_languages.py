@@ -52,6 +52,18 @@ class TestCodeLanguages(unittest.TestCase):
     def test_html_text_node(self):
         self._assert_roundtrip("<p>Hello</p>\n", "html")
 
+    def test_c_hello(self):
+        self._assert_roundtrip("int main() { return 0; }\n", "c")
+
+    def test_go_func(self):
+        self._assert_roundtrip("package main\nfunc main() {}\n", "go")
+
+    def test_json_flat(self):
+        self._assert_roundtrip('{"k": 1}\n', "json")
+
+    def test_bracket_not_block(self):
+        self._assert_roundtrip("arr[i]\n", "js")
+
 
 if __name__ == "__main__":
     unittest.main()

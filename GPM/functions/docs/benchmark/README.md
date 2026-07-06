@@ -40,6 +40,8 @@ python run_tests.py
 
 **PROFILE_LIMITS.md lesen:** Spalten wie `max_L_roundtrip_unique` = größte getestete Länge mit erfolgreichem Roundtrip bei **L paarweise verschiedenen Zeichen**. `first_fail` = erster Fehlerpunkt im Sweep-Raster.
 
+Detail Perm/Width-Gate: [../referenz/perm.md](../referenz/perm.md) · Tools: [../referenz/tools.md](../referenz/tools.md)
+
 ---
 
 ## Width-Gate — Schutz vor Permutations-Explosion
