@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 
 from alphabets import AlphabetProfile
+from analysis.algebra.gates import passes_document_relevance
 from analysis.basis.compare_tiered import CompareTier, compare_documents_tiered
 from analysis.basis.index import BasisIndex, build_basis_index, query_candidates
 from analysis.basis.signature import BasisSignature, get_basis_signature
@@ -30,9 +31,29 @@ class CorpusSearchResult:
     zero_reason: str | None = None
 
 
+def batch_gate_candidates(
+    query_sig: BasisSignature,
+    index: BasisIndex,
+    *,
+    min_shared_primes: int = 1,
+    allowed_ids: set[str] | None = None,
+) -> list[str]:
+    """Arithmetisches Pruning über gespeicherte BasisSignaturen — ohne GpmDocument."""
+    survivors: list[str] = []
+    for doc_id, sig in index.signatures.items():
+        if doc_id == query_sig.doc_id:
+            continue
+        if allowed_ids is not None and doc_id not in allowed_ids:
+            continue
+        gate = passes_document_relevance(query_sig, sig, min_shared_primes=min_shared_primes)
+        if gate.passed:
+            survivors.append(doc_id)
+    return survivors
+
+
 def find_similar_documents(
     query: GpmDocument,
-    corpus: Iterable[tuple[str, GpmDocument]],
+    corpus: Iterable[tuple[str, GpmDocument]] | None = None,
     *,
     max_tier: CompareTier = CompareTier.BASIS,
     top_k: int = 20,
@@ -42,9 +63,15 @@ def find_similar_documents(
     substance_hint: int | None = None,
     fusion_mode: str = "default",
     typed_weight: float = 0.0,
+    corpus_ids: list[str] | None = None,
+    doc_loader: Callable[[str], GpmDocument | None] | None = None,
 ) -> CorpusSearchResult:
-    corpus_list = list(corpus)
-    use_minhash = len(corpus_list) >= MINHASH_AUTO_THRESHOLD
+    if corpus is None and (corpus_ids is None or doc_loader is None):
+        raise ValueError("corpus oder (corpus_ids + doc_loader) erforderlich.")
+
+    corpus_list = list(corpus) if corpus is not None else []
+    corpus_id_set = set(corpus_ids) if corpus_ids is not None else {doc_id for doc_id, _ in corpus_list}
+    use_minhash = len(corpus_id_set) >= MINHASH_AUTO_THRESHOLD
     include_typed = max_tier > CompareTier.BASIS
 
     partitions = index if index is not None else build_basis_index(
@@ -66,6 +93,17 @@ def find_similar_documents(
         return CorpusSearchResult([], zero_reason="profile_partition_empty")
 
     index_obj = partitions[profile]
+    gated_ids = set(
+        batch_gate_candidates(
+            query_sig,
+            index_obj,
+            min_shared_primes=min_shared_primes,
+            allowed_ids=corpus_id_set,
+        )
+    )
+    if not gated_ids:
+        return CorpusSearchResult([], zero_reason="batch_gate_empty")
+
     candidate_result = query_candidates(
         index_obj,
         query_sig,
@@ -78,10 +116,17 @@ def find_similar_documents(
         return CorpusSearchResult([], zero_reason=candidate_result.zero_reason)
 
     hits: list[SimilarityHit] = []
-    doc_by_id = {doc_id: doc for doc_id, doc in corpus_list if doc.profile == profile}
+    doc_by_id: dict[str, GpmDocument] = {}
+    if doc_loader is None:
+        doc_by_id = {doc_id: doc for doc_id, doc in corpus_list if doc.profile == profile}
 
     for doc_id, _candidate_score in candidate_result.candidates:
-        doc = doc_by_id.get(doc_id)
+        if doc_id not in gated_ids:
+            continue
+        if doc_loader is not None:
+            doc = doc_loader(doc_id)
+        else:
+            doc = doc_by_id.get(doc_id)
         if doc is None:
             continue
         tiered = compare_documents_tiered(

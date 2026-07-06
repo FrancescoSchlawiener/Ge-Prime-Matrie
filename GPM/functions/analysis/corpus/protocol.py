@@ -12,6 +12,7 @@ class CorpusEntry:
     perm_index: int
     word_normalized: str
     word_original: str | None = None
+    language: str = ""
 
 
 @runtime_checkable

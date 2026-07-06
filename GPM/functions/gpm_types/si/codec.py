@@ -83,14 +83,68 @@ def encode_si(
     raw: str,
     profile: AlphabetProfile | str = AlphabetProfile.OG,
 ) -> tuple[int, int]:
+    substance, index, _trace = encode_si_with_trace(raw, profile)
+    return substance, index
+
+
+def encode_si_with_trace(
+    raw: str,
+    profile: AlphabetProfile | str = AlphabetProfile.OG,
+):
+    from analysis.inference.trace import InferenceTrace
+    from alphabets.registry import prime_map_for_profile
+    from gpm_types.si.substance import substance_for_profile
+
+    if isinstance(profile, str):
+        profile = AlphabetProfile(profile)
     seq = prepare_substrate(raw, profile)
     if not is_valid_substrate(seq, profile):
         raise ValueError(f"Keine gültige Substrat-Sequenz ({profile!r}): {seq!r}")
-    from gpm_types.si.substance import substance_for_profile
-
     counts = Counter(seq)
     lex = lex_order_for_profile(profile)
-    return substance_for_profile(seq, profile), perm_index(list(seq), counts, lex_order=lex)
+    substance = substance_for_profile(seq, profile)
+    index = perm_index(list(seq), counts, lex_order=lex)
+    prime_map = prime_map_for_profile(profile)
+    prime_factors: dict[int, int] = {}
+    for char, exp in counts.items():
+        prime = prime_map.get(char)
+        if prime is not None:
+            prime_factors[prime] = exp
+    trace = InferenceTrace(
+        raw_word=raw,
+        normalized=seq,
+        substance=substance,
+        index=index,
+        prime_factors=prime_factors,
+    )
+    return substance, index, trace
+
+
+def decode_si_with_trace(
+    substance: int,
+    index: int,
+    profile: AlphabetProfile | str = AlphabetProfile.OG,
+):
+    from analysis.inference.trace import InferenceTrace
+    from gpm_types.si.substance import ingredients_for_profile
+
+    if isinstance(profile, str):
+        profile = AlphabetProfile(profile)
+    word = decode_si(substance, index, profile)
+    counts = ingredients_for_profile(substance, profile)
+    from alphabets.registry import prime_map_for_profile
+
+    prime_map = prime_map_for_profile(profile)
+    char_to_prime = {char: prime for prime, char in prime_map.items()}
+    prime_factors = {char_to_prime[char]: exp for char, exp in counts.items() if char in char_to_prime}
+    trace = InferenceTrace(
+        substance=substance,
+        index=index,
+        normalized=word,
+        decoded_word=word,
+        prime_factors=prime_factors,
+    )
+    return word, trace
 
 
 get_index = permutation_index_og

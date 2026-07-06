@@ -54,6 +54,12 @@ GPM/functions/**/*.pyc
 GPM/functions/.pytest_cache/
 GPM/functions/data/*.db
 
+# GPM Workbench local runtime
+GPM/workbench/.venv/
+GPM/workbench/.python-path
+GPM/workbench/web/node_modules/
+GPM/workbench/web/dist/
+
 # OS
 .DS_Store
 Thumbs.db

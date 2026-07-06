@@ -67,6 +67,51 @@ class TestBinaryGpm(unittest.TestCase):
         with self.assertRaises(Exception):
             read_gpm(bytes(bad))
 
+    def test_v9_long_prose_roundtrip(self):
+        """Regression: Zell-Perm-Indizes > 65535 dürfen write_gpm nicht brechen."""
+        words = [
+            "Morgenröte", "Gedanken", "Moral", "Vorurteil", "Pulvergeruch",
+            "Feinheit", "Nüstern", "Geschütz", "Schluß", "Kanonschuß",
+            "Vorsicht", "Anbetung", "Bosheit", "Seegetier", "Felsen",
+            "Genua", "Heimlichkeiten", "Erinnerung", "Eidechsen", "Grausamkeit",
+            "Griechengott", "Eidechslein", "Morgenröten", "Inschrift",
+            "Umwertung", "Moralwerte", "Verachtet", "Verflucht", "Zärtlichkeit",
+            "Gewissen", "Dasein", "Selbstbesinnung", "Menschheit", "Zufall",
+            "Priester", "Verneinung", "Verderbnis", "décadence", "Instinkt",
+            "Herkunft", "Bibel", "Weisheit", "Schlechtweggekommenen",
+            "Arglistig", "Rachsüchtigen", "Heiligen", "Verleumdern",
+            "Physiologe", "Selbsterhaltung", "Solidarität", "Entarteten",
+            "Seele", "Geist", "freier", "Willen", "Bleichsucht", "décadence",
+        ]
+        source = (
+            "Morgenröte\nGedanken über die Moral als Vorurteil\n1\n"
+            "[1124] Mit diesem Buche beginnt mein Feldzug gegen die Moral. "
+            + " ".join(words * 3)
+            + " Nicht daß es den geringsten Pulvergeruch an sich hätte."
+        )
+        self._roundtrip(source)
+
+    def test_registry_c_large_perm_index(self):
+        """Direkt: C-Registry mit perm_index > 65535 serialisierbar."""
+        from analysis.binary.format import _build_registry_c
+        from analysis.blocks.context import COrigin
+        from analysis.blocks.registry import DocumentRegistry, StructureEntry
+
+        reg = DocumentRegistry(profile=self.profile)
+        reg.c_entries.append(
+            StructureEntry(
+                entry_id=0,
+                key_bytes=b"\x01\x02",
+                substance=1,
+                perm_index=28_034_225,
+                perm_space=28_034_225,
+                origin=COrigin.GEOM,
+            )
+        )
+        doc, _ = compile_text("Test", self.profile)
+        doc.registry = reg
+        block = _build_registry_c(doc)
+        self.assertGreater(len(block), 2)
 
 if __name__ == "__main__":
     unittest.main()

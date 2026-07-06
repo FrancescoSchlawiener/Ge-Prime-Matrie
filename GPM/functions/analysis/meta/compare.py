@@ -148,4 +148,5 @@ def assess_structure_matrix(
         "substance_parallel": substance_parallel,
         "relation_twins": relation_twins_flag,
         "meta_genome_strong": meta_genome_strong,
+        "structural_twin": icurve_comparison.get("structural_twin", False),
     }

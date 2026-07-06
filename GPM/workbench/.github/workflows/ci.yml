@@ -1,0 +1,99 @@
+name: GPM Workbench CI
+
+on:
+  push:
+    paths:
+      - "GPM/workbench/**"
+      - "GPM/ui-text/**"
+      - "GPM/functions/analysis/**"
+      - "GPM/functions/gpm_types/**"
+      - "GPM/functions/tests/analysis/**"
+  pull_request:
+    paths:
+      - "GPM/workbench/**"
+      - "GPM/ui-text/**"
+      - "GPM/functions/analysis/**"
+      - "GPM/functions/gpm_types/**"
+      - "GPM/functions/tests/analysis/**"
+
+jobs:
+  functions-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: GPM/functions
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run functions tests (batch gate sample)
+        run: python -m pytest tests/analysis/test_corpus_batch_gate.py -q
+
+  api-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: GPM/workbench
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install API deps
+        run: pip install -r requirements.txt pytest httpx
+      - name: Run API tests
+        env:
+          PYTHONPATH: ../functions
+        run: pytest api/tests -q
+      - name: Export OpenAPI snapshot
+        env:
+          PYTHONPATH: ../functions
+        run: python scripts/export_openapi.py
+      - name: Verify OpenAPI snapshot committed
+        run: git diff --exit-code web/openapi.snapshot.json
+
+  start-setup:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: GPM/workbench
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Run start setup (Linux)
+        run: bash start/setup.sh
+      - name: Verify venv imports
+        run: .venv/bin/python -c "import fastapi; import cachetools"
+
+  frontend-lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: GPM/workbench/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install API for e2e backend
+        working-directory: GPM/workbench
+        run: pip install -r requirements.txt
+      - run: npm install
+      - run: npm run validate:text
+      - run: npm run lint
+      - run: npm run build
+      - name: Install Playwright
+        run: npx playwright install chromium --with-deps
+      - name: E2E smoke
+        env:
+          PYTHONPATH: ../../functions
+        run: npm run test:e2e

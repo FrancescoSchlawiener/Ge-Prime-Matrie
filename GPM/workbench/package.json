@@ -1,0 +1,13 @@
+{
+  "name": "gpm-workbench-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "api:dev": "uvicorn api.main:app --reload --port 8000 --app-dir .",
+    "fe:dev": "cd web && npm run dev",
+    "dev": "python start/run_dev.py",
+    "build": "cd web && npm run build",
+    "codegen": "openapi-typescript http://localhost:8000/openapi.json --output web/src/api/gpm-api.ts",
+    "codegen:check": "npm run codegen && git diff --exit-code web/src/api/gpm-api.ts || true"
+  }
+}

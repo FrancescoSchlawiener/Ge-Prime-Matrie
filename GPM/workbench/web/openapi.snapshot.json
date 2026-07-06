@@ -1,0 +1,1825 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "GPM Workbench API",
+    "description": "Pedagogical API over GPM/functions",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Health",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Health Api Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/version": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Version",
+        "operationId": "version_api_version_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Version Api Version Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/profiles": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Profiles",
+        "operationId": "profiles_api_profiles_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Profiles Api Profiles Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/calc/encode-word": {
+      "post": {
+        "tags": [
+          "calc"
+        ],
+        "summary": "Encode Word",
+        "operationId": "encode_word_api_calc_encode_word_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EncodeWordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/calc/decode-word": {
+      "post": {
+        "tags": [
+          "calc"
+        ],
+        "summary": "Decode Word",
+        "operationId": "decode_word_api_calc_decode_word_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecodeWordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/calc/compare-words": {
+      "post": {
+        "tags": [
+          "calc"
+        ],
+        "summary": "Compare Words",
+        "operationId": "compare_words_api_calc_compare_words_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompareWordsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/editor/compile": {
+      "post": {
+        "tags": [
+          "editor"
+        ],
+        "summary": "Compile Endpoint",
+        "operationId": "compile_endpoint_api_editor_compile_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/editor/reconstruct": {
+      "post": {
+        "tags": [
+          "editor"
+        ],
+        "summary": "Reconstruct Endpoint",
+        "operationId": "reconstruct_endpoint_api_editor_reconstruct_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReconstructRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/editor/gpm/read": {
+      "post": {
+        "tags": [
+          "editor"
+        ],
+        "summary": "Gpm Read",
+        "operationId": "gpm_read_api_editor_gpm_read_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GpmReadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/editor/gpm/write": {
+      "post": {
+        "tags": [
+          "editor"
+        ],
+        "summary": "Gpm Write",
+        "operationId": "gpm_write_api_editor_gpm_write_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GpmWriteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/editor/spectroscope": {
+      "post": {
+        "tags": [
+          "editor"
+        ],
+        "summary": "Spectroscope Endpoint",
+        "operationId": "spectroscope_endpoint_api_editor_spectroscope_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpectroscopeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/compare/word-pair": {
+      "post": {
+        "tags": [
+          "compare"
+        ],
+        "summary": "Word Pair",
+        "operationId": "word_pair_api_compare_word_pair_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WordPairRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/compare/documents": {
+      "post": {
+        "tags": [
+          "compare"
+        ],
+        "summary": "Compare Documents",
+        "operationId": "compare_documents_api_compare_documents_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompareDocumentsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/compare/documents-inline": {
+      "post": {
+        "tags": [
+          "compare"
+        ],
+        "summary": "Compare Documents Inline",
+        "operationId": "compare_documents_inline_api_compare_documents_inline_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompareDocumentsInlineRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/compare/i-curve": {
+      "post": {
+        "tags": [
+          "compare"
+        ],
+        "summary": "I Curve",
+        "operationId": "i_curve_api_compare_i_curve_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ICurveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/compare/corpus/index": {
+      "post": {
+        "tags": [
+          "compare"
+        ],
+        "summary": "Corpus Index",
+        "operationId": "corpus_index_api_compare_corpus_index_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CorpusIndexRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/compare/corpus/query": {
+      "post": {
+        "tags": [
+          "compare"
+        ],
+        "summary": "Corpus Query",
+        "operationId": "corpus_query_api_compare_corpus_query_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CorpusQueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/compare/redundancy/scan": {
+      "post": {
+        "tags": [
+          "compare"
+        ],
+        "summary": "Redundancy Scan",
+        "operationId": "redundancy_scan_api_compare_redundancy_scan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RedundancyScanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cipher/encrypt": {
+      "post": {
+        "tags": [
+          "cipher"
+        ],
+        "summary": "Cipher Encrypt",
+        "operationId": "cipher_encrypt_api_cipher_encrypt_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CipherEncryptRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cipher/decrypt": {
+      "post": {
+        "tags": [
+          "cipher"
+        ],
+        "summary": "Cipher Decrypt",
+        "operationId": "cipher_decrypt_api_cipher_decrypt_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CipherRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Get Job",
+        "operationId": "get_job_api_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Job Api Jobs  Job Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/compile": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Job Compile",
+        "operationId": "job_compile_api_jobs_compile_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobCompileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Job Compile Api Jobs Compile Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/redundancy/scan": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Job Redundancy",
+        "operationId": "job_redundancy_api_jobs_redundancy_scan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobRedundancyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Job Redundancy Api Jobs Redundancy Scan Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/corpus/index": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Job Corpus Index",
+        "operationId": "job_corpus_index_api_jobs_corpus_index_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobCorpusIndexRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Job Corpus Index Api Jobs Corpus Index Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CipherEncryptRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode",
+            "default": "word"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "og"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "key"
+        ],
+        "title": "CipherEncryptRequest"
+      },
+      "CipherRequest": {
+        "properties": {
+          "base64_gpm": {
+            "type": "string",
+            "title": "Base64 Gpm"
+          },
+          "key": {
+            "type": "string",
+            "title": "Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "base64_gpm",
+          "key"
+        ],
+        "title": "CipherRequest"
+      },
+      "CompareDocumentsInlineRequest": {
+        "properties": {
+          "doc_a": {
+            "$ref": "#/components/schemas/DocumentRefPayload"
+          },
+          "doc_b": {
+            "$ref": "#/components/schemas/DocumentRefPayload"
+          },
+          "tier": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Tier",
+            "default": 4
+          }
+        },
+        "type": "object",
+        "required": [
+          "doc_a",
+          "doc_b"
+        ],
+        "title": "CompareDocumentsInlineRequest"
+      },
+      "CompareDocumentsRequest": {
+        "properties": {
+          "doc_a_ref": {
+            "type": "string",
+            "title": "Doc A Ref"
+          },
+          "doc_b_ref": {
+            "type": "string",
+            "title": "Doc B Ref"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "og"
+          },
+          "tier": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Tier",
+            "default": 4
+          }
+        },
+        "type": "object",
+        "required": [
+          "doc_a_ref",
+          "doc_b_ref"
+        ],
+        "title": "CompareDocumentsRequest"
+      },
+      "CompareWordsRequest": {
+        "properties": {
+          "a": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "A"
+          },
+          "b": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "B"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "og"
+          },
+          "include_steps": {
+            "type": "boolean",
+            "title": "Include Steps",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "a",
+          "b"
+        ],
+        "title": "CompareWordsRequest"
+      },
+      "CompileRequest": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "nl",
+              "code",
+              "hybrid"
+            ],
+            "title": "Mode"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "default": ""
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "og"
+          },
+          "language_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language Id"
+          },
+          "content_key": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mode"
+        ],
+        "title": "CompileRequest"
+      },
+      "CorpusIndexRequest": {
+        "properties": {
+          "document_refs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Document Refs"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "og"
+          },
+          "extend_index_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extend Index Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_refs"
+        ],
+        "title": "CorpusIndexRequest"
+      },
+      "CorpusQueryRequest": {
+        "properties": {
+          "index_id": {
+            "type": "string",
+            "title": "Index Id"
+          },
+          "query_ref": {
+            "type": "string",
+            "title": "Query Ref"
+          },
+          "top_k": {
+            "type": "integer",
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "default": 5
+          },
+          "tier": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Tier",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "index_id",
+          "query_ref"
+        ],
+        "title": "CorpusQueryRequest"
+      },
+      "CurveMeta": {
+        "properties": {
+          "full_count": {
+            "type": "integer",
+            "title": "Full Count"
+          },
+          "downsampled": {
+            "type": "boolean",
+            "title": "Downsampled"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit",
+            "default": 512
+          }
+        },
+        "type": "object",
+        "required": [
+          "full_count",
+          "downsampled"
+        ],
+        "title": "CurveMeta"
+      },
+      "DecodeWordRequest": {
+        "properties": {
+          "substance": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Substance"
+          },
+          "index": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Index"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "og"
+          },
+          "include_steps": {
+            "type": "boolean",
+            "title": "Include Steps",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "substance",
+          "index"
+        ],
+        "title": "DecodeWordRequest"
+      },
+      "DocumentRefPayload": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "nl",
+              "code",
+              "hybrid"
+            ],
+            "title": "Mode",
+            "default": "nl"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "og"
+          },
+          "language_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "DocumentRefPayload",
+        "description": "Inline document for compare without prior compile session."
+      },
+      "EncodeWordRequest": {
+        "properties": {
+          "word": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Word"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "og"
+          },
+          "include_steps": {
+            "type": "boolean",
+            "title": "Include Steps",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "word"
+        ],
+        "title": "EncodeWordRequest"
+      },
+      "GpmReadRequest": {
+        "properties": {
+          "base64": {
+            "type": "string",
+            "minLength": 4,
+            "contentMediaType": "application/octet-stream",
+            "title": "Base64"
+          }
+        },
+        "type": "object",
+        "required": [
+          "base64"
+        ],
+        "title": "GpmReadRequest"
+      },
+      "GpmWriteRequest": {
+        "properties": {
+          "document_ref": {
+            "type": "string",
+            "title": "Document Ref"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "og"
+          },
+          "encrypt": {
+            "type": "boolean",
+            "title": "Encrypt",
+            "default": false
+          },
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_ref"
+        ],
+        "title": "GpmWriteRequest"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ICurveRequest": {
+        "properties": {
+          "doc_a_ref": {
+            "type": "string",
+            "title": "Doc A Ref"
+          },
+          "doc_b_ref": {
+            "type": "string",
+            "title": "Doc B Ref"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "og"
+          }
+        },
+        "type": "object",
+        "required": [
+          "doc_a_ref",
+          "doc_b_ref"
+        ],
+        "title": "ICurveRequest"
+      },
+      "JobCompileRequest": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "nl",
+              "code",
+              "hybrid"
+            ],
+            "title": "Mode"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "default": ""
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "og"
+          },
+          "language_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language Id"
+          },
+          "content_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mode"
+        ],
+        "title": "JobCompileRequest"
+      },
+      "JobCorpusIndexRequest": {
+        "properties": {
+          "document_refs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Document Refs"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "og"
+          },
+          "extend_index_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extend Index Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_refs"
+        ],
+        "title": "JobCorpusIndexRequest"
+      },
+      "JobRedundancyRequest": {
+        "properties": {
+          "document_ref": {
+            "type": "string",
+            "title": "Document Ref"
+          },
+          "canonical": {
+            "type": "boolean",
+            "title": "Canonical",
+            "default": false
+          },
+          "window_mode": {
+            "type": "string",
+            "enum": [
+              "fixed",
+              "adaptive"
+            ],
+            "title": "Window Mode",
+            "default": "fixed"
+          },
+          "window_min": {
+            "type": "integer",
+            "title": "Window Min",
+            "default": 8
+          },
+          "window_max": {
+            "type": "integer",
+            "title": "Window Max",
+            "default": 30
+          },
+          "window_size": {
+            "type": "integer",
+            "title": "Window Size",
+            "default": 15
+          },
+          "structural_only": {
+            "type": "boolean",
+            "title": "Structural Only",
+            "default": false
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "token",
+              "block"
+            ],
+            "title": "Level",
+            "default": "token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_ref"
+        ],
+        "title": "JobRedundancyRequest"
+      },
+      "ReconstructRequest": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "nl",
+              "code",
+              "hybrid"
+            ],
+            "title": "Mode"
+          },
+          "document_ref": {
+            "type": "string",
+            "title": "Document Ref"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mode",
+          "document_ref"
+        ],
+        "title": "ReconstructRequest"
+      },
+      "RedundancyScanRequest": {
+        "properties": {
+          "document_ref": {
+            "type": "string",
+            "title": "Document Ref"
+          },
+          "canonical": {
+            "type": "boolean",
+            "title": "Canonical",
+            "default": false
+          },
+          "window_mode": {
+            "type": "string",
+            "enum": [
+              "fixed",
+              "adaptive"
+            ],
+            "title": "Window Mode",
+            "default": "fixed"
+          },
+          "window_min": {
+            "type": "integer",
+            "title": "Window Min",
+            "default": 8
+          },
+          "window_max": {
+            "type": "integer",
+            "title": "Window Max",
+            "default": 30
+          },
+          "window_size": {
+            "type": "integer",
+            "title": "Window Size",
+            "default": 15
+          },
+          "structural_only": {
+            "type": "boolean",
+            "title": "Structural Only",
+            "default": false
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "token",
+              "block"
+            ],
+            "title": "Level",
+            "default": "token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_ref"
+        ],
+        "title": "RedundancyScanRequest"
+      },
+      "SpectroscopeRequest": {
+        "properties": {
+          "document_ref": {
+            "type": "string",
+            "title": "Document Ref"
+          },
+          "token_start": {
+            "type": "integer",
+            "title": "Token Start",
+            "default": 0
+          },
+          "token_end": {
+            "type": "integer",
+            "title": "Token End",
+            "default": 0
+          },
+          "content_key": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_ref"
+        ],
+        "title": "SpectroscopeRequest"
+      },
+      "Step": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "values": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Values"
+          },
+          "formula": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Formula"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "detail"
+        ],
+        "title": "Step"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WordPairRequest": {
+        "properties": {
+          "a": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "A"
+          },
+          "b": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "B"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "og"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "compare",
+              "diff"
+            ],
+            "title": "Mode",
+            "default": "compare"
+          }
+        },
+        "type": "object",
+        "required": [
+          "a",
+          "b"
+        ],
+        "title": "WordPairRequest"
+      },
+      "WorkbenchResponse": {
+        "properties": {
+          "result": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Result"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/Step"
+            },
+            "type": "array",
+            "title": "Steps"
+          },
+          "explain_links": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Explain Links"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "curve_meta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CurveMeta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "result"
+        ],
+        "title": "WorkbenchResponse"
+      }
+    }
+  }
+}

@@ -19,6 +19,7 @@ from analysis.binary.int_codec import (
     perm_width_bytes,
     substance_width_class,
     width_bytes_for_class,
+    width_class_for_magnitude,
 )
 from analysis.binary.separator_codec import decode_gaps, encode_gaps, scan_perm_code
 from analysis.case.policy import DEFAULT_CASE_POLICY
@@ -146,10 +147,14 @@ def _build_registry_c(document: GpmDocument) -> bytes:
         s_bytes = width_bytes_for_class(s_class)
         block += struct.pack("<B", s_class & 0x03)
         block += encode_fixed_int(max(1, entry.substance), s_bytes)
-        i_bytes = 2
-        if entry.perm_space > 1:
-            i_bytes = perm_width_bytes("A" * min(20, entry.perm_space))
-        block += encode_fixed_int(max(1, entry.perm_index), i_bytes)
+        n = max(1, entry.perm_index, entry.perm_space)
+        i_class = width_class_for_magnitude(n)
+        i_bytes = width_bytes_for_class(i_class)
+        block += struct.pack("<B", i_class & 0x03)
+        try:
+            block += encode_fixed_int(max(1, entry.perm_index), i_bytes)
+        except ValueError as exc:
+            raise GpmFormatError(str(exc)) from exc
     return bytes(block)
 
 
@@ -173,7 +178,11 @@ def _read_registry_c(data: bytes, offset: int, body_end: int) -> int:
         if offset + s_bytes > body_end:
             raise GpmFormatError("C-Substanz abgeschnitten.")
         offset += s_bytes
-        i_bytes = 2
+        if offset + 1 > body_end:
+            raise GpmFormatError("C-Perm-Klasse abgeschnitten.")
+        i_class = data[offset] & 0x03
+        offset += 1
+        i_bytes = width_bytes_for_class(i_class)
         if offset + i_bytes > body_end:
             raise GpmFormatError("C-Perm-Index abgeschnitten.")
         offset += i_bytes

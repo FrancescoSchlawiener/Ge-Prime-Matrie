@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: gpm-workbench
+    env: python
+    rootDir: GPM/workbench
+    buildCommand: |
+      pip install -r requirements.txt
+      cd web && npm install && npm run build
+    startCommand: python scripts/run_prod.py
+    envVars:
+      - key: PYTHONPATH
+        value: "../functions"

@@ -34,10 +34,16 @@ class TestHierarchyExtended(unittest.TestCase):
         if line_curve:
             self.assertIn("i_zeile_ratio", line_curve[0])
             self.assertIn("line_index", line_curve[0])
+            self.assertIn("text", line_curve[0])
+            self.assertTrue(line_curve[0]["text"])
         if sent_curve:
             self.assertIn("i_satz_ratio", sent_curve[0])
+            self.assertIn("text", sent_curve[0])
+            self.assertTrue(sent_curve[0]["text"])
         if para_curve:
             self.assertIn("i_absatz_ratio", para_curve[0])
+            self.assertIn("text", para_curve[0])
+            self.assertTrue(para_curve[0]["text"])
         self.assertIsInstance(page_curve, list)
 
     def test_compare_level_sequences(self):

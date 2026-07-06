@@ -1,0 +1,35 @@
+:root {
+  --gpm-bg: #0a0e14;
+  --gpm-surface: #131920;
+  --gpm-surface-2: #1a222d;
+  --gpm-border: #2a3441;
+  --gpm-text: #e6edf3;
+  --gpm-muted: #8b9cb3;
+  --gpm-accent: #6cb6ff;
+  --gpm-accent-dim: #1f6feb;
+  --gpm-green: #3fb950;
+  --gpm-orange: #e67e22;
+  --gpm-data-bg: var(--gpm-surface-2);
+  --gpm-data-border: var(--gpm-border);
+  --gpm-data-text: var(--gpm-text);
+  --gpm-pedagogy-accent-encode: var(--gpm-accent);
+  --gpm-pedagogy-accent-decode: var(--gpm-orange);
+  --gpm-danger: #f85149;
+  --gpm-tab-active: #1f6feb;
+  --gpm-spectro-teal: 0, 150, 136;
+  --gpm-spectro-amber: 255, 171, 0;
+  --gpm-ikurve-a: #e67e22;
+  --gpm-ikurve-b: #6eb5ff;
+  --gpm-font: "Inter", system-ui, sans-serif;
+  --gpm-mono: "Fira Code", ui-monospace, monospace;
+  --gpm-radius: 8px;
+  --gpm-radius-sm: 6px;
+  --gpm-space-xs: 0.25rem;
+  --gpm-space-sm: 0.5rem;
+  --gpm-space-md: 1rem;
+  --gpm-space-lg: 1.5rem;
+  --gpm-space-xl: 2rem;
+  --gpm-page-width: 780px;
+  --gpm-page-width-gpm: 1400px;
+  --gpm-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+}

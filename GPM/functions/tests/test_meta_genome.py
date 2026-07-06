@@ -60,12 +60,13 @@ class TestMetaGenome(unittest.TestCase):
 
         doc_a, _ = compile_text(self.DE_TEXT, AlphabetProfile.OG)
         doc_b, _ = compile_text(self.DE_MED, AlphabetProfile.OG)
-        cmp = {"geometry_score": 0.3, "literal_match_ratio": 0.2, "aligned": False}
+        cmp = {"geometry_score": 0.3, "literal_match_ratio": 0.2, "aligned": False, "structural_twin": True}
         enriched = enrich_pair_analysis(doc_a, doc_b, cmp)
         self.assertIn("interpretation", enriched["structure_assessment"])
         self.assertIn("signals", enriched["structure_assessment"])
         self.assertIn("relation_comparison", enriched)
         self.assertIn("relation_score", enriched["meta_comparison"])
+        self.assertTrue(enriched["structure_assessment"].get("structural_twin"))
 
     def test_build_meta_genome_direct(self):
         doc, _ = compile_text("Hallo Welt", AlphabetProfile.OG)

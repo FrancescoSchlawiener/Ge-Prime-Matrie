@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from analysis.compile.reconstruct import reconstruct_text
 from analysis.document.model import GpmDocument
 from analysis.hierarchy.access import get_hierarchy
 from analysis.hierarchy.geom import HierarchyNode, build_document_hierarchy
+from analysis.hierarchy.span_utils import char_range_for_tokens
 from analysis.algebra.substance_kernel import (
     empty_transition_fields,
     substance_ggt_kgv_similarity,
@@ -13,6 +15,7 @@ from analysis.algebra.substance_kernel import (
 
 
 def _curve_from_nodes(
+    document: GpmDocument,
     nodes: list[HierarchyNode],
     *,
     ratio_key: str,
@@ -20,6 +23,7 @@ def _curve_from_nodes(
 ) -> list[dict]:
     points: list[dict] = []
     prev_s: int | None = None
+    text = reconstruct_text(document)
     for node in nodes:
         ratio = node.perm_index / node.perm_space if node.perm_space > 1 else 1.0
         trans = (
@@ -27,9 +31,12 @@ def _curve_from_nodes(
             if prev_s is not None
             else empty_transition_fields()
         )
+        cs, ce = char_range_for_tokens(document, node.token_start, node.token_count)
+        snippet = text[cs:ce] if text else ""
         points.append(
             {
                 index_key: len(points),
+                "text": snippet.strip(),
                 "token_start": node.token_start,
                 "token_count": node.token_count,
                 "s_level": node.s_level,
@@ -46,24 +53,24 @@ def _curve_from_nodes(
 
 def extract_phrase_curve(document: GpmDocument) -> list[dict]:
     h = document.hierarchy or build_document_hierarchy(document)
-    return _curve_from_nodes(h.semantic.phrases, ratio_key="i_phrase_ratio", index_key="phrase_index")
+    return _curve_from_nodes(document, h.semantic.phrases, ratio_key="i_phrase_ratio", index_key="phrase_index")
 
 
 def extract_sentence_curve(document: GpmDocument) -> list[dict]:
     h = document.hierarchy or build_document_hierarchy(document)
-    return _curve_from_nodes(h.semantic.sentences, ratio_key="i_satz_ratio", index_key="sentence_index")
+    return _curve_from_nodes(document, h.semantic.sentences, ratio_key="i_satz_ratio", index_key="sentence_index")
 
 
 def extract_paragraph_curve(document: GpmDocument) -> list[dict]:
     h = document.hierarchy or build_document_hierarchy(document)
-    return _curve_from_nodes(h.semantic.paragraphs, ratio_key="i_absatz_ratio", index_key="paragraph_index")
+    return _curve_from_nodes(document, h.semantic.paragraphs, ratio_key="i_absatz_ratio", index_key="paragraph_index")
 
 
 def extract_line_curve(document: GpmDocument) -> list[dict]:
     h = document.hierarchy or build_document_hierarchy(document)
-    return _curve_from_nodes(h.structural.lines, ratio_key="i_zeile_ratio", index_key="line_index")
+    return _curve_from_nodes(document, h.structural.lines, ratio_key="i_zeile_ratio", index_key="line_index")
 
 
 def extract_page_curve(document: GpmDocument) -> list[dict]:
     h = get_hierarchy(document)
-    return _curve_from_nodes(h.structural.pages, ratio_key="i_page_ratio", index_key="page_index")
+    return _curve_from_nodes(document, h.structural.pages, ratio_key="i_page_ratio", index_key="page_index")

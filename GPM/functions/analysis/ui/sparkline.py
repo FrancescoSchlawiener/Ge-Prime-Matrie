@@ -17,13 +17,19 @@ def downsample_curve_points(points: list[dict], limit: int) -> list[dict]:
     """Stride-Downsampling — erster/letzter Punkt immer erhalten."""
     if len(points) <= limit:
         return points
-    stride = max(1, len(points) // limit)
+    stride = max(1, (len(points) + limit - 1) // limit)
     out = [points[0]]
     for i in range(stride, len(points), stride):
         out.append(points[i])
     if out[-1] is not points[-1]:
         out.append(points[-1])
     out = dedupe_neighbors(out)
+    while len(out) > limit:
+        stride = max(2, (len(out) + limit - 1) // limit)
+        out = [out[0], *out[stride::stride]]
+        if out[-1] is not points[-1]:
+            out.append(points[-1])
+        out = dedupe_neighbors(out)
     assert out[0] is points[0]
     assert out[-1] is points[-1]
     return out

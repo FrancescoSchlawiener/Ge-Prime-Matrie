@@ -330,6 +330,7 @@ def analyze_pair_full(
         "meta_a": meta["meta_a"],
         "meta_b": meta["meta_b"],
         "meta_comparison": meta["meta_comparison"],
+        "relation_comparison": meta["relation_comparison"],
         "structure_assessment": meta["structure_assessment"],
         "validation_pipeline": validation_pipeline,
         "geometry_score": comparison["geometry_score"],

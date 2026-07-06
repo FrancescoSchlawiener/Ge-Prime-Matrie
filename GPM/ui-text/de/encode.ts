@@ -1,0 +1,15 @@
+export const encode = {
+  title: "Encodieren",
+  lead: "Bis zu 50 Wörter — Schritt für Schritt zu Substanz S und Index I",
+  wordsLabel: "Freitext (Leerzeichen oder Zeilenumbruch)",
+  wordsPlaceholder: "HALLO WELT",
+  hint: "Wörter durch Leerzeichen oder Zeilenumbruch trennen. Ziffern und Satzzeichen werden pro Token ignoriert.",
+  submit: "Encodieren",
+  resultTitle: "Ergebnis",
+  word: "Wort",
+  normalized: "Normalisiert",
+  substance: "S",
+  index: "I",
+  empty: "Wörter eingeben und Encodieren klicken.",
+  failedToken: "Keine gültige Substrat-Sequenz",
+} as const;
