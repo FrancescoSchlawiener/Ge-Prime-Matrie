@@ -11,8 +11,34 @@ from analysis.document.model import GpmHeaderEntry
 from gpm_types.di.relation import DRelation
 from gpm_types.hi.codec import decode_hi
 from gpm_types.hi.segments import HiPayload, HiSegment, parse_hi_segments, parse_hi_segments_code
+from gpm_types.ni.registry import checksum_n, pointer_id_n
+from gpm_types.ni.substance import substance_n
 
-NEntry = int | tuple[int, ...]
+
+@dataclass(frozen=True)
+class NComposite:
+    """Mehrstelliges N(I)-Literal als adressierbarer Kompositionsknoten.
+
+    Das Ganze bleibt ein einziger Pointer (fraktal: innen Ziffern-Komposition
+    über ``digit_ptrs``), trägt aber echte GPM-Identität: ``substance`` als
+    Primprodukt über die Ziffern und ``checksum`` als N_<hash>-Adresse. Der
+    rohe ``literal`` bleibt für den verlustfreien Roundtrip erhalten
+    (führende Nullen), während substance/checksum dokumentübergreifende
+    Äquivalenz erlauben.
+    """
+
+    literal: str
+    digit_ptrs: tuple[int, ...]
+    substance: int
+    checksum: int
+
+    @property
+    def pointer_id(self) -> str:
+        return pointer_id_n(self.literal)
+
+
+# Atomare Ziffern 0–9 bleiben ``int``; mehrstellige Literale werden NComposite.
+NEntry = int | NComposite
 
 
 @dataclass
@@ -46,6 +72,7 @@ class DocumentRegistry:
     _s_reverse: dict[str, int] = field(default_factory=dict, repr=False)
     _c_reverse: dict[tuple[COrigin, bytes], int] = field(default_factory=dict, repr=False)
     _n_reverse: dict[int | tuple[int, ...], int] = field(default_factory=dict, repr=False)
+    _n_substance: dict[int, list[int]] = field(default_factory=dict, repr=False)
     _d_reverse: dict[str, int] = field(default_factory=dict, repr=False)
     _h_reverse: dict[str, int] = field(default_factory=dict, repr=False)
 
@@ -158,11 +185,20 @@ class DocumentRegistry:
             if isinstance(value, tuple):
                 if not value:
                     raise ValueError("Leeres N(I)-Tupel verboten.")
+                # Fraktale Komposition: strukturelle Dedup über die Ziffern-ptrs.
                 if value in self._n_reverse:
                     return self._n_reverse[value]
+                literal = "".join(self.n_display(d) for d in value)
+                composite = NComposite(
+                    literal=literal,
+                    digit_ptrs=value,
+                    substance=substance_n(literal),
+                    checksum=checksum_n(literal),
+                )
                 entry_id = len(self.n_entries)
-                self.n_entries.append(value)
+                self.n_entries.append(composite)
                 self._n_reverse[value] = entry_id
+                self._n_substance.setdefault(composite.substance, []).append(entry_id)
                 return entry_id
             if not isinstance(value, int):
                 raise TypeError("N-Wert muss int oder tuple[int, ...] sein.")
@@ -211,10 +247,24 @@ class DocumentRegistry:
         entry = self.n_entries[ptr_id]
         if isinstance(entry, int):
             return str(entry)
-        return "".join(self.n_display(d) for d in entry)
+        return entry.literal
 
     def n_val(self, ptr_id: int) -> int:
         return int(self.n_display(ptr_id))
+
+    def n_substance(self, ptr_id: int) -> int:
+        """Primprodukt-Substanz eines N(I)-Eintrags (Atom oder Komposit)."""
+        entry = self.n_entries[ptr_id]
+        if isinstance(entry, int):
+            return substance_n(str(entry))
+        return entry.substance
+
+    def n_checksum(self, ptr_id: int) -> int:
+        """Checksum-Identität (N_<checksum>) eines N(I)-Eintrags."""
+        entry = self.n_entries[ptr_id]
+        if isinstance(entry, int):
+            return checksum_n(str(entry))
+        return entry.checksum
 
     def intern_n_from_display(self, text: str, *, context: ParseContext) -> int:
         """Wire/Decode: Ziffernliteral → atomarer oder Tupel-N-Eintrag."""

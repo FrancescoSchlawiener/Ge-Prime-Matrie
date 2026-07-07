@@ -22,7 +22,12 @@ def intern_n_literal(
     registry: DocumentRegistry,
     context: ParseContext,
 ) -> int:
-    """Ziffernkette → atomarer oder Tupel-N-Pointer in der Registry."""
+    """Ziffernkette → atomarer oder Komposit-N-Pointer in der Registry.
+
+    Einstellig → atomarer Ziffer-Pointer (0–9). Mehrstellig → **ein**
+    Komposit-Eintrag (``NComposite``) mit Substanz/Checksum-Identität; die
+    Ziffern-ptrs bilden die fraktale Innenstruktur.
+    """
     if not text or not all(ch.isdigit() for ch in text):
         raise ValueError(f"Kein N-Literal: {text!r}")
     if len(text) == 1:
