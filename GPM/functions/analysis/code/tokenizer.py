@@ -27,6 +27,11 @@ _TOKEN_CORE = re.compile(
     r"|([{}()\[\]])"
     r"|(=>|\?\?|\?\.|===|!==|\+\+|--|<<|>>|[+\-*/=<>!&|^%?:]+)"
     r"|([#.,;])"
+    # Catch-all: zusammenhaengender Lauf sonst nicht erfasster Nicht-Whitespace-
+    # Zeichen (Em-Dash, typografische Quotes, §, °, ~, \\, $, € …). Verhindert,
+    # dass fremde Zeichen in den Whitespace-only-Gap leaken (sprachunabhaengig).
+    # Quote-Starter (" ' `) sind ausgenommen, damit String-Scanner Vorrang haben.
+    r"|([^\s\w{}()\[\]#.,;+\-*/=<>!&|^%?:@\"'`]+)"
 )
 
 
