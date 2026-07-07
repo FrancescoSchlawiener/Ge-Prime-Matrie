@@ -1,0 +1,54 @@
+# ==============================================================================
+# GPM TOKENSAVING ENFORCEMENT - CRITICAL CACHE-WRITE BLOCK
+# ==============================================================================
+
+# 1. Lokale Caches, IDE-Metadaten & Python-Rauschen (Die Hauptursache für Index-Loops)
+.git/
+.github/
+.vscode/
+.cursor/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.env.*
+*.log
+
+# 2. Komplette Frontend-Sperre (Da P0 ein reines Backend-Häppchen in Schicht 0 ist)
+gpm/workbench/web/
+gpm/workbench/ui/
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
+dist/
+build/
+out/
+.next/
+*.ts
+*.tsx
+*.js
+*.jsx
+*.css
+*.scss
+*.html
+
+# 3. Dokumentation, Erklärungen & Markdown-Wände
+# (Verhindert, dass die KI seitenweise Spezifikationen bei jedem Prompt neu in den RAM schaufelt)
+*.md
+gpm/ui-text/de/erklaerungen/
+docs/
+
+# 4. Massive Test-Fixtures, Datensätze & Binär-Müll
+# (Sehr wichtig: Wenn hier HTML-Dateien mit 30k Zeilen liegen, erzeugt das die 47M Token)
+*.json
+*.b64
+*.bin
+*.csv
+*.html
+Toy/
+Ge-Prime-Matrix_OG/
+fixtures/
