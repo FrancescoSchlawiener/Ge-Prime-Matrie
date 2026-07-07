@@ -51,10 +51,13 @@ BlockNode (Teilraum)
 - Kein `lstrip` / `canonical_n` auf dem gespeicherten Literal (Roundtrip `11` ≠ `1 1` über nl/col-Gap); `substance_n`/`checksum_n` nutzen intern `canonical_n` nur für die Identität
 - `42n`: `meta.bigint` am N-Ref
 
-## D(I) — DRelation-Dedup
+## D(I) — DRelation-Dedup (pointer-first)
 
-- `intern.intern_d_decimal` → `parse_decimal` + Triple-Schlüssel in Registry (`DCodeEntry`)
-- `whole_ptr`, `den_reduced_ptr`, `ggt_ptr` verweisen auf fraktale N(I)-Pointer
+- `intern.intern_d_decimal` → `parse_decimal`; `DCodeEntry` in Registry
+- `whole_ptr`, `den_reduced_ptr`, `ggt_ptr`, `frac_red_ptr` verweisen auf fraktale N(I)-Pointer
+- **Dedup über Pointer-Triple** `(whole_ptr, den_reduced_ptr, ggt_ptr)` (`_d_by_triple`), nicht über String-`==`; `relation_key` bleibt nur sekundärer Index (Anzeige/Wire)
+- `registry.d_relation(ptr_id)` rekonstruiert die `DRelation` aus den N-Pointern
+- `registry.d_display(ptr_id)` rekonstruiert die Ziffern aus den N-Pointern (pointer-first) und erhält nur das originale Dezimaltrennzeichen (`.` vs `,`) aus dem Display
 - Gleichwertige Dezimalen teilen ptr_id (nicht String-`==`)
 
 ## H(I) — fraktal im Code-Pfad

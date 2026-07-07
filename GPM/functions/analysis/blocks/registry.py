@@ -48,6 +48,9 @@ class DCodeEntry:
     whole_ptr: int
     den_reduced_ptr: int
     ggt_ptr: int
+    # frac_red als N-Pointer: macht die D(I)-Rekonstruktion vollständig
+    # pointer-first (DRelation aus N-Pointern statt display-String).
+    frac_red_ptr: int | None = None
 
 
 @dataclass
@@ -74,6 +77,7 @@ class DocumentRegistry:
     _n_reverse: dict[int | tuple[int, ...], int] = field(default_factory=dict, repr=False)
     _n_substance: dict[int, list[int]] = field(default_factory=dict, repr=False)
     _d_reverse: dict[str, int] = field(default_factory=dict, repr=False)
+    _d_by_triple: dict[tuple[int, int, int], int] = field(default_factory=dict, repr=False)
     _h_reverse: dict[str, int] = field(default_factory=dict, repr=False)
 
     def intern_s_header(self, entry: GpmHeaderEntry) -> int:
@@ -280,22 +284,47 @@ class DocumentRegistry:
         *,
         context: ParseContext,
     ) -> int:
-        if rel_key in self._d_reverse:
-            return self._d_reverse[rel_key]
         from analysis.code.intern import intern_n_from_int
+
+        # Zuerst die N-Pointer erzeugen — Identität kommt aus dem Pointer-Triple,
+        # nicht aus dem rel_key-String.
+        whole_ptr = intern_n_from_int(rel.whole, self, context)
+        den_reduced_ptr = intern_n_from_int(rel.den_reduced, self, context)
+        ggt_ptr = intern_n_from_int(rel.ggt, self, context)
+        frac_red_ptr = intern_n_from_int(rel.frac_red, self, context)
+
+        triple = (whole_ptr, den_reduced_ptr, ggt_ptr)
+        existing = self._d_by_triple.get(triple)
+        if existing is not None:
+            return existing
 
         entry_id = len(self.d_entries)
         self.d_entries.append(
             DCodeEntry(
                 display=display,
                 relation_key=rel_key,
-                whole_ptr=intern_n_from_int(rel.whole, self, context),
-                den_reduced_ptr=intern_n_from_int(rel.den_reduced, self, context),
-                ggt_ptr=intern_n_from_int(rel.ggt, self, context),
+                whole_ptr=whole_ptr,
+                den_reduced_ptr=den_reduced_ptr,
+                ggt_ptr=ggt_ptr,
+                frac_red_ptr=frac_red_ptr,
             )
         )
+        self._d_by_triple[triple] = entry_id
+        # rel_key bleibt als sekundärer Index (Wire-Decode nutzt ihn weiterhin).
         self._d_reverse[rel_key] = entry_id
         return entry_id
+
+    def d_relation(self, ptr_id: int) -> DRelation | None:
+        """DRelation aus den N-Pointern rekonstruieren (pointer-first)."""
+        entry = self.d_entries[ptr_id]
+        if not isinstance(entry, DCodeEntry) or entry.frac_red_ptr is None:
+            return None
+        return DRelation(
+            whole=self.n_val(entry.whole_ptr),
+            den_reduced=self.n_val(entry.den_reduced_ptr),
+            ggt=self.n_val(entry.ggt_ptr),
+            frac_red=self.n_val(entry.frac_red_ptr),
+        )
 
     def intern_h_code(self, raw: str, *, context: ParseContext) -> int:
         from analysis.code.intern import intern_n_literal
@@ -339,5 +368,16 @@ class DocumentRegistry:
     def d_display(self, ptr_id: int) -> str:
         entry = self.d_entries[ptr_id]
         if isinstance(entry, DCodeEntry):
+            # Pointer-first: Ziffern aus dem N-Pointer-Triple (DRelation)
+            # rekonstruieren; nur das originale Dezimaltrennzeichen aus dem
+            # gespeicherten Display übernehmen (Roundtrip-Treue . vs ,).
+            rel = self.d_relation(ptr_id)
+            if rel is not None:
+                from gpm_types.di.codec import decode_di_relation
+
+                canonical = decode_di_relation(rel)
+                if "," in canonical and "," not in entry.display and "." in entry.display:
+                    return canonical.replace(",", ".")
+                return canonical
             return entry.display
         return str(entry)
