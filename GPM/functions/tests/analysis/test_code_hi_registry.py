@@ -9,6 +9,7 @@ from alphabets import AlphabetProfile
 from analysis.blocks.kinds import PointerKind
 from analysis.blocks.registry import DocumentRegistry
 from analysis.code.compile import compile_source, verify_reversibility
+from analysis.code.decompile import reconstruct_source
 from analysis.code.tokenizer import classify_code_token
 from analysis.blocks.context import ParseContext, ParseDomain
 
@@ -41,6 +42,28 @@ class TestCodeHiRegistry(unittest.TestCase):
         reg = DocumentRegistry(profile=AlphabetProfile.OG)
         src = "var x = abc123 + 42;\n"
         self.assertTrue(verify_reversibility(src, "js", reg))
+
+    def test_reconstruct_h_uses_pointers_not_seg_value(self):
+        reg = DocumentRegistry(profile=AlphabetProfile.OG)
+        ctx = ParseContext(domain=ParseDomain.CODE, language_id="js")
+        ptr = reg.intern(PointerKind.H, "abc123", context=ctx)
+        # Rekonstruktion == Original.
+        self.assertEqual(reg.reconstruct_h(ptr), "abc123")
+        # Beweis, dass ptr_id (nicht seg.value) genutzt wird: seg.value verfälschen,
+        # Rekonstruktion muss trotzdem aus der Registry stimmen.
+        from dataclasses import replace
+
+        payload = reg.h_entries[ptr]
+        tampered = tuple(replace(seg, value="XXX") for seg in payload.segments)
+        reg.h_entries[ptr] = type(payload)(tampered)
+        self.assertEqual(reg.reconstruct_h(ptr), "abc123")
+
+    def test_reconstruct_h_case_preserving(self):
+        reg = DocumentRegistry(profile=AlphabetProfile.OG)
+        src = "var y = AbC123;\n"
+        mod = compile_source(src, "js", reg)
+        out = reconstruct_source(mod, reg)
+        self.assertEqual(out, src)
 
 
 if __name__ == "__main__":

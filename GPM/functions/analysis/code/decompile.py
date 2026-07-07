@@ -27,9 +27,8 @@ def _render_value(ref, registry: DocumentRegistry) -> str:
     if ref.kind is PointerKind.C:
         return registry.c_entries[ref.ptr_id].key_bytes.decode("utf-8", errors="replace")
     if ref.kind is PointerKind.H:
-        from gpm_types.hi.codec import decode_hi
-
-        return decode_hi(registry.h_entries[ref.ptr_id])
+        # Pointer-first: aus S/N-Registry über ptr_id rekonstruieren, nicht aus seg.value.
+        return registry.reconstruct_h(ref.ptr_id)
     if ref.kind is PointerKind.SYS:
         close = ref.meta.get("close_syntax") or registry.c_entries[ref.ptr_id].key_bytes.decode(
             "utf-8", errors="replace"

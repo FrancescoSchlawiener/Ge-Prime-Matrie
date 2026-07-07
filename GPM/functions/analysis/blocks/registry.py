@@ -317,6 +317,25 @@ class DocumentRegistry:
         self._h_reverse[raw_key] = entry_id
         return entry_id
 
+    def reconstruct_h(self, ptr_id: int) -> str:
+        """Pointer-first: H(I) aus S/N-Registry über ``seg.ptr_id`` rekonstruieren.
+
+        Nutzt NICHT ``seg.value``, sondern rekonstruiert jedes Segment aus dem
+        Registry-Eintrag, auf den ``ptr_id`` zeigt (S → Genom-Kanonform,
+        N → N(I)-Literal). Fällt nur dann auf ``seg.value`` zurück, wenn ein
+        Segment keinen ``ptr_id`` trägt (NL-Pfad-Payload).
+        """
+        payload = self.h_entries[ptr_id]
+        parts: list[str] = []
+        for seg in payload.segments:
+            if seg.ptr_id is None:
+                parts.append(seg.value)
+            elif seg.tag == "N":
+                parts.append(self.n_display(seg.ptr_id))
+            else:
+                parts.append(self.s_entries[seg.ptr_id].word_canonical)
+        return "".join(parts)
+
     def d_display(self, ptr_id: int) -> str:
         entry = self.d_entries[ptr_id]
         if isinstance(entry, DCodeEntry):
