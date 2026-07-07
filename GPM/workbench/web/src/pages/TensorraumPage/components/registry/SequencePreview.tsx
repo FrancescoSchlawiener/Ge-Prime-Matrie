@@ -26,7 +26,11 @@ export function SequencePreview({ sequence, registry, limit = 32 }: SequencePrev
             className={`gpm-tensor-sequence-preview__token gpm-tensor-sequence-preview__token--${token.kind}${
               token.type ? ` gpm-tensor-ptr--${token.type.toLowerCase()}` : ""
             }`}
-            title={token.pointerFull}
+            title={
+              token.type && token.pointerFull
+                ? `${token.type} · ${token.label} · ${token.pointerFull}`
+                : token.pointerFull
+            }
           >
             {token.label}
           </span>

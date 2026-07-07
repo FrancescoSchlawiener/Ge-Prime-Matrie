@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from analysis.blocks.context import COrigin, ParseContext
+from analysis.blocks.context import COrigin, ParseContext, ParseDomain
 from analysis.blocks.kinds import PointerKind
 from analysis.blocks.node import PointerRef
 from analysis.blocks.registry import DocumentRegistry
@@ -149,5 +149,10 @@ def intern_scalar_token(
                 col_prefix=tok.col_prefix,
             )
         ]
-    ptr = registry.intern(kind, tok.value, context=context)
+    # Code-C-Token (Keyword/Operator/Trenner) sind CODE-Origin, damit sie die
+    # C(I)-Primzahl-Geometrie bekommen (nicht die NL-Zell-Geometrie GEOM).
+    if kind is PointerKind.C and context.domain is ParseDomain.CODE:
+        ptr = registry.intern(kind, tok.value, context=context, origin=COrigin.CODE)
+    else:
+        ptr = registry.intern(kind, tok.value, context=context)
     return [PointerRef(kind=kind, ptr_id=ptr, nl=tok.nl, col_prefix=tok.col_prefix)]

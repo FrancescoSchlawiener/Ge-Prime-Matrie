@@ -102,6 +102,8 @@ export const tensorraum = {
     expandH: "H aufklappen",
     expandS: "S aufklappen",
     entriesBadge: "{count} Einträge",
+    collisionFree: "kollisionsfrei",
+    collisions: "{count} Kollisionen",
     emptyCategory: "Leer",
     showAll: "Zeige alle {count} Einträge",
     showLess: "Weniger anzeigen ({count} gesamt)",

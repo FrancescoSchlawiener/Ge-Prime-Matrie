@@ -80,8 +80,20 @@ export interface ProjectRoot {
     hSegments?: Map<string, Array<{ tag: string; value: string }>>;
     dRelation?: Map<string, { whole: number; den_reduced: number; ggt: number; display: string }>;
     sSubstance?: Map<string, { substance: string; permIndex: string }>;
+    cSubstance?: Map<string, { substance: string; permIndex: string }>;
+    hSubstance?: Map<string, { substance: string }>;
+    collisionReport?: CollisionReport;
   };
 }
+
+export interface CollisionCategory {
+  entries: number;
+  identities: number;
+  collisions: number;
+  collision_free: boolean;
+}
+
+export type CollisionReport = Partial<Record<PointerType, CollisionCategory>>;
 
 export interface TensorraumProject {
   id: string;
