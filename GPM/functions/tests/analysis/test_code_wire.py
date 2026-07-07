@@ -41,6 +41,69 @@ class TestCodeWire(unittest.TestCase):
         out = reconstruct_source(loaded_mod, loaded_reg)
         self.assertEqual(out, src)
 
+    def test_v4_preserves_c_and_h_geometry(self):
+        reg = DocumentRegistry(profile=AlphabetProfile.OG)
+        src = "function add(a, b) { return a + b; }\nlet y = abc123;\n"
+        mod = compile_source(src, "js", reg)
+        wire = encode_code_module(mod, reg)
+        self.assertEqual(wire[0], 4)  # v4 Version-Byte
+        _, loaded_reg = decode_code_module(wire)
+        # C-Substanz/perm_index (auch sehr grosse Werte) exakt erhalten.
+        for i in range(len(reg.c_entries)):
+            self.assertEqual(loaded_reg.c_substance(i), reg.c_substance(i))
+            self.assertEqual(loaded_reg.c_perm_index(i), reg.c_perm_index(i))
+        # H-Substanz deterministisch identisch.
+        for i in range(len(reg.h_entries)):
+            self.assertEqual(loaded_reg.h_substance(i), reg.h_substance(i))
+
+    def test_v3_blob_backward_compatible(self):
+        """Alter v3-Blob (ohne C/H-Geometrie) wird gelesen; Geometrie rekonstruiert."""
+        import struct
+
+        from gpm_types.hi.codec import decode_hi
+        from analysis.code import wire as W
+        from analysis.code.wire import decode_code_module, encode_block_tree_v2
+
+        reg = DocumentRegistry(profile=AlphabetProfile.OG)
+        src = "function add(a, b) { return a + b; }\nlet y = abc123;\n"
+        mod = compile_source(src, "js", reg)
+
+        # v3-Registry-Layout manuell (ohne die v4-Zusatzfelder).
+        parts = [W._pack_utf16(reg.profile.value)]
+        parts.append(struct.pack("<I", len(reg.s_entries)))
+        for e in reg.s_entries:
+            parts.append(W._pack_utf16(e.word_canonical))
+            parts.append(W._pack_utf16(e.word_normalized))
+            parts.append(struct.pack("<QQ", e.substance & 0xFFFFFFFFFFFFFFFF, e.perm_index & 0xFFFFFFFFFFFFFFFF))
+        parts.append(struct.pack("<I", len(reg.n_entries)))
+        for i in range(len(reg.n_entries)):
+            parts.append(W._pack_utf16(reg.n_display(i)))
+        parts.append(struct.pack("<I", len(reg.d_entries)))
+        parts.append(struct.pack("<I", len(reg.c_entries)))
+        for e in reg.c_entries:
+            ob = (e.origin.value if hasattr(e.origin, "value") else str(e.origin)).encode("ascii")
+            parts.append(struct.pack("<B", len(ob)))
+            parts.append(ob)
+            parts.append(W._pack_utf16(e.key_bytes.decode("utf-8", "replace")))
+        parts.append(struct.pack("<I", len(reg.h_entries)))
+        for p in reg.h_entries:
+            parts.append(W._pack_utf16(decode_hi(p)))
+            parts.append(struct.pack("<H", len(p.segments)))
+            for s in p.segments:
+                tb = s.tag.encode("ascii")
+                parts.append(struct.pack("<B", len(tb)))
+                parts.append(tb)
+                parts.append(W._pack_utf16(s.value))
+        regbytes = b"".join(parts)
+        block = encode_block_tree_v2(mod)
+        v3blob = struct.pack("<BII", 3, len(block), len(regbytes)) + block + regbytes
+
+        loaded_mod, loaded_reg = decode_code_module(v3blob)
+        self.assertEqual(reconstruct_source(loaded_mod, loaded_reg), src)
+        # C-Geometrie aus dem Klartext rekonstruiert (nicht verloren).
+        for i in range(len(reg.c_entries)):
+            self.assertEqual(loaded_reg.c_substance(i), reg.c_substance(i))
+
     def test_block_tree_v2_meta_string_length_is_u32(self):
         """Regression: u16-Meta-Strings brachen TS-Decoder (Invalid typed array length)."""
         import struct

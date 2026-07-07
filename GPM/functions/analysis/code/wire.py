@@ -9,14 +9,17 @@ from analysis.blocks.codec import decode_block_tree_v2, encode_block_tree_v2
 from analysis.code.envelope import BlockEnvelope
 from analysis.blocks.context import COrigin, ParseContext, ParseDomain
 from analysis.blocks.node import BlockNode
-from analysis.blocks.registry import DocumentRegistry, DCodeEntry, StructureEntry
+from analysis.blocks.registry import DocumentRegistry, DCodeEntry, StructureEntry, _code_geometry
 from analysis.document.model import GpmHeaderEntry
 from gpm_types.di.codec import decode_di_relation
 from gpm_types.di.relation import parse_decimal
 from gpm_types.hi.codec import decode_hi
 from gpm_types.hi.segments import HiPayload, HiSegment
 
-CODE_WIRE_VERSION = 3
+CODE_WIRE_VERSION = 4
+# v3 = ohne C/H-Substanz (wird weiterhin gelesen), v4 = mit C-substance/
+# perm_index und H-substance auf der Leitung.
+_SUPPORTED_WIRE_VERSIONS = (3, 4)
 
 
 def _pack_utf16(text: str) -> bytes:
@@ -73,8 +76,12 @@ def encode_code_registry(reg: DocumentRegistry) -> bytes:
         parts.append(struct.pack("<B", len(origin_b)))
         parts.append(origin_b)
         parts.append(_pack_utf16(entry.key_bytes.decode("utf-8", errors="replace")))
+        # v4: Primzahl-Geometrie (substance, perm_index) als Dezimalstrings —
+        # beliebige Groesse, kein uint64-Overflow (Substanz kann sehr gross sein).
+        parts.append(_pack_utf16(str(entry.substance)))
+        parts.append(_pack_utf16(str(entry.perm_index)))
     parts.append(struct.pack("<I", len(reg.h_entries)))
-    for payload in reg.h_entries:
+    for entry_id, payload in enumerate(reg.h_entries):
         raw = decode_hi(payload)
         parts.append(_pack_utf16(raw))
         parts.append(struct.pack("<H", len(payload.segments)))
@@ -83,10 +90,12 @@ def encode_code_registry(reg: DocumentRegistry) -> bytes:
             parts.append(struct.pack("<B", len(tag_b)))
             parts.append(tag_b)
             parts.append(_pack_utf16(seg.value))
+        # v4: H-Substanz (gewichtetes Segmentprodukt) als Dezimalstring.
+        parts.append(_pack_utf16(str(reg.h_substance(entry_id))))
     return b"".join(parts)
 
 
-def decode_code_registry(data: bytes) -> DocumentRegistry:
+def decode_code_registry(data: bytes, *, version: int = CODE_WIRE_VERSION) -> DocumentRegistry:
     profile, offset = _unpack_utf16(data, 0)
     reg = DocumentRegistry(profile=AlphabetProfile(profile))
     (s_count,) = struct.unpack_from("<I", data, offset)
@@ -139,13 +148,21 @@ def decode_code_registry(data: bytes) -> DocumentRegistry:
         value, offset = _unpack_utf16(data, offset)
         key = value.encode("utf-8")
         rev_key = (origin, key)
+        if version >= 4:
+            sub_str, offset = _unpack_utf16(data, offset)
+            perm_str, offset = _unpack_utf16(data, offset)
+            substance_c_val = int(sub_str)
+            perm_index_c_val = int(perm_str)
+        else:
+            # v3-Abwaertskompatibilitaet: Geometrie aus dem Klartext rekonstruieren.
+            substance_c_val, perm_index_c_val, _ = _code_geometry(value)
         entry_id = len(reg.c_entries)
         reg.c_entries.append(
             StructureEntry(
                 entry_id=entry_id,
                 key_bytes=key,
-                substance=1,
-                perm_index=1,
+                substance=substance_c_val,
+                perm_index=perm_index_c_val,
                 perm_space=1,
                 origin=origin,
             )
@@ -167,6 +184,10 @@ def decode_code_registry(data: bytes) -> DocumentRegistry:
             segments.append(HiSegment(tag, value))
         reg.h_entries.append(HiPayload(tuple(segments)))
         reg._h_reverse[raw] = len(reg.h_entries) - 1
+        if version >= 4:
+            # H-Substanz ist auf der Leitung (Dezimalstring); wird aus dem Payload
+            # ohnehin deterministisch neu berechnet — nur Offset ueberspringen.
+            _h_sub_str, offset = _unpack_utf16(data, offset)
     return reg
 
 
@@ -182,10 +203,10 @@ def encode_code_module(module: BlockNode, registry: DocumentRegistry) -> bytes:
 
 def decode_code_module(data: bytes) -> tuple[BlockNode, DocumentRegistry]:
     (version, block_len, reg_len) = struct.unpack_from("<BII", data, 0)
-    if version != CODE_WIRE_VERSION:
+    if version not in _SUPPORTED_WIRE_VERSIONS:
         raise ValueError(f"Code-Wire-Version {version} nicht unterstützt")
     offset = 9
     block_end = offset + block_len
     module = decode_block_tree_v2(data[offset:block_end])
-    registry = decode_code_registry(data[block_end : block_end + reg_len])
+    registry = decode_code_registry(data[block_end : block_end + reg_len], version=version)
     return module, registry
