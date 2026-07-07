@@ -11,8 +11,34 @@ from analysis.document.model import GpmHeaderEntry
 from gpm_types.di.relation import DRelation
 from gpm_types.hi.codec import decode_hi
 from gpm_types.hi.segments import HiPayload, HiSegment, parse_hi_segments, parse_hi_segments_code
+from gpm_types.ni.registry import checksum_n, pointer_id_n
+from gpm_types.ni.substance import substance_n
 
-NEntry = int | tuple[int, ...]
+
+@dataclass(frozen=True)
+class NComposite:
+    """Mehrstelliges N(I)-Literal als adressierbarer Kompositionsknoten.
+
+    Das Ganze bleibt ein einziger Pointer (fraktal: innen Ziffern-Komposition
+    über ``digit_ptrs``), trägt aber echte GPM-Identität: ``substance`` als
+    Primprodukt über die Ziffern und ``checksum`` als N_<hash>-Adresse. Der
+    rohe ``literal`` bleibt für den verlustfreien Roundtrip erhalten
+    (führende Nullen), während substance/checksum dokumentübergreifende
+    Äquivalenz erlauben.
+    """
+
+    literal: str
+    digit_ptrs: tuple[int, ...]
+    substance: int
+    checksum: int
+
+    @property
+    def pointer_id(self) -> str:
+        return pointer_id_n(self.literal)
+
+
+# Atomare Ziffern 0–9 bleiben ``int``; mehrstellige Literale werden NComposite.
+NEntry = int | NComposite
 
 
 @dataclass
@@ -22,6 +48,9 @@ class DCodeEntry:
     whole_ptr: int
     den_reduced_ptr: int
     ggt_ptr: int
+    # frac_red als N-Pointer: macht die D(I)-Rekonstruktion vollständig
+    # pointer-first (DRelation aus N-Pointern statt display-String).
+    frac_red_ptr: int | None = None
 
 
 @dataclass
@@ -46,7 +75,9 @@ class DocumentRegistry:
     _s_reverse: dict[str, int] = field(default_factory=dict, repr=False)
     _c_reverse: dict[tuple[COrigin, bytes], int] = field(default_factory=dict, repr=False)
     _n_reverse: dict[int | tuple[int, ...], int] = field(default_factory=dict, repr=False)
+    _n_substance: dict[int, list[int]] = field(default_factory=dict, repr=False)
     _d_reverse: dict[str, int] = field(default_factory=dict, repr=False)
+    _d_by_triple: dict[tuple[int, int, int], int] = field(default_factory=dict, repr=False)
     _h_reverse: dict[str, int] = field(default_factory=dict, repr=False)
 
     def intern_s_header(self, entry: GpmHeaderEntry) -> int:
@@ -158,11 +189,20 @@ class DocumentRegistry:
             if isinstance(value, tuple):
                 if not value:
                     raise ValueError("Leeres N(I)-Tupel verboten.")
+                # Fraktale Komposition: strukturelle Dedup über die Ziffern-ptrs.
                 if value in self._n_reverse:
                     return self._n_reverse[value]
+                literal = "".join(self.n_display(d) for d in value)
+                composite = NComposite(
+                    literal=literal,
+                    digit_ptrs=value,
+                    substance=substance_n(literal),
+                    checksum=checksum_n(literal),
+                )
                 entry_id = len(self.n_entries)
-                self.n_entries.append(value)
+                self.n_entries.append(composite)
                 self._n_reverse[value] = entry_id
+                self._n_substance.setdefault(composite.substance, []).append(entry_id)
                 return entry_id
             if not isinstance(value, int):
                 raise TypeError("N-Wert muss int oder tuple[int, ...] sein.")
@@ -211,10 +251,24 @@ class DocumentRegistry:
         entry = self.n_entries[ptr_id]
         if isinstance(entry, int):
             return str(entry)
-        return "".join(self.n_display(d) for d in entry)
+        return entry.literal
 
     def n_val(self, ptr_id: int) -> int:
         return int(self.n_display(ptr_id))
+
+    def n_substance(self, ptr_id: int) -> int:
+        """Primprodukt-Substanz eines N(I)-Eintrags (Atom oder Komposit)."""
+        entry = self.n_entries[ptr_id]
+        if isinstance(entry, int):
+            return substance_n(str(entry))
+        return entry.substance
+
+    def n_checksum(self, ptr_id: int) -> int:
+        """Checksum-Identität (N_<checksum>) eines N(I)-Eintrags."""
+        entry = self.n_entries[ptr_id]
+        if isinstance(entry, int):
+            return checksum_n(str(entry))
+        return entry.checksum
 
     def intern_n_from_display(self, text: str, *, context: ParseContext) -> int:
         """Wire/Decode: Ziffernliteral → atomarer oder Tupel-N-Eintrag."""
@@ -230,22 +284,47 @@ class DocumentRegistry:
         *,
         context: ParseContext,
     ) -> int:
-        if rel_key in self._d_reverse:
-            return self._d_reverse[rel_key]
         from analysis.code.intern import intern_n_from_int
+
+        # Zuerst die N-Pointer erzeugen — Identität kommt aus dem Pointer-Triple,
+        # nicht aus dem rel_key-String.
+        whole_ptr = intern_n_from_int(rel.whole, self, context)
+        den_reduced_ptr = intern_n_from_int(rel.den_reduced, self, context)
+        ggt_ptr = intern_n_from_int(rel.ggt, self, context)
+        frac_red_ptr = intern_n_from_int(rel.frac_red, self, context)
+
+        triple = (whole_ptr, den_reduced_ptr, ggt_ptr)
+        existing = self._d_by_triple.get(triple)
+        if existing is not None:
+            return existing
 
         entry_id = len(self.d_entries)
         self.d_entries.append(
             DCodeEntry(
                 display=display,
                 relation_key=rel_key,
-                whole_ptr=intern_n_from_int(rel.whole, self, context),
-                den_reduced_ptr=intern_n_from_int(rel.den_reduced, self, context),
-                ggt_ptr=intern_n_from_int(rel.ggt, self, context),
+                whole_ptr=whole_ptr,
+                den_reduced_ptr=den_reduced_ptr,
+                ggt_ptr=ggt_ptr,
+                frac_red_ptr=frac_red_ptr,
             )
         )
+        self._d_by_triple[triple] = entry_id
+        # rel_key bleibt als sekundärer Index (Wire-Decode nutzt ihn weiterhin).
         self._d_reverse[rel_key] = entry_id
         return entry_id
+
+    def d_relation(self, ptr_id: int) -> DRelation | None:
+        """DRelation aus den N-Pointern rekonstruieren (pointer-first)."""
+        entry = self.d_entries[ptr_id]
+        if not isinstance(entry, DCodeEntry) or entry.frac_red_ptr is None:
+            return None
+        return DRelation(
+            whole=self.n_val(entry.whole_ptr),
+            den_reduced=self.n_val(entry.den_reduced_ptr),
+            ggt=self.n_val(entry.ggt_ptr),
+            frac_red=self.n_val(entry.frac_red_ptr),
+        )
 
     def intern_h_code(self, raw: str, *, context: ParseContext) -> int:
         from analysis.code.intern import intern_n_literal
@@ -267,8 +346,38 @@ class DocumentRegistry:
         self._h_reverse[raw_key] = entry_id
         return entry_id
 
+    def reconstruct_h(self, ptr_id: int) -> str:
+        """Pointer-first: H(I) aus S/N-Registry über ``seg.ptr_id`` rekonstruieren.
+
+        Nutzt NICHT ``seg.value``, sondern rekonstruiert jedes Segment aus dem
+        Registry-Eintrag, auf den ``ptr_id`` zeigt (S → Genom-Kanonform,
+        N → N(I)-Literal). Fällt nur dann auf ``seg.value`` zurück, wenn ein
+        Segment keinen ``ptr_id`` trägt (NL-Pfad-Payload).
+        """
+        payload = self.h_entries[ptr_id]
+        parts: list[str] = []
+        for seg in payload.segments:
+            if seg.ptr_id is None:
+                parts.append(seg.value)
+            elif seg.tag == "N":
+                parts.append(self.n_display(seg.ptr_id))
+            else:
+                parts.append(self.s_entries[seg.ptr_id].word_canonical)
+        return "".join(parts)
+
     def d_display(self, ptr_id: int) -> str:
         entry = self.d_entries[ptr_id]
         if isinstance(entry, DCodeEntry):
+            # Pointer-first: Ziffern aus dem N-Pointer-Triple (DRelation)
+            # rekonstruieren; nur das originale Dezimaltrennzeichen aus dem
+            # gespeicherten Display übernehmen (Roundtrip-Treue . vs ,).
+            rel = self.d_relation(ptr_id)
+            if rel is not None:
+                from gpm_types.di.codec import decode_di_relation
+
+                canonical = decode_di_relation(rel)
+                if "," in canonical and "," not in entry.display and "." in entry.display:
+                    return canonical.replace(",", ".")
+                return canonical
             return entry.display
         return str(entry)

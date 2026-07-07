@@ -1,0 +1,22 @@
+# Nicht im Scope – Legacy-App und Spielereien
+Ge-Prime-Matrix OG/
+Toy/
+
+# Python-Laufzeit / Build-Artefakte (gesamtes Repo)
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+**/.venv/
+**/.mypy_cache/
+
+# Workbench-Frontend generiert
+GPM/workbench/web/node_modules/
+GPM/workbench/web/dist/
+GPM/workbench/web/test-results/
+GPM/workbench/web/playwright-report/
+GPM/workbench/web/blob-report/
+GPM/workbench/web/tsconfig.tsbuildinfo
+
+# Runtime-DB / Logs
+**/*.db
+*.log
