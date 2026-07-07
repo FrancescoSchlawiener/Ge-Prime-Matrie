@@ -145,16 +145,17 @@ export function verifyReversibility(
   const byteMatch = decompiled === file.normalizedCode;
 
   if (typeof file.roundtripOk === "boolean") {
-    if (file.roundtripOk && byteMatch) return { ok: true };
-    if (!file.roundtripOk) {
-      return {
-        ok: false,
-        reason: byteMatch
-          ? "API-Round-Trip fehlgeschlagen (roundtrip_ok=false)"
-          : "API-Round-Trip fehlgeschlagen; Dekompiliert weicht von normalisiertem Code ab",
-      };
-    }
-    return { ok: false, reason: "Dekompiliert weicht von normalisiertem Code ab" };
+    // Die API ist die Autoritaet fuer Reversibilitaet. Wenn sie OK meldet,
+    // ist die Datei reversibel — auch wenn die rein lokale Rekonstruktion
+    // (ohne API-reconstructed) Byte-fuer-Byte leicht abweicht. Kein
+    // widerspruechlicher Status mehr (OK-API != Fail-Badge).
+    if (file.roundtripOk) return { ok: true };
+    return {
+      ok: false,
+      reason: byteMatch
+        ? "API-Round-Trip fehlgeschlagen (roundtrip_ok=false)"
+        : "API-Round-Trip fehlgeschlagen; Dekompiliert weicht von normalisiertem Code ab",
+    };
   }
 
   return byteMatch
