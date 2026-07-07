@@ -90,10 +90,15 @@ def test_canonicalize_response_shape():
         "roundtrip_ok",
         "trailing_whitespace",
         "wire_b64",
+        "collision_report",
     }
     assert "tree" not in result
     assert "registry" not in result
     assert result["language_manifest"]["primary"] == "js"
+    # Kollisionsbericht je Kategorie, alle kollisionsfrei fuer sauberen Code.
+    report = result["collision_report"]
+    assert set(report.keys()) == {"S", "N", "C", "H"}
+    assert all(cat["collision_free"] for cat in report.values())
 
 
 def test_canonicalize_fraktaler_tensorraum_html():

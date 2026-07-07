@@ -6,6 +6,7 @@ import {
   syncRegistryMetaFromWire,
 } from "../tensorraum/codeWire";
 import type {
+  CollisionReport,
   FileNode,
   ProcessCodeOptions,
   ProcessCodeSkipReason,
@@ -34,6 +35,7 @@ interface CanonicalizeApiResult {
   roundtrip_ok: boolean;
   trailing_whitespace?: string;
   wire_b64: string;
+  collision_report?: CollisionReport;
 }
 
 function newId(prefix: string): string {
@@ -101,6 +103,7 @@ export async function processCode(
 
   root.children.push(fileNode);
   syncRegistryMetaFromWire(root, tables);
+  if (data.collision_report) root.header.collisionReport = data.collision_report;
 
   return { fileNode };
 }

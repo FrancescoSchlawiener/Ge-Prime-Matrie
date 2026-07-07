@@ -1,7 +1,9 @@
 import { registerSubstrate } from "./registry";
 import type { PointerType, ProjectRoot, SequenceItem, SpaceNode } from "./types";
 
-const CODE_WIRE_VERSION = 3;
+const CODE_WIRE_VERSION = 4;
+// v3 (ohne C/H-Substanz) wird weiterhin gelesen, v4 traegt die Geometrie mit.
+const SUPPORTED_WIRE_VERSIONS = new Set([3, CODE_WIRE_VERSION]);
 const BLOCK_TREE_V2 = 2;
 
 export interface WirePointerRef {
@@ -37,8 +39,8 @@ export interface WireRegistryTables {
   s: Array<{ canon: string; norm: string; substance: string; permIndex: string }>;
   n: string[];
   d: Array<{ raw: string; display: string; whole: number; denReduced: number; ggt: number }>;
-  c: Array<{ origin: string; value: string }>;
-  h: Array<{ raw: string; segments: Array<{ tag: string; value: string }> }>;
+  c: Array<{ origin: string; value: string; substance?: string; permIndex?: string }>;
+  h: Array<{ raw: string; segments: Array<{ tag: string; value: string }>; substance?: string }>;
 }
 
 export interface DecodedCodeModule {
@@ -167,7 +169,11 @@ function decodeBlockTreeV2(view: DataView, offset: number): { module: WireBlockN
   return { module: root ?? { blockId: 0, parentId: null, level: "module", meta: {}, sequence: [], children: [] }, offset };
 }
 
-function decodeRegistryTables(view: DataView, offset: number): { tables: WireRegistryTables; offset: number } {
+function decodeRegistryTables(
+  view: DataView,
+  offset: number,
+  version: number,
+): { tables: WireRegistryTables; offset: number } {
   const profileR = readUtf16(view, offset);
   offset = profileR.offset;
   const tables: WireRegistryTables = {
@@ -236,8 +242,18 @@ function decodeRegistryTables(view: DataView, offset: number): { tables: WireReg
     const origin = new TextDecoder().decode(originBytes);
     offset += originLen;
     const value = readUtf16(view, offset);
-    tables.c.push({ origin, value: value.text });
     offset = value.offset;
+    let substance: string | undefined;
+    let permIndex: string | undefined;
+    if (version >= 4) {
+      const sub = readUtf16(view, offset);
+      offset = sub.offset;
+      const perm = readUtf16(view, offset);
+      offset = perm.offset;
+      substance = sub.text;
+      permIndex = perm.text;
+    }
+    tables.c.push({ origin, value: value.text, substance, permIndex });
   }
   let hCount = view.getUint32(offset, true);
   offset += 4;
@@ -257,7 +273,13 @@ function decodeRegistryTables(view: DataView, offset: number): { tables: WireReg
       segments.push({ tag, value: val.text });
       offset = val.offset;
     }
-    tables.h.push({ raw: raw.text, segments });
+    let hSubstance: string | undefined;
+    if (version >= 4) {
+      const sub = readUtf16(view, offset);
+      offset = sub.offset;
+      hSubstance = sub.text;
+    }
+    tables.h.push({ raw: raw.text, segments, substance: hSubstance });
   }
   return { tables, offset };
 }
@@ -265,7 +287,7 @@ function decodeRegistryTables(view: DataView, offset: number): { tables: WireReg
 export function decodeCodeModule(bytes: Uint8Array): DecodedCodeModule {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const version = view.getUint8(0);
-  if (version !== CODE_WIRE_VERSION) {
+  if (!SUPPORTED_WIRE_VERSIONS.has(version)) {
     throw new Error(`Code-Wire-Version ${version} nicht unterstützt`);
   }
   const blockLen = view.getUint32(1, true);
@@ -273,7 +295,7 @@ export function decodeCodeModule(bytes: Uint8Array): DecodedCodeModule {
   let offset = 9;
   const blockEnd = offset + blockLen;
   const blockR = decodeBlockTreeV2(view, offset);
-  const regR = decodeRegistryTables(view, blockEnd);
+  const regR = decodeRegistryTables(view, blockEnd, version);
   if (blockEnd + regLen !== regR.offset) {
     // tolerate trailing slack from base64 decode
   }
@@ -303,22 +325,32 @@ function pointerForWireValue(root: ProjectRoot, kind: PointerType, value: string
 
 export function syncRegistryFromWire(root: ProjectRoot, tables: WireRegistryTables): void {
   if (!root.header.sSubstance) root.header.sSubstance = new Map();
+  if (!root.header.cSubstance) root.header.cSubstance = new Map();
   for (const entry of tables.s) {
     const ptr = registerSubstrate(root, "S", entry.canon);
     root.header.sSubstance.set(ptr, { substance: entry.substance, permIndex: entry.permIndex });
   }
   for (const v of tables.n) registerSubstrate(root, "N", v);
   for (const d of tables.d) registerSubstrate(root, "D", d.raw);
-  for (const c of tables.c) registerSubstrate(root, "C", c.value);
+  for (const c of tables.c) {
+    const ptr = registerSubstrate(root, "C", c.value);
+    if (c.substance != null && c.permIndex != null) {
+      root.header.cSubstance.set(ptr, { substance: c.substance, permIndex: c.permIndex });
+    }
+  }
   for (const h of tables.h) registerSubstrate(root, "H", h.raw);
 }
 
 export function syncRegistryMetaFromWire(root: ProjectRoot, tables: WireRegistryTables): void {
   if (!root.header.hSegments) root.header.hSegments = new Map();
   if (!root.header.dRelation) root.header.dRelation = new Map();
+  if (!root.header.hSubstance) root.header.hSubstance = new Map();
   for (const h of tables.h) {
     const ptr = root.header.reverseRegistry.H.get(h.raw);
-    if (ptr) root.header.hSegments.set(ptr, h.segments);
+    if (ptr) {
+      root.header.hSegments.set(ptr, h.segments);
+      if (h.substance != null) root.header.hSubstance.set(ptr, { substance: h.substance });
+    }
   }
   for (const d of tables.d) {
     const ptr = root.header.reverseRegistry.D.get(d.raw);

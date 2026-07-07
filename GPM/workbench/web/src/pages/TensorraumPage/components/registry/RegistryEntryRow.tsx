@@ -9,15 +9,43 @@ interface RegistryEntryRowProps {
   hSegments?: Array<{ tag: string; value: string }>;
   dRelation?: { whole: number; den_reduced: number; ggt: number; display: string };
   sSubstance?: { substance: string; permIndex: string };
+  cSubstance?: { substance: string; permIndex: string };
+  hSubstance?: { substance: string };
 }
 
-export function RegistryEntryRow({ type, pointerId, value, hSegments, dRelation, sSubstance }: RegistryEntryRowProps) {
+function pointerChecksum(pointerId: string): string {
+  const idx = pointerId.indexOf("_");
+  return idx >= 0 ? pointerId.slice(idx + 1) : pointerId;
+}
+
+export function RegistryEntryRow({
+  type,
+  pointerId,
+  value,
+  hSegments,
+  dRelation,
+  sSubstance,
+  cSubstance,
+  hSubstance,
+}: RegistryEntryRowProps) {
   const [copied, setCopied] = useState(false);
   const displayValue =
     type === "D" && dRelation
       ? `${dRelation.display} (${dRelation.whole}:${dRelation.den_reduced}:${dRelation.ggt})`
       : value;
   const row = formatRegistryRow(type, pointerId, displayValue);
+
+  // Einheitliche Primzahl-Geometrie-Zeile je Kategorie (Substanz · Index/Checksum).
+  let geometry: string | null = null;
+  if (type === "S" && sSubstance) {
+    geometry = `S=${sSubstance.substance} · I=${sSubstance.permIndex}`;
+  } else if (type === "C" && cSubstance) {
+    geometry = `S=${cSubstance.substance} · I=${cSubstance.permIndex}`;
+  } else if (type === "N") {
+    geometry = `N_${pointerChecksum(pointerId)}`;
+  } else if (type === "H" && hSubstance) {
+    geometry = `S=${hSubstance.substance}`;
+  }
 
   async function onCopyId() {
     try {
@@ -36,11 +64,7 @@ export function RegistryEntryRow({ type, pointerId, value, hSegments, dRelation,
       </td>
       <td className="gpm-tensor-registry-row__label">
         <div>{row.label}</div>
-        {type === "S" && sSubstance ? (
-          <div className="gpm-metric__hint">
-            S={sSubstance.substance} · I={sSubstance.permIndex}
-          </div>
-        ) : null}
+        {geometry ? <div className="gpm-metric__hint gpm-tensor-registry-row__geometry">{geometry}</div> : null}
         {type === "H" && hSegments && hSegments.length > 0 ? (
           <div className="gpm-tensor-registry-row__segments">
             {hSegments.map((seg, i) => (

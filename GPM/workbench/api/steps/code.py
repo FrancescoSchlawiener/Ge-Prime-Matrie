@@ -62,6 +62,7 @@ def canonicalize_for_code(
         "roundtrip_ok": roundtrip_ok,
         "trailing_whitespace": module.meta.get("trailing_whitespace", ""),
         "wire_b64": base64.b64encode(wire).decode("ascii"),
+        "collision_report": reg.collision_report(),
     }
 
 
