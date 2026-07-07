@@ -325,22 +325,32 @@ function pointerForWireValue(root: ProjectRoot, kind: PointerType, value: string
 
 export function syncRegistryFromWire(root: ProjectRoot, tables: WireRegistryTables): void {
   if (!root.header.sSubstance) root.header.sSubstance = new Map();
+  if (!root.header.cSubstance) root.header.cSubstance = new Map();
   for (const entry of tables.s) {
     const ptr = registerSubstrate(root, "S", entry.canon);
     root.header.sSubstance.set(ptr, { substance: entry.substance, permIndex: entry.permIndex });
   }
   for (const v of tables.n) registerSubstrate(root, "N", v);
   for (const d of tables.d) registerSubstrate(root, "D", d.raw);
-  for (const c of tables.c) registerSubstrate(root, "C", c.value);
+  for (const c of tables.c) {
+    const ptr = registerSubstrate(root, "C", c.value);
+    if (c.substance != null && c.permIndex != null) {
+      root.header.cSubstance.set(ptr, { substance: c.substance, permIndex: c.permIndex });
+    }
+  }
   for (const h of tables.h) registerSubstrate(root, "H", h.raw);
 }
 
 export function syncRegistryMetaFromWire(root: ProjectRoot, tables: WireRegistryTables): void {
   if (!root.header.hSegments) root.header.hSegments = new Map();
   if (!root.header.dRelation) root.header.dRelation = new Map();
+  if (!root.header.hSubstance) root.header.hSubstance = new Map();
   for (const h of tables.h) {
     const ptr = root.header.reverseRegistry.H.get(h.raw);
-    if (ptr) root.header.hSegments.set(ptr, h.segments);
+    if (ptr) {
+      root.header.hSegments.set(ptr, h.segments);
+      if (h.substance != null) root.header.hSubstance.set(ptr, { substance: h.substance });
+    }
   }
   for (const d of tables.d) {
     const ptr = root.header.reverseRegistry.D.get(d.raw);

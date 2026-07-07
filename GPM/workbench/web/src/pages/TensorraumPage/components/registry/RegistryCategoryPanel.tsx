@@ -38,10 +38,17 @@ export function RegistryCategoryPanel({ type, root, showAll, onToggleShowAll }: 
   const title = t(`tensorraum.registry.categories.${catKey}.title`);
   const subtitle = t(`tensorraum.registry.categories.${catKey}.subtitle`);
   const badge = t("tensorraum.registry.entriesBadge", { count: String(entries.length) });
+  const collision = root.header.collisionReport?.[type];
+  const collisionBadge =
+    collision && entries.length > 0
+      ? collision.collision_free
+        ? ` · ✓ ${t("tensorraum.registry.collisionFree")}`
+        : ` · ⚠ ${t("tensorraum.registry.collisions", { count: String(collision.collisions) })}`
+      : "";
 
   return (
     <div className="gpm-tensor-registry-section">
-      <DisclosureSection title={title} brief={`${subtitle} · ${badge}`} defaultOpen>
+      <DisclosureSection title={title} brief={`${subtitle} · ${badge}${collisionBadge}`} defaultOpen>
         {entries.length === 0 ? (
           <p className="gpm-metric__hint">{t("tensorraum.registry.emptyCategory")}</p>
         ) : (
@@ -65,6 +72,8 @@ export function RegistryCategoryPanel({ type, root, showAll, onToggleShowAll }: 
                       hSegments={type === "H" ? root.header.hSegments?.get(pointer) : undefined}
                       dRelation={type === "D" ? root.header.dRelation?.get(pointer) : undefined}
                       sSubstance={type === "S" ? root.header.sSubstance?.get(pointer) : undefined}
+                      cSubstance={type === "C" ? root.header.cSubstance?.get(pointer) : undefined}
+                      hSubstance={type === "H" ? root.header.hSubstance?.get(pointer) : undefined}
                     />
                   ))}
                 </tbody>

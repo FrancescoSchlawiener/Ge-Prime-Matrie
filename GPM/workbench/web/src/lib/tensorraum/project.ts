@@ -70,6 +70,9 @@ export function cloneProjectSnapshot(project: TensorraumProject): TensorraumProj
         reverseRegistry: cloneRegistryMaps(project.root.header.reverseRegistry),
         hSegments: new Map(project.root.header.hSegments ?? []),
         dRelation: new Map(project.root.header.dRelation ?? []),
+        sSubstance: new Map(project.root.header.sSubstance ?? []),
+        cSubstance: new Map(project.root.header.cSubstance ?? []),
+        hSubstance: new Map(project.root.header.hSubstance ?? []),
       },
     },
   };
