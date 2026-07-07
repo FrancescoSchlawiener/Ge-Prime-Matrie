@@ -14,6 +14,7 @@ SegmentTag = str  # "S" | "N"
 class HiSegment:
     tag: SegmentTag
     value: str
+    ptr_id: int | None = None
 
 
 @dataclass(frozen=True)
@@ -32,6 +33,22 @@ def parse_hi_segments(raw: str) -> HiPayload:
             parts.append(HiSegment("N", canonical_n(chunk)))
         else:
             parts.append(HiSegment("S", normalize_latin(chunk)))
+    if len(parts) < 2 or len({p.tag for p in parts}) < 2:
+        raise ValueError(f"Kein gemischter H(I)-Wert: {raw!r}")
+    return HiPayload(tuple(parts))
+
+
+def parse_hi_segments_code(raw: str) -> HiPayload:
+    """Code-Pfad: N-Runs als Ganzes (abc123 → S + N123)."""
+    text = (raw or "").strip()
+    if not text:
+        raise ValueError("Leerer H(I)-Wert.")
+    parts: list[HiSegment] = []
+    for kind, chunk in _split_runs(text):
+        if kind == "N":
+            parts.append(HiSegment("N", chunk))
+        else:
+            parts.append(HiSegment("S", chunk))
     if len(parts) < 2 or len({p.tag for p in parts}) < 2:
         raise ValueError(f"Kein gemischter H(I)-Wert: {raw!r}")
     return HiPayload(tuple(parts))

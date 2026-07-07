@@ -64,6 +64,7 @@ export function RegistryCategoryPanel({ type, root, showAll, onToggleShowAll }: 
                       value={value}
                       hSegments={type === "H" ? root.header.hSegments?.get(pointer) : undefined}
                       dRelation={type === "D" ? root.header.dRelation?.get(pointer) : undefined}
+                      sSubstance={type === "S" ? root.header.sSubstance?.get(pointer) : undefined}
                     />
                   ))}
                 </tbody>

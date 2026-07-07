@@ -111,6 +111,19 @@ npm run lint && npm run build
 
 **Fehlerformat:** `{"error": {"code": "...", "message": "...", "details": {...}}}` via `WorkbenchError`.
 
+## Code-Werkzeug (library-first)
+
+| Endpoint | Rolle |
+|----------|--------|
+| `GET /api/code/languages` | Sprachen aus `analysis/code/languages.py` |
+| `POST /api/code/manifest` | Primary + eingebettete Sprachen (HTML script/style) |
+| `POST /api/code/canonicalize` | normalize → compile → wire_b64 + reconstructed |
+| `POST /api/tensorraum/canonicalize` | Deprecated Alias |
+
+Client: `web/src/lib/code/` — API-Client + Manifest-Filter. Wire-Decode: `web/src/lib/tensorraum/codeWire.ts`. Entfernte Duplikate: `web/src/lib/code/REMOVED.md`.
+
+Vertrag: `GPM/functions/docs/analyse/fractal-code-contract.md`.
+
 ## Deploy (Render)
 
 See `render.yaml` — bind `0.0.0.0:$PORT`, ephemeral filesystem (in-memory session store only).

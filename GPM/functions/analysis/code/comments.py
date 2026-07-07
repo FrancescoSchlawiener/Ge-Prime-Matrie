@@ -73,5 +73,15 @@ def next_comment_start(source: str, pos: int, comment_style: str) -> tuple[str, 
             hit = find_sql_comment(source, p)
         if hit:
             return hit
-        p += 1
+        if comment_style == "c":
+            i1 = source.find("//", p + 1)
+            i2 = source.find("/*", p + 1)
+            candidates = [i for i in (i1, i2) if i != -1]
+        else:
+            i1 = source.find("--", p + 1)
+            i2 = source.find("/*", p + 1)
+            candidates = [i for i in (i1, i2) if i != -1]
+        if not candidates:
+            return None
+        p = min(candidates)
     return None

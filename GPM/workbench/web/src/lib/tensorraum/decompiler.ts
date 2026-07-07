@@ -1,3 +1,4 @@
+import { getLanguagesCache, languageSpecToConfig } from "../code/languages";
 import { SUPPORTED_LANGUAGES } from "./constants";
 import type {
   FileNode,
@@ -36,33 +37,59 @@ export interface FileReversibilityResult {
 }
 
 export function resolveLanguageConfig(languageId: string): LanguageConfig {
+  const payload = getLanguagesCache();
+  if (payload) {
+    const spec = payload.languages.find((l) => l.id === languageId);
+    if (spec) return languageSpecToConfig(spec);
+  }
   return SUPPORTED_LANGUAGES.find((l) => l.id === languageId) ?? SUPPORTED_LANGUAGES[0];
 }
 
-function nlPrefix(nl: number, depth: number): string {
-  return nl ? "\n".repeat(nl) + INDENT_UNIT.repeat(depth) : "";
+function gapPrefix(
+  nl: number,
+  colPrefix: string | undefined,
+  depth: number,
+  visualStyle: string | undefined,
+): string {
+  let out = "\n".repeat(nl);
+  if (colPrefix) {
+    out += colPrefix;
+  } else if (visualStyle === "indent" && nl > 0) {
+    out += INDENT_UNIT.repeat(depth);
+  }
+  return out;
+}
+
+function childBlockPrefix(nl: number, colPrefix: string | undefined): string {
+  if (!nl && !colPrefix) return "";
+  return "\n".repeat(nl) + (colPrefix ?? "");
 }
 
 export function reconstruct(node: SpaceNode, registry: RegistryMaps, depth = 0): string {
+  const visual = node.visualStyle;
   let codeOut = "";
   for (const item of node.sequence) {
     if (item.t === "CHILD") {
       const isIndentStyle = item.visualStyle === "indent";
-      const prefixDepth = isIndentStyle ? depth + 1 : depth;
-      const nlStr = nlPrefix(item.nl || 0, prefixDepth);
-      const openTxt = item.openSyntax ? `${item.openSyntax} ` : "";
-      codeOut += nlStr + openTxt + reconstruct(item.n, registry, depth + 1);
+      const childDepth = isIndentStyle ? depth + 1 : depth;
+      codeOut += childBlockPrefix(item.nl || 0, item.colPrefix);
+      codeOut += reconstruct(item.n, registry, childDepth);
     } else if (item.t === "SYS" && item.p === "CLOSE_BRACKET") {
-      const nlStr = nlPrefix(item.nl || 0, depth);
-      const closeTxt = item.closeSyntax ? `${item.closeSyntax} ` : "";
-      codeOut += nlStr + closeTxt;
+      const closeTxt = item.closeSyntax ?? "";
+      codeOut += gapPrefix(item.nl || 0, item.colPrefix, depth, visual) + closeTxt;
     } else if (item.t === "S" || item.t === "N" || item.t === "D" || item.t === "C" || item.t === "H") {
       const realValue = registry[item.t].get(item.p);
-      const nlStr = nlPrefix(item.nl || 0, depth);
-      codeOut += nlStr + (realValue ?? item.p) + " ";
+      let text = realValue ?? item.p;
+      if (item.t === "N" && item.bigint) text += "n";
+      codeOut += gapPrefix(item.nl || 0, item.colPrefix, depth, visual) + text;
     }
   }
   return codeOut;
+}
+
+export function reconstructFile(file: FileNode, registry: RegistryMaps): string {
+  const body = reconstruct(file, registry);
+  return body + (file.trailingWhitespace ?? "");
 }
 
 export function reconstructFlat(items: SequenceItem[], registry: RegistryMaps): string {
@@ -70,28 +97,22 @@ export function reconstructFlat(items: SequenceItem[], registry: RegistryMaps): 
   let depth = 0;
   for (const item of items) {
     if (item.t === "CHILD") {
-      const isIndentStyle = item.visualStyle === "indent";
-      const nlStr = nlPrefix(item.nl || 0, isIndentStyle ? depth + 1 : depth);
-      const openTxt = item.openSyntax ? `${item.openSyntax} ` : "";
-      codeOut += nlStr + openTxt;
+      codeOut += childBlockPrefix(item.nl || 0, item.colPrefix);
       depth++;
     } else if (item.t === "SYS" && item.p === "BLOCK_OPEN") {
       const blockOpen = item as SequenceSysItem & { visualStyle?: string; openSyntax?: string | null };
       const isIndentStyle = blockOpen.visualStyle === "indent";
-      const nlStr = nlPrefix(item.nl || 0, isIndentStyle ? depth + 1 : depth);
-      const openTxt = blockOpen.openSyntax ? `${blockOpen.openSyntax} ` : "";
-      codeOut += nlStr + openTxt;
+      const openTxt = blockOpen.openSyntax ?? "";
+      codeOut += gapPrefix(item.nl || 0, item.colPrefix, isIndentStyle ? depth + 1 : depth, blockOpen.visualStyle) + openTxt;
       depth++;
     } else if (item.t === "SYS" && item.p === "CLOSE_BRACKET") {
       depth = Math.max(0, depth - 1);
-      const nlStr = nlPrefix(item.nl || 0, depth);
-      const closeTxt = item.closeSyntax ? `${item.closeSyntax} ` : "";
-      codeOut += nlStr + closeTxt;
+      const closeTxt = item.closeSyntax ?? "";
+      codeOut += gapPrefix(item.nl || 0, item.colPrefix, depth, undefined) + closeTxt;
     } else if (item.t === "S" || item.t === "N" || item.t === "D" || item.t === "C" || item.t === "H") {
       const realValue = registry[item.t].get(item.p);
       if (realValue === undefined) continue;
-      const nlStr = nlPrefix(item.nl || 0, depth);
-      codeOut += nlStr + realValue + " ";
+      codeOut += gapPrefix(item.nl || 0, item.colPrefix, depth, undefined) + realValue;
     }
   }
   return codeOut;
@@ -120,7 +141,7 @@ export function verifyReversibility(
   registry: RegistryMaps,
   decompiledText?: string,
 ): ReversibilityVerdict {
-  const decompiled = decompiledText ?? reconstruct(file, registry);
+  const decompiled = decompiledText ?? file.reconstructed ?? reconstructFile(file, registry);
   const byteMatch = decompiled === file.normalizedCode;
 
   if (typeof file.roundtripOk === "boolean") {
@@ -162,7 +183,7 @@ export function formatCodeWithLineNumbers(code: string): string {
 }
 
 export function verifyFileReversibility(file: FileNode, registry: RegistryMaps): FileReversibilityResult {
-  const decompiled = reconstruct(file, registry);
+  const decompiled = file.reconstructed ?? reconstructFile(file, registry);
   const verdict = verifyReversibility(file, registry, decompiled);
   const originalFlat = flattenForVerify(file, registry);
 

@@ -8,8 +8,20 @@ from alphabets import AlphabetProfile
 from analysis.blocks.context import COrigin, NL_CONTEXT, ParseContext, ParseDomain
 from analysis.blocks.kinds import PointerKind
 from analysis.document.model import GpmHeaderEntry
+from gpm_types.di.relation import DRelation
 from gpm_types.hi.codec import decode_hi
-from gpm_types.hi.segments import HiPayload, parse_hi_segments
+from gpm_types.hi.segments import HiPayload, HiSegment, parse_hi_segments, parse_hi_segments_code
+
+NEntry = int | tuple[int, ...]
+
+
+@dataclass
+class DCodeEntry:
+    display: str
+    relation_key: str
+    whole_ptr: int
+    den_reduced_ptr: int
+    ggt_ptr: int
 
 
 @dataclass
@@ -28,12 +40,12 @@ class DocumentRegistry:
     profile: AlphabetProfile
     s_entries: list[GpmHeaderEntry] = field(default_factory=list)
     c_entries: list[StructureEntry] = field(default_factory=list)
-    n_entries: list[int] = field(default_factory=list)
-    d_entries: list[str] = field(default_factory=list)
+    n_entries: list[NEntry] = field(default_factory=list)
+    d_entries: list[DCodeEntry | str] = field(default_factory=list)
     h_entries: list[HiPayload] = field(default_factory=list)
     _s_reverse: dict[str, int] = field(default_factory=dict, repr=False)
     _c_reverse: dict[tuple[COrigin, bytes], int] = field(default_factory=dict, repr=False)
-    _n_reverse: dict[int, int] = field(default_factory=dict, repr=False)
+    _n_reverse: dict[int | tuple[int, ...], int] = field(default_factory=dict, repr=False)
     _d_reverse: dict[str, int] = field(default_factory=dict, repr=False)
     _h_reverse: dict[str, int] = field(default_factory=dict, repr=False)
 
@@ -143,8 +155,19 @@ class DocumentRegistry:
             return entry_id
 
         if kind is PointerKind.N:
+            if isinstance(value, tuple):
+                if not value:
+                    raise ValueError("Leeres N(I)-Tupel verboten.")
+                if value in self._n_reverse:
+                    return self._n_reverse[value]
+                entry_id = len(self.n_entries)
+                self.n_entries.append(value)
+                self._n_reverse[value] = entry_id
+                return entry_id
             if not isinstance(value, int):
-                raise TypeError("N-Wert muss int sein.")
+                raise TypeError("N-Wert muss int oder tuple[int, ...] sein.")
+            if context.domain is ParseDomain.CODE and not (0 <= value <= 9):
+                raise ValueError(f"Code-N(I): atomare Ziffern nur 0–9, got {value}")
             if value in self._n_reverse:
                 return self._n_reverse[value]
             entry_id = len(self.n_entries)
@@ -165,6 +188,8 @@ class DocumentRegistry:
         if kind is PointerKind.H:
             if not isinstance(value, str):
                 raise TypeError("H-Wert muss str sein.")
+            if context.domain is ParseDomain.CODE:
+                return self.intern_h_code(value, context=context)
             payload = parse_hi_segments(value)
             raw_key = decode_hi(payload)
             existing = self._h_reverse.get(raw_key)
@@ -181,3 +206,69 @@ class DocumentRegistry:
             return entry_id
 
         raise ValueError(f"PointerKind {kind} nicht unterstützt für intern().")
+
+    def n_display(self, ptr_id: int) -> str:
+        entry = self.n_entries[ptr_id]
+        if isinstance(entry, int):
+            return str(entry)
+        return "".join(self.n_display(d) for d in entry)
+
+    def n_val(self, ptr_id: int) -> int:
+        return int(self.n_display(ptr_id))
+
+    def intern_n_from_display(self, text: str, *, context: ParseContext) -> int:
+        """Wire/Decode: Ziffernliteral → atomarer oder Tupel-N-Eintrag."""
+        from analysis.code.intern import intern_n_literal
+
+        return intern_n_literal(text, self, context)
+
+    def intern_d_code(
+        self,
+        display: str,
+        rel_key: str,
+        rel: DRelation,
+        *,
+        context: ParseContext,
+    ) -> int:
+        if rel_key in self._d_reverse:
+            return self._d_reverse[rel_key]
+        from analysis.code.intern import intern_n_from_int
+
+        entry_id = len(self.d_entries)
+        self.d_entries.append(
+            DCodeEntry(
+                display=display,
+                relation_key=rel_key,
+                whole_ptr=intern_n_from_int(rel.whole, self, context),
+                den_reduced_ptr=intern_n_from_int(rel.den_reduced, self, context),
+                ggt_ptr=intern_n_from_int(rel.ggt, self, context),
+            )
+        )
+        self._d_reverse[rel_key] = entry_id
+        return entry_id
+
+    def intern_h_code(self, raw: str, *, context: ParseContext) -> int:
+        from analysis.code.intern import intern_n_literal
+
+        payload = parse_hi_segments_code(raw)
+        raw_key = decode_hi(payload)
+        existing = self._h_reverse.get(raw_key)
+        if existing is not None:
+            return existing
+        resolved: list[HiSegment] = []
+        for seg in payload.segments:
+            if seg.tag == "N":
+                ptr = intern_n_literal(seg.value, self, context)
+            else:
+                ptr = self.intern(PointerKind.S, seg.value, context=context)
+            resolved.append(HiSegment(seg.tag, seg.value, ptr_id=ptr))
+        entry_id = len(self.h_entries)
+        self.h_entries.append(HiPayload(tuple(resolved)))
+        self._h_reverse[raw_key] = entry_id
+        return entry_id
+
+    def d_display(self, ptr_id: int) -> str:
+        entry = self.d_entries[ptr_id]
+        if isinstance(entry, DCodeEntry):
+            return entry.display
+        return str(entry)

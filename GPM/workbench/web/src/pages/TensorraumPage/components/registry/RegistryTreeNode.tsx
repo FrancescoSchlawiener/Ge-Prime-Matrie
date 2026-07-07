@@ -17,7 +17,7 @@ function accentForNode(node: SpaceNode, depth: number): string {
 
 export function RegistryTreeNode({ node, registry, depth = 0 }: RegistryTreeNodeProps) {
   const isModule = isFileNode(node);
-  const title = isModule ? node.filename : node.id || "space";
+  const title = isModule ? node.filename : node.id || node.openSyntax?.toUpperCase() || "space";
   const sequence = node.sequence ?? [];
   const childCount = node.children?.length ?? 0;
   const stats = useMemo(() => sequenceStats(node), [node]);

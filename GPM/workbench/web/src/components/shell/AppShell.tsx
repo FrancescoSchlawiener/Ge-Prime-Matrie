@@ -11,10 +11,10 @@ const TABS = [
   },
   { to: "/gpm", labelKey: "shell.tabs.gpm", gpm: true, testId: "nav-gpm" },
   {
-    to: "/tensorraum",
-    labelKey: "shell.tabs.tensorraum",
-    prefix: "/tensorraum",
-    testId: "nav-tensorraum",
+    to: "/code",
+    labelKey: "shell.tabs.code",
+    prefix: "/code",
+    testId: "nav-code",
   },
   { to: "/datenbank", labelKey: "shell.tabs.database", testId: "nav-datenbank" },
   { to: "/erklaerungen/00-einstieg", labelKey: "shell.tabs.explain", testId: "nav-erklaerungen" },
@@ -25,7 +25,7 @@ export function AppShell() {
   const wideExplain = location.pathname.includes("/erklaerungen");
   const wideGpm = location.pathname.startsWith("/gpm");
 
-  const wideTensor = location.pathname.startsWith("/tensorraum");
+  const wideTensor = location.pathname.startsWith("/code") || location.pathname.startsWith("/tensorraum");
 
   return (
     <div className="gpm-app">

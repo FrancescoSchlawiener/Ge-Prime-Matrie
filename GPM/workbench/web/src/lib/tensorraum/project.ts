@@ -1,14 +1,16 @@
-import { SUPPORTED_LANGUAGES } from "./constants";
-import { countPointers, countSpaces, createEmptyRoot } from "./registry";
-import type { ProjectStats, TensorraumProject } from "./types";
+import { createEmptyRoot, countPointers, countSpaces } from "./registry";
+import type { ProjectRoot, ProjectStats, TensorraumProject } from "./types";
 
-export function createProject(name: string): TensorraumProject {
+const DEFAULT_LANGUAGE_IDS = ["js", "py", "html", "css", "c", "java", "go", "rs", "php", "rb", "cs", "swift", "kt", "sql", "sh", "xml", "json", "toml", "markdown"];
+
+export function createProject(name: string, languageIds?: Iterable<string>): TensorraumProject {
   const id = `proj_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const ids = languageIds ? [...languageIds] : DEFAULT_LANGUAGE_IDS;
   return {
     id,
     name,
     root: createEmptyRoot(name),
-    activeLanguageIds: new Set(SUPPORTED_LANGUAGES.map((l) => l.id)),
+    activeLanguageIds: new Set(ids),
     crossLanguageAnalysis: false,
     structuralOnly: false,
   };
@@ -34,13 +36,42 @@ export function clearProject(project: TensorraumProject): void {
   project.root.header.dRelation = new Map();
 }
 
-export function projectStats(project: TensorraumProject): ProjectStats {
+export function projectStats(project: TensorraumProject, totalLanguages?: number): ProjectStats {
   return {
     files: project.root.children.length,
     spaces: countSpaces(project.root),
     pointers: countPointers(project.root),
     activeLanguages: project.activeLanguageIds.size,
-    totalLanguages: SUPPORTED_LANGUAGES.length,
+    totalLanguages: totalLanguages ?? project.activeLanguageIds.size,
+  };
+}
+
+function cloneRegistryMaps(maps: ProjectRoot["header"]["registry"]): ProjectRoot["header"]["registry"] {
+  return {
+    S: new Map(maps.S),
+    N: new Map(maps.N),
+    D: new Map(maps.D),
+    C: new Map(maps.C),
+    H: new Map(maps.H),
+  };
+}
+
+/** Shallow snapshot so React detects registry/file changes after in-place mutation. */
+export function cloneProjectSnapshot(project: TensorraumProject): TensorraumProject {
+  return {
+    ...project,
+    activeLanguageIds: new Set(project.activeLanguageIds),
+    root: {
+      ...project.root,
+      children: [...project.root.children],
+      header: {
+        ...project.root.header,
+        registry: cloneRegistryMaps(project.root.header.registry),
+        reverseRegistry: cloneRegistryMaps(project.root.header.reverseRegistry),
+        hSegments: new Map(project.root.header.hSegments ?? []),
+        dRelation: new Map(project.root.header.dRelation ?? []),
+      },
+    },
   };
 }
 

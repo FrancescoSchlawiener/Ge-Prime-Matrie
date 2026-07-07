@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from analysis.code.envelope import BlockEnvelope, CloseRole
+
 _FORMATTING_CHARS = frozenset("\n\r\t ")
 
 
@@ -45,6 +47,8 @@ class CodeToken:
     value: str | None = None
     block: str | None = None
     visual_style: str | None = None
+    envelope: BlockEnvelope | None = None
+    close_role: CloseRole | None = None
     open_syntax: str | None = None
     close_syntax: str | None = None
     meta: dict = field(default_factory=dict)

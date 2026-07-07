@@ -15,6 +15,7 @@ from analysis.code.context import scan_fences_hybrid
 from analysis.code.decompile import reconstruct_hybrid, reconstruct_source
 from analysis.code.hybrid import HybridDocument, HybridSegment
 from analysis.code.languages import language_for_extension, language_for_id, resolve_fence_language
+from analysis.code.manifest import language_manifest
 from analysis.code.tokenizer import tokenize_source
 from analysis.code.tokens import tokenize_results_equal
 from analysis.compile.compiler import compile_text
@@ -165,6 +166,23 @@ def compile_hybrid_to_gpm(
 ) -> tuple[GpmDocument, bytes]:
     hybrid = compile_hybrid(text, profile)
     doc = hybrid_to_gpm_document(hybrid)
+    from analysis.binary.format import VERSION, write_gpm
+
+    return doc, write_gpm(doc, version=VERSION)
+
+
+def compile_source_to_gpm(
+    source: str,
+    language_id: str,
+    profile: AlphabetProfile | str = AlphabetProfile.OG,
+) -> tuple[GpmDocument, bytes]:
+    """Reine Code-Datei → GpmDocument + .gpm-Bytes (v9, Blockbaum + Code-Registry)."""
+    prof = profile if isinstance(profile, AlphabetProfile) else AlphabetProfile(profile)
+    reg = DocumentRegistry(profile=prof)
+    module = compile_source(source, language_id, reg)
+    doc = GpmDocument(profile=prof, header=[], tokens=[], gaps=[""])
+    doc.registry = reg
+    doc.root_block = module
     from analysis.binary.format import VERSION, write_gpm
 
     return doc, write_gpm(doc, version=VERSION)

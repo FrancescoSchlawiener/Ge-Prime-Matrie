@@ -1,11 +1,12 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { t } from "../../../i18n/t";
+import { allLanguageIds, fetchLanguages, type LanguageSpec } from "../../../lib/code/languages";
 import {
   ADAPTIVE_WINDOW_SIZES,
   DEFAULT_WINDOW_SIZE,
-  SUPPORTED_LANGUAGES,
   StorageError,
   clearProject,
+  cloneProjectSnapshot,
   createProject,
   deleteSave,
   exportRegistryJson,
@@ -57,6 +58,12 @@ export function useTensorraumStore() {
   const [redundancySubview, setRedundancySubview] = useState<RedundancySubview>("block");
   const [redundancyScan, setRedundancyScan] = useState<RedundancyScanResult | null>(null);
   const [storageSaves, setStorageSaves] = useState<StorageIndexEntry[]>(() => listSaves());
+  const [ingestBusy, setIngestBusy] = useState<string | null>(null);
+  const [languageCatalog, setLanguageCatalog] = useState<LanguageSpec[]>([]);
+
+  useEffect(() => {
+    void fetchLanguages().then((p) => setLanguageCatalog(p.languages));
+  }, []);
 
   const toggleRegistryShowAll = useCallback((type: PointerType) => {
     setRegistryShowAll((prev) => ({ ...prev, [type]: !prev[type] }));
@@ -75,23 +82,29 @@ export function useTensorraumStore() {
     [projects, activeProjectId],
   );
 
-  const stats = useMemo(() => (project ? projectStats(project) : null), [project]);
+  const stats = useMemo(
+    () => (project ? projectStats(project, languageCatalog.length || undefined) : null),
+    [project, languageCatalog.length],
+  );
 
   const appendLog = useCallback((message: string) => {
     setLogs((prev) => [...prev.slice(-199), newLog(message)]);
   }, []);
 
   const refreshProjects = useCallback(() => {
-    setProjects((prev) => [...prev]);
-  }, []);
+    setProjects((prev) =>
+      prev.map((p) => (p.id === activeProjectId ? cloneProjectSnapshot(p) : p)),
+    );
+  }, [activeProjectId]);
 
   const createNewProject = useCallback(() => {
-    const p = createProject(`Projekt_${projects.length + 1}`);
+    const ids = languageCatalog.length ? allLanguageIds({ languages: languageCatalog, ignored_suffixes: [] }) : undefined;
+    const p = createProject(`Projekt_${projects.length + 1}`, ids);
     setProjects((prev) => [...prev, p]);
     setActiveProjectId(p.id);
     setRedundancyScan(null);
     appendLog(t("tensorraum.log.projectCreated", { name: p.name }));
-  }, [appendLog, projects.length]);
+  }, [appendLog, languageCatalog, projects.length]);
 
   const renameProject = useCallback(
     (name: string) => {
@@ -130,15 +143,16 @@ export function useTensorraumStore() {
   );
 
   const toggleAllLanguages = useCallback(() => {
-    if (!project) return;
-    const allActive = project.activeLanguageIds.size === SUPPORTED_LANGUAGES.length;
+    if (!project || languageCatalog.length === 0) return;
+    const allIds = languageCatalog.map((l) => l.id);
+    const allActive = allIds.every((id) => project.activeLanguageIds.has(id));
     if (allActive) {
-      project.activeLanguageIds = new Set([SUPPORTED_LANGUAGES[0].id]);
+      project.activeLanguageIds = new Set([allIds[0]]);
     } else {
-      project.activeLanguageIds = new Set(SUPPORTED_LANGUAGES.map((l) => l.id));
+      project.activeLanguageIds = new Set(allIds);
     }
     refreshProjects();
-  }, [project, refreshProjects]);
+  }, [languageCatalog, project, refreshProjects]);
 
   const canonicalizeSnippet = useCallback(async () => {
     if (!project || !codeInput.trim()) return;
@@ -167,42 +181,56 @@ export function useTensorraumStore() {
   const ingestFiles = useCallback(
     async (files: FileList | File[]) => {
       if (!project) return;
+      const list = Array.from(files);
+      setIngestBusy(t("tensorraum.sidebar.loadingFiles"));
       let loaded = 0;
       let skipped = 0;
       let failed = 0;
-      for (const file of Array.from(files)) {
-        const text = await file.text();
-        try {
-          const result = await processCode(project, text, file.name);
-          if (!result) {
-            skipped++;
-            continue;
-          }
-          if ("skipped" in result) {
-            skipped++;
-            if (result.reason === "ignored") appendLog(t("tensorraum.log.skippedIgnored", { file: file.name }));
-            else if (result.reason === "unknown") appendLog(t("tensorraum.log.skippedUnknown", { file: file.name }));
-            else
+      try {
+        for (const file of list) {
+          setIngestBusy(t("tensorraum.log.canonicalizing", { file: file.name, len: "…" }));
+          const text = await file.text();
+          try {
+            const result = await processCode(project, text, file.name);
+            if (!result) {
+              skipped++;
+              continue;
+            }
+            if ("skipped" in result) {
+              skipped++;
+              if (result.reason === "ignored") appendLog(t("tensorraum.log.skippedIgnored", { file: file.name }));
+              else if (result.reason === "unknown") appendLog(t("tensorraum.log.skippedUnknown", { file: file.name }));
+              else if (result.reason === "embedded_language_disabled")
+                appendLog(
+                  t("tensorraum.log.skippedEmbedded", {
+                    file: file.name,
+                    lang: result.embeddedLanguage ?? result.languageName ?? "?",
+                  }),
+                );
+              else
+                appendLog(
+                  t("tensorraum.log.skippedLanguage", { file: file.name, lang: result.languageName ?? "?" }),
+                );
+            } else {
+              loaded++;
               appendLog(
-                t("tensorraum.log.skippedLanguage", { file: file.name, lang: result.languageName ?? "?" }),
+                t("tensorraum.log.canonicalized", {
+                  file: result.fileNode.filename,
+                  len: String(result.fileNode.sequence.length),
+                }),
               );
-          } else {
-            loaded++;
-            appendLog(
-              t("tensorraum.log.canonicalized", {
-                file: result.fileNode.filename,
-                len: String(result.fileNode.sequence.length),
-              }),
-            );
+            }
+          } catch (e) {
+            failed++;
+            const message = e instanceof Error ? e.message : String(e);
+            appendLog(t("tensorraum.log.canonicalizeFailed", { file: file.name, message }));
           }
-        } catch (e) {
-          failed++;
-          const message = e instanceof Error ? e.message : String(e);
-          appendLog(t("tensorraum.log.canonicalizeFailed", { file: file.name, message }));
         }
+        refreshProjects();
+        appendLog(t("tensorraum.log.filesLoaded", { count: loaded, skipped, failed: String(failed) }));
+      } finally {
+        setIngestBusy(null);
       }
-      refreshProjects();
-      appendLog(t("tensorraum.log.filesLoaded", { count: loaded, skipped, failed: String(failed) }));
     },
     [appendLog, project, refreshProjects],
   );
@@ -359,6 +387,8 @@ export function useTensorraumStore() {
     deleteStorageSave,
     exportSaveToFile,
     importSaveFromFile,
+    ingestBusy,
+    languageCatalog,
     setCrossLanguage: (v: boolean) => {
       if (!project) return;
       project.crossLanguageAnalysis = v;

@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent } from 
 import { SegmentToggle } from "../../../components/ui/SegmentToggle";
 import { Input } from "../../../components/ui";
 import { t } from "../../../i18n/t";
-import { SUPPORTED_LANGUAGES } from "../../../lib/tensorraum";
 import type { TensorraumStore } from "../hooks/useTensorraumStore";
 
 interface TensorraumSidebarProps {
@@ -26,6 +25,7 @@ export function TensorraumSidebar({ store }: TensorraumSidebarProps) {
   function onDrop(e: DragEvent) {
     e.preventDefault();
     setDragOver(false);
+    if (store.ingestBusy) return;
     const files = e.dataTransfer.files;
     if (files.length) void store.ingestFiles(files);
   }
@@ -88,18 +88,20 @@ export function TensorraumSidebar({ store }: TensorraumSidebarProps) {
       <section className="gpm-tensor-sidebar__block">
         <h2 className="gpm-tensor-sidebar__label">{t("tensorraum.sidebar.ingest")}</h2>
         <div
-          className={`gpm-tensor-drop${dragOver ? " gpm-tensor-drop--active" : ""}`}
+          className={`gpm-tensor-drop${dragOver ? " gpm-tensor-drop--active" : ""}${store.ingestBusy ? " gpm-tensor-drop--busy" : ""}`}
           onDragOver={(e) => {
             e.preventDefault();
-            setDragOver(true);
+            if (!store.ingestBusy) setDragOver(true);
           }}
           onDragLeave={() => setDragOver(false)}
           onDrop={onDrop}
-          onClick={() => fileRef.current?.click()}
+          onClick={() => {
+            if (!store.ingestBusy) fileRef.current?.click();
+          }}
           role="button"
           tabIndex={0}
         >
-          <p>{t("tensorraum.sidebar.dropHint")}</p>
+          <p>{store.ingestBusy ?? t("tensorraum.sidebar.dropHint")}</p>
           <div className="gpm-tensor-sidebar__row gpm-tensor-drop__actions">
             <button
               type="button"
@@ -154,7 +156,7 @@ export function TensorraumSidebar({ store }: TensorraumSidebarProps) {
           </button>
         </div>
         <div className="gpm-tensor-lang-chips">
-          {SUPPORTED_LANGUAGES.map((lang) => {
+          {store.languageCatalog.map((lang) => {
             const active = project.activeLanguageIds.has(lang.id);
             return (
               <button
@@ -162,6 +164,7 @@ export function TensorraumSidebar({ store }: TensorraumSidebarProps) {
                 type="button"
                 className={`gpm-tensor-lang-chip${active ? " gpm-tensor-lang-chip--active" : ""}`}
                 onClick={() => store.toggleLanguage(lang.id)}
+                title={lang.name}
               >
                 {lang.id.toUpperCase()}
               </button>

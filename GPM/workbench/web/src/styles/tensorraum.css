@@ -158,6 +158,13 @@
   background: color-mix(in srgb, var(--gpm-text) 4%, var(--gpm-surface));
 }
 
+.gpm-tensor-drop--busy {
+  cursor: wait;
+  border-color: var(--gpm-accent);
+  color: var(--gpm-text);
+  background: color-mix(in srgb, var(--gpm-accent) 6%, var(--gpm-surface));
+}
+
 .gpm-tensor-drop__actions {
   justify-content: center;
   width: 100%;

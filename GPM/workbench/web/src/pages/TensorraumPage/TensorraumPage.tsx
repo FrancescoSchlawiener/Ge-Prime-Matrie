@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { PageHead, TabGuide } from "../../components/ui";
 import { t } from "../../i18n/t";
+import { ensureLanguagesLoaded } from "../../lib/tensorraum/detectLanguage";
 import { TensorraumDocsPanel } from "./components/TensorraumDocsPanel";
 import { TensorraumSidebar } from "./components/TensorraumSidebar";
 import { TensorraumTabNav } from "./components/TensorraumTabNav";
@@ -12,6 +14,10 @@ import { WorkspaceView } from "./views/WorkspaceView";
 
 export function TensorraumPage() {
   const store = useTensorraumStore();
+
+  useEffect(() => {
+    void ensureLanguagesLoaded();
+  }, []);
 
   return (
     <div className="gpm-page gpm-page--tensor">

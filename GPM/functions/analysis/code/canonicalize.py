@@ -88,3 +88,17 @@ def canonicalize_for_analysis(source: str, language_id: str, *, uppercase: bool 
     if uppercase:
         text = text.upper()
     return text
+
+
+def normalize_for_tensorraum(source: str, language_id: str) -> str:
+    """OG v35-Kanonisierung: Kommentare weg (sprachspezifisch), dann ß/Ä/Ö/Ü + UPPERCASE."""
+    text = strip_comments_aware(source, language_id)
+    text = (
+        text.replace("ß", "ẞ")
+        .upper()
+        .replace("Ä", "AE")
+        .replace("Ö", "OE")
+        .replace("Ü", "UE")
+    )
+    text = unicodedata.normalize("NFD", text)
+    return "".join(c for c in text if unicodedata.category(c) != "Mn")

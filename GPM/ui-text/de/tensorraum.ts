@@ -238,6 +238,7 @@ export const tensorraum = {
     skippedIgnored: "Übersprungen: {file} (ignorierter Dateityp)",
     skippedUnknown: "Übersprungen: {file} (unbekannte Erweiterung)",
     skippedLanguage: 'Übersprungen: {file} (Sprache "{lang}" deaktiviert)',
+    skippedEmbedded: 'Übersprungen: {file} (eingebettete Sprache "{lang}" deaktiviert)',
     canonicalized: "Kanonisiert: {file} → Sequenzlänge {len}",
     canonicalizeFailed: "Fehler bei {file}: {message}",
     projectCleared: "Projekt geleert.",

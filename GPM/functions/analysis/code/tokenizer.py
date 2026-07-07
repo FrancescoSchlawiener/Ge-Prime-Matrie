@@ -8,6 +8,7 @@ import unicodedata
 from alphabets.unicode_utils import assert_no_surrogates
 from analysis.blocks.context import ParseContext, ParseDomain
 from analysis.blocks.kinds import PointerKind
+from analysis.code.envelope import BlockEnvelope, CloseRole, envelope_from_token_visual
 from analysis.code.comments import find_comment_at
 from analysis.code.languages import VOID_HTML_TAGS, language_for_id
 from analysis.code.tokens import (
@@ -38,6 +39,9 @@ def _keyword_match(value: str, spec) -> bool:
     return low in spec.keywords_lower
 
 
+_CSS_LANGS = frozenset({"css", "scss", "sass", "less"})
+
+
 def classify_code_token(value: str, *, context: ParseContext, language_id: str) -> PointerKind:
     if context.domain is ParseDomain.NL:
         return PointerKind.S
@@ -46,6 +50,8 @@ def classify_code_token(value: str, *, context: ParseContext, language_id: str) 
     if value.startswith("//") or value.startswith("/*") or value.startswith("--"):
         return PointerKind.C
     if re.fullmatch(r"[+-]?\d+", value):
+        if language_id in _CSS_LANGS and re.fullmatch(r"0\d+", value):
+            return PointerKind.S
         return PointerKind.N
     if re.fullmatch(r"[+-]?\d+n", value):
         return PointerKind.N
@@ -60,6 +66,8 @@ def classify_code_token(value: str, *, context: ParseContext, language_id: str) 
         return PointerKind.C
     if re.fullmatch(r"/(?:\\.|[^/\\\r\n])+/[gimsuy]*", value):
         return PointerKind.C
+    if language_id in _CSS_LANGS:
+        return PointerKind.S
     from gpm_types.classify import PayloadKind, classify_token
 
     try:
@@ -93,7 +101,17 @@ def _find_next_comment(source: str, pos: int, comment_style: str) -> tuple[str, 
             text, c_start, c_end = hit
             if c_start >= pos:
                 return hit
-        p += 1
+        if comment_style == "c":
+            i1 = source.find("//", p + 1)
+            i2 = source.find("/*", p + 1)
+            candidates = [i for i in (i1, i2) if i != -1]
+        else:
+            i1 = source.find("--", p + 1)
+            i2 = source.find("/*", p + 1)
+            candidates = [i for i in (i1, i2) if i != -1]
+        if not candidates:
+            return None
+        p = min(candidates)
     return None
 
 
@@ -176,6 +194,29 @@ def _find_next_string_or_template(source: str, pos: int) -> tuple[str, int, int]
     return text, pos, end
 
 
+_CSS_HEX_COLOR = re.compile(r"#[0-9a-fA-F]{3,8}(?![0-9a-fA-F])")
+
+
+def _try_emit_css_hex_color(
+    tokens: list[CodeToken],
+    source: str,
+    pos: int,
+    last: int,
+    language_id: str,
+    ctx: ParseContext,
+) -> int | None:
+    """CSS: #RRGGBB als ein S-Token — kein isolierter Hex-Fragment-S."""
+    if language_id not in _CSS_LANGS:
+        return None
+    m = _CSS_HEX_COLOR.match(source, pos)
+    if not m:
+        return None
+    val = m.group(0)
+    nl, col_prefix = split_leading_gap(source, last, pos)
+    tokens.append(CodeToken(type=PointerKind.S.value, value=val, nl=nl, col_prefix=col_prefix))
+    return m.end()
+
+
 def _emit_scalar(
     tokens: list[CodeToken],
     val: str,
@@ -199,15 +240,51 @@ def _emit_brace_delim(
     if flat:
         tokens.append(CodeToken(type=PointerKind.C.value, value=val, nl=nl, col_prefix=col_prefix))
         return
-    if val in "{[":
-        style = "bracket" if val == "[" else None
+    if val == "{":
         tokens.append(
-            CodeToken(block="open", value=val, nl=nl, col_prefix=col_prefix, visual_style=style)
+            CodeToken(
+                block="open",
+                value=val,
+                nl=nl,
+                col_prefix=col_prefix,
+                envelope=BlockEnvelope.BRACE,
+                open_syntax=val,
+            )
         )
-    elif val in "}]":
-        style = "bracket" if val == "]" else None
+    elif val == "[":
         tokens.append(
-            CodeToken(block="close", value=val, nl=nl, col_prefix=col_prefix, visual_style=style)
+            CodeToken(
+                block="open",
+                value=val,
+                nl=nl,
+                col_prefix=col_prefix,
+                envelope=BlockEnvelope.BRACKET,
+                open_syntax=val,
+            )
+        )
+    elif val == "}":
+        tokens.append(
+            CodeToken(
+                block="close",
+                value=val,
+                nl=nl,
+                col_prefix=col_prefix,
+                envelope=BlockEnvelope.BRACE,
+                close_role=CloseRole.BRACE,
+                close_syntax=val,
+            )
+        )
+    elif val == "]":
+        tokens.append(
+            CodeToken(
+                block="close",
+                value=val,
+                nl=nl,
+                col_prefix=col_prefix,
+                envelope=BlockEnvelope.BRACKET,
+                close_role=CloseRole.BRACKET,
+                close_syntax=val,
+            )
         )
     elif val in "()":
         tokens.append(CodeToken(type=PointerKind.C.value, value=val, nl=nl, col_prefix=col_prefix))
@@ -232,12 +309,12 @@ def _lex_scanned(
     n = len(source)
     comment_style = spec.comment_style
 
-    open_closers: dict[str, str] = {}
-    closers: set[str] = set()
+    open_closers: dict[str, tuple[str, int]] = {}
+    closers: dict[str, int] = {}
     if keyword:
-        for opener, closer in spec.block_pairs:
-            open_closers[opener.lower()] = closer.lower()
-            closers.add(closer.lower())
+        for pair_idx, (opener, closer) in enumerate(spec.block_pairs):
+            open_closers[opener.lower()] = (closer.lower(), pair_idx)
+            closers[closer.lower()] = pair_idx
 
     while pos < n:
         comm = _find_next_comment(source, pos, comment_style)
@@ -264,6 +341,13 @@ def _lex_scanned(
 
         if next_kind is None:
             break
+
+        if language_id in _CSS_LANGS and next_kind == "tok" and source[pos : pos + 1] == "#":
+            hex_end = _try_emit_css_hex_color(tokens, source, pos, last, language_id, ctx)
+            if hex_end is not None:
+                last = hex_end
+                pos = hex_end
+                continue
 
         if next_kind == "comm":
             text, c_start, c_end = comm
@@ -292,18 +376,35 @@ def _lex_scanned(
         last = tok_m.end()
         pos = tok_m.end()
 
+        if (
+            tokens
+            and tokens[-1].type == PointerKind.C.value
+            and tokens[-1].value == "#"
+            and re.fullmatch(r"[0-9A-Fa-f]{3,8}", val)
+        ):
+            prev = tokens.pop()
+            tokens.append(
+                CodeToken(
+                    type=PointerKind.S.value,
+                    value="#" + val,
+                    nl=prev.nl,
+                    col_prefix=prev.col_prefix,
+                )
+            )
+            continue
+
         low = val.lower()
         if keyword and low in open_closers:
-            closer = open_closers[low]
+            _closer, pair_idx = open_closers[low]
             tokens.append(
                 CodeToken(
                     block="open",
                     value=val,
                     nl=nl,
                     col_prefix=col_prefix,
-                    visual_style="keyword",
+                    envelope=BlockEnvelope.KEYWORD,
                     open_syntax=val,
-                    meta={"expectedCloser": closer, "keyword": val},
+                    meta={"pair_index": pair_idx},
                 )
             )
         elif keyword and low in closers:
@@ -313,8 +414,10 @@ def _lex_scanned(
                     value=val,
                     nl=nl,
                     col_prefix=col_prefix,
-                    visual_style="keyword",
+                    envelope=BlockEnvelope.KEYWORD,
+                    close_role=CloseRole.KEYWORD,
                     close_syntax=val,
+                    meta={"pair_index": closers[low]},
                 )
             )
         elif val in "{()}[]":
@@ -336,6 +439,87 @@ def tokenize_flat(source: str, language_id: str) -> TokenizeResult:
 
 def tokenize_keyword(source: str, language_id: str) -> TokenizeResult:
     return _lex_scanned(source, language_id, flat=False, keyword=True)
+
+
+def _scan_indent_code_part(
+    source: str,
+    code_part: str,
+    content_start: int,
+    *,
+    first: bool,
+    opened_this_line: bool,
+    nl_for_line: int,
+    col_prefix_line: str,
+    tokens: list[CodeToken],
+    ctx: ParseContext,
+    language_id: str,
+    line_last: int,
+) -> tuple[bool, int, int]:
+    """Robuster Scanner: Strings/Literale vor _TOKEN_CORE (kein Gap mit ")."""
+    pos_abs = content_start
+    end_abs = content_start + len(code_part)
+    last_end = line_last
+    while pos_abs < end_abs:
+        str_hit = _find_next_string_or_template(source, pos_abs)
+        tok_m = _TOKEN_CORE.search(source, pos_abs)
+        if tok_m is not None and tok_m.start() >= end_abs:
+            tok_m = None
+
+        if tok_m is not None and tok_m.start() > pos_abs:
+            for i in range(pos_abs, min(tok_m.start(), end_abs)):
+                if source[i] in '"\'`':
+                    str_hit = _find_next_string_or_template(source, i)
+                    break
+
+        next_kind = None
+        next_abs = end_abs
+
+        if str_hit is not None:
+            _text, s_start, _s_end = str_hit
+            if pos_abs <= s_start < end_abs:
+                next_kind = "str"
+                next_abs = s_start
+
+        if tok_m is not None and tok_m.start() < next_abs:
+            next_kind = "tok"
+            next_abs = tok_m.start()
+
+        if next_kind is None:
+            break
+
+        if next_kind == "str":
+            text, s_start, s_end = str_hit
+            if first and not opened_this_line:
+                t_nl, t_col = nl_for_line, col_prefix_line
+            elif first:
+                t_nl, t_col = 0, ""
+            else:
+                t_nl, t_col = split_leading_gap(source, last_end, s_start)
+            first = False
+            _emit_scalar(tokens, text, t_nl, t_col, ctx, language_id)
+            last_end = s_end
+            pos_abs = s_end
+            continue
+
+        val = tok_m.group(0)
+        if not val.strip():
+            pos_abs = tok_m.end()
+            continue
+        abs_start = tok_m.start()
+        abs_end = tok_m.end()
+        if first and not opened_this_line:
+            t_nl, t_col = nl_for_line, col_prefix_line
+        elif first:
+            t_nl, t_col = 0, ""
+        else:
+            t_nl, t_col = split_leading_gap(source, last_end, abs_start)
+        first = False
+        kind = classify_code_token(val, context=ctx, language_id=language_id)
+        tokens.append(CodeToken(type=kind.value, value=val, nl=t_nl, col_prefix=t_col))
+        last_end = abs_end
+        pos_abs = abs_end
+
+    return first, line_last if last_end == line_last else last_end, last_end
 
 
 def tokenize_indent(source: str, language_id: str) -> TokenizeResult:
@@ -369,7 +553,7 @@ def tokenize_indent(source: str, language_id: str) -> TokenizeResult:
                     block="open",
                     nl=nl_for_line,
                     col_prefix=col_prefix_line,
-                    visual_style="indent",
+                    envelope=BlockEnvelope.INDENT,
                 )
             )
             indent_stack.append(indent)
@@ -377,7 +561,9 @@ def tokenize_indent(source: str, language_id: str) -> TokenizeResult:
             nl_for_line = 0
         else:
             while indent < indent_stack[-1]:
-                tokens.append(CodeToken(block="close", nl=0, visual_style="indent"))
+                tokens.append(
+                    CodeToken(block="close", nl=0, envelope=BlockEnvelope.INDENT, close_role=CloseRole.INDENT)
+                )
                 indent_stack.pop()
 
         content_start = line_start + len(raw_line) - len(trimmed)
@@ -403,23 +589,19 @@ def tokenize_indent(source: str, language_id: str) -> TokenizeResult:
 
         first = True
         line_last = content_start
-        for m in _TOKEN_CORE.finditer(code_part):
-            val = m.group(0)
-            if not val.strip():
-                continue
-            abs_start = content_start + m.start()
-            abs_end = content_start + m.end()
-            if first and not opened_this_line:
-                t_nl, t_col = nl_for_line, col_prefix_line
-            elif first:
-                t_nl, t_col = 0, ""
-            else:
-                t_nl, t_col = split_leading_gap(source, line_last, abs_start)
-            first = False
-            kind = classify_code_token(val, context=ctx, language_id=language_id)
-            tokens.append(CodeToken(type=kind.value, value=val, nl=t_nl, col_prefix=t_col))
-            line_last = abs_end
-            last_end = abs_end
+        first, line_last, last_end = _scan_indent_code_part(
+            source,
+            code_part,
+            content_start,
+            first=first,
+            opened_this_line=opened_this_line,
+            nl_for_line=nl_for_line,
+            col_prefix_line=col_prefix_line,
+            tokens=tokens,
+            ctx=ctx,
+            language_id=language_id,
+            line_last=line_last,
+        )
 
         if comment_text is not None:
             c_start = content_start + trimmed.index(comment_text)
@@ -433,7 +615,9 @@ def tokenize_indent(source: str, language_id: str) -> TokenizeResult:
             last_end = c_start + len(comment_text)
 
     while len(indent_stack) > 1:
-        tokens.append(CodeToken(block="close", nl=0, visual_style="indent"))
+        tokens.append(
+            CodeToken(block="close", nl=0, envelope=BlockEnvelope.INDENT, close_role=CloseRole.INDENT)
+        )
         indent_stack.pop()
 
     trailing = extract_trailing_whitespace(source, last_end)
@@ -486,7 +670,6 @@ def tokenize_html(source: str) -> TokenizeResult:
     )
     tokens: list[CodeToken] = []
     last = 0
-    pending_nl = 0
     trailing_buf = ""
     pos = 0
     n = len(source)
@@ -499,7 +682,6 @@ def tokenize_html(source: str) -> TokenizeResult:
                 trailing_buf += tail
             elif tail.strip():
                 nl, col_prefix = split_leading_gap(source, last, n)
-                nl += pending_nl
                 tokens.append(CodeToken(type=PointerKind.S.value, value=tail, nl=nl, col_prefix=col_prefix))
             last = n
             break
@@ -509,15 +691,10 @@ def tokenize_html(source: str) -> TokenizeResult:
         if raw.strip() == "":
             if m.end() >= n:
                 trailing_buf += raw
-            else:
-                pending_nl += raw.count("\n")
             pos = m.end()
-            last = m.end()
             continue
 
         nl, col_prefix = split_leading_gap(source, last, m.start())
-        nl += pending_nl
-        pending_nl = 0
         last = m.end()
         pos = m.end()
 
@@ -535,7 +712,9 @@ def tokenize_html(source: str) -> TokenizeResult:
                     value=close_text,
                     nl=nl,
                     col_prefix=col_prefix,
-                    visual_style="tag",
+                    envelope=BlockEnvelope.TAG,
+                    close_role=CloseRole.TAG,
+                    close_syntax=close_text,
                 )
             )
             continue
@@ -551,24 +730,39 @@ def tokenize_html(source: str) -> TokenizeResult:
                     open_syntax=name,
                     nl=0,
                     col_prefix="",
-                    visual_style="tag",
+                    envelope=BlockEnvelope.TAG,
                 )
             )
             tokens.append(
                 CodeToken(type=PointerKind.C.value, value=tag_text, nl=nl, col_prefix=col_prefix)
             )
             if self_close:
-                tokens.append(CodeToken(block="close", value="", nl=0, visual_style="tag"))
+                tokens.append(
+                    CodeToken(
+                        block="close",
+                        value="",
+                        nl=0,
+                        envelope=BlockEnvelope.TAG,
+                        close_role=CloseRole.TAG,
+                    )
+                )
                 continue
 
             raw_lang = _HTML_RAWTEXT.get(name.lower())
             if raw_lang is not None:
                 body_start = m.end()
                 close_m = _find_rawtext_close(source, body_start, name)
-                body = source[body_start:close_m.start()]
-                inner_trail = _merge_rawtext_body(tokens, body, raw_lang)
-                body_end = body_start + len(body) - len(inner_trail)
-                close_nl, close_col = split_leading_gap(source, body_end, close_m.start())
+                body = source[body_start : close_m.start()]
+                if body.strip():
+                    for t in reversed(tokens):
+                        if t.block == "open" and t.open_syntax and t.open_syntax.lower() == name.lower():
+                            t.meta["embedded_language"] = raw_lang
+                            break
+                    inner_trail = _merge_rawtext_body(tokens, body, raw_lang)
+                else:
+                    inner_trail = ""
+                close_nl, close_col = split_leading_gap(source, body_start + len(body), close_m.start())
+                close_nl += inner_trail.count("\n")
                 close_text = source[close_m.start() : close_m.end()]
                 tokens.append(
                     CodeToken(
@@ -576,7 +770,9 @@ def tokenize_html(source: str) -> TokenizeResult:
                         value=close_text,
                         nl=close_nl,
                         col_prefix=close_col,
-                        visual_style="tag",
+                        envelope=BlockEnvelope.TAG,
+                        close_role=CloseRole.TAG,
+                        close_syntax=close_text,
                     )
                 )
                 last = close_m.end()

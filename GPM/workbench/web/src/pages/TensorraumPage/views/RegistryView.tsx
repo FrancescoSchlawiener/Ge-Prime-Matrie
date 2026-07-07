@@ -14,7 +14,7 @@ export function RegistryView({ store }: RegistryViewProps) {
   if (!project) return null;
 
   const reg = project.root.header.registry;
-  const hasAny = (["S", "N", "D", "C"] as const).some((ty) => reg[ty].size > 0);
+  const hasAny = (["S", "N", "D", "C", "H"] as const).some((ty) => reg[ty].size > 0);
   const subview = store.registrySubview;
   const showRegistry = subview === "registry";
   const showTree = subview === "tree";

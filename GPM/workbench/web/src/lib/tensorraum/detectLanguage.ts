@@ -1,4 +1,4 @@
-import { IGNORED_SUFFIXES, SUPPORTED_LANGUAGES } from "./constants";
+import { fetchLanguages, getLanguagesCache, languageForExtension, languageSpecToConfig } from "../code/languages";
 import type { LanguageConfig } from "./types";
 
 export type FileDetection =
@@ -7,15 +7,16 @@ export type FileDetection =
   | { status: "unknown" };
 
 export function detectFileLanguage(filename: string): FileDetection {
-  const basename = filename.split(/[\\/]/).pop()?.toLowerCase() ?? "";
-  for (const suffix of IGNORED_SUFFIXES) {
-    if (basename.endsWith(suffix)) return { status: "ignored" };
-  }
-  if (!basename.includes(".")) return { status: "unknown" };
-  for (const lang of SUPPORTED_LANGUAGES) {
-    for (const ext of lang.ext) {
-      if (basename.endsWith(ext)) return { status: "ok", lang };
-    }
-  }
-  return { status: "unknown" };
+  const payload = getLanguagesCache();
+  if (!payload) return { status: "unknown" };
+  const lower = filename.toLowerCase();
+  if (payload.ignored_suffixes.some((s) => lower.endsWith(s))) return { status: "ignored" };
+  const spec = languageForExtension(filename, payload);
+  if (!spec) return { status: "unknown" };
+  return { status: "ok", lang: languageSpecToConfig(spec) };
+}
+
+/** Lädt Sprachkatalog von der API (einmalig gecacht). */
+export async function ensureLanguagesLoaded(): Promise<void> {
+  await fetchLanguages();
 }

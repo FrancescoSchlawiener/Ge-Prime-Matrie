@@ -32,6 +32,10 @@ class TestCodeHiRegistry(unittest.TestCase):
         self.assertEqual(len(reg.h_entries[0].segments), 2)
         self.assertGreater(len(reg.s_entries), 0)
         self.assertGreater(len(reg.n_entries), 0)
+        n_seg = next(s for s in reg.h_entries[0].segments if s.tag == "N")
+        self.assertEqual(n_seg.value, "123")
+        self.assertIsNotNone(n_seg.ptr_id)
+        self.assertEqual(reg.n_display(n_seg.ptr_id), "123")
 
     def test_verify_reversibility_with_h(self):
         reg = DocumentRegistry(profile=AlphabetProfile.OG)

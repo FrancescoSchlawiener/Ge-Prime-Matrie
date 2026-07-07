@@ -53,12 +53,16 @@ export function App() {
             }
           />
           <Route
-            path="tensorraum"
+            path="code"
             element={
               <Suspense fallback={<p className="gpm-empty">…</p>}>
                 <TensorraumPage />
               </Suspense>
             }
+          />
+          <Route
+            path="tensorraum"
+            element={<LegacyRedirect to="/code" />}
           />
           <Route path="datenbank" element={<DatenbankPage />} />
           <Route path="erklaerungen" element={<Navigate to="/erklaerungen/00-einstieg" replace />} />

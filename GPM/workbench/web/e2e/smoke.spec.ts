@@ -48,8 +48,8 @@ test("smoke: OG tabs codec → vergleichen → gpm compile", async ({ page }) =>
   ).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText(/Geometrische Matrix/i)).toBeVisible();
 
-  await page.goto("/#/tensorraum");
-  await expect(page.getByTestId("nav-tensorraum")).toBeVisible();
+  await page.goto("/#/code");
+  await expect(page.getByTestId("nav-code")).toBeVisible();
   await page.getByTestId("tensorraum-code-input").fill("function add(a,b){return a+b;}");
   await page.getByTestId("tensorraum-canonicalize").click();
   await expect(page.getByText(/Kanonisiert/i)).toBeVisible({ timeout: 10_000 });

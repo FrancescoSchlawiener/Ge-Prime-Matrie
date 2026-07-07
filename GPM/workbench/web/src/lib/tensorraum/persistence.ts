@@ -1,4 +1,4 @@
-import { processCode } from "./canonicalizer";
+import { processCode } from "../code";
 import { DEFAULT_WINDOW_SIZE } from "./constants";
 import { createProject } from "./project";
 import type { TensorraumProject } from "./types";

@@ -21,6 +21,7 @@ export interface SequenceChildItem {
   t: "CHILD";
   n: SpaceNode;
   nl: number;
+  colPrefix?: string;
   visualStyle?: string;
   openSyntax?: string | null;
 }
@@ -29,12 +30,15 @@ export interface SequencePointerItem {
   t: PointerType;
   p: string;
   nl: number;
+  colPrefix?: string;
+  bigint?: boolean;
 }
 
 export interface SequenceSysItem {
   t: "SYS";
   p: string;
   nl: number;
+  colPrefix?: string;
   closeSyntax?: string | null;
 }
 
@@ -45,6 +49,7 @@ export interface SpaceNode {
   children: SpaceNode[];
   sequence: SequenceItem[];
   visualStyle?: string;
+  openSyntax?: string;
 }
 
 export interface FileNode extends SpaceNode {
@@ -53,6 +58,8 @@ export interface FileNode extends SpaceNode {
   rawCodeOriginal: string;
   normalizedCode: string;
   roundtripOk?: boolean;
+  trailingWhitespace?: string;
+  reconstructed?: string;
 }
 
 export interface RegistryMaps {
@@ -72,6 +79,7 @@ export interface ProjectRoot {
     reverseRegistry: RegistryMaps;
     hSegments?: Map<string, Array<{ tag: string; value: string }>>;
     dRelation?: Map<string, { whole: number; den_reduced: number; ggt: number; display: string }>;
+    sSubstance?: Map<string, { substance: string; permIndex: string }>;
   };
 }
 
@@ -89,7 +97,7 @@ export interface ProcessCodeOptions {
   bypassFilter?: boolean;
 }
 
-export type ProcessCodeSkipReason = "ignored" | "unknown" | "language_disabled";
+export type ProcessCodeSkipReason = "ignored" | "unknown" | "language_disabled" | "embedded_language_disabled";
 
 export interface TokenBlock {
   block: "open" | "close";

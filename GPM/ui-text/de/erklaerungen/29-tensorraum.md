@@ -1,21 +1,23 @@
 ---
-title: Tensorraum
+title: Code-Werkzeug
 ---
 
-# Tensorraum — Kanonisierung, Registry und Projektvergleich
+# Code — Kanonisierung, Registry und Projektvergleich
 
-Der **Tensorraum** ist ein browser-seitiges Werkzeug zur **Kanonisierung von Quellcode**, zur **Registry-Visualisierung** und zum **Vergleich von Resonanzmustern** zwischen mehreren Projekten. Er ergänzt den GPM-Tab der Workbench: Dort liegt der Fokus auf Dokumenten, Gaps und `.gpm`-Export — im Tensorraum liegt der Fokus auf **Codebasen**, **Pointer-Registries** und **Vergleichs-Workflows**.
+Der **Code-Tab** (früher „Tensorraum“) ist ein Werkzeug zur **Kanonisierung von Quellcode**, zur **Registry-Visualisierung** und zum **Vergleich von Resonanzmustern** zwischen mehreren Projekten. Er ergänzt den GPM-Tab der Workbench: Dort liegt der Fokus auf Dokumenten, Gaps und `.gpm`-Export — im Code-Tab liegt der Fokus auf **Codebasen**, **Pointer-Registries** und **Vergleichs-Workflows**.
 
-## Tensorraum vs. GPM-Tab
+## Code vs. GPM-Tab
 
-| Aspekt | GPM-Tab | Tensorraum |
-|--------|---------|------------|
+| Aspekt | GPM-Tab | Code-Tab |
+|--------|---------|----------|
 | Eingabe | NL, Code, Hybrid als Dokument | Dateien, Ordner, interaktives Snippet |
 | Ziel | GPM-Binary, Roundtrip eines Dokuments | Registry-Atlas, Resonanz, Multi-Projekt-Vergleich |
 | Speicher | Session, Export `.gpm` | Browser-Ablage (Snapshots) + JSON-Import |
-| Server | Kompilierung über API | Phase 6: **rein client-seitig** |
+| Server | Kompilierung über API | **Kanonisierung über API** (`GPM/functions`) |
 
-Der Tensorraum ist bewusst ein **Vergleichs- und Resonanz-Werkzeug**, kein Single-Project-Editor: In der Sidebar können mehrere **Live-Projekte** parallel existieren.
+Die Kanonisierung läuft **library-first**: Tokenize, Block-Parse, Registry und Decompile kommen aus `GPM/functions`. Die Workbench-API (`POST /api/code/canonicalize`) liefert Wire, normalisierten Code und Rekonstruktion; der Browser dekodiert nur Wire und rendert UI.
+
+Der Code-Tab ist bewusst ein **Vergleichs- und Resonanz-Werkzeug**, kein Single-Project-Editor: In der Sidebar können mehrere **Live-Projekte** parallel existieren.
 
 ## Workspace — Code einlesen und kanonisieren
 
@@ -23,10 +25,10 @@ Im Tab **Workspace** wird Quellcode eingegeben oder per Drag&Drop geladen:
 
 1. **Snippet** in die Textarea schreiben und **Kanonisieren & speichern** wählen
 2. **Dateien** oder **Ordner** über die Sidebar laden (Sprache aus Dateiendung)
-3. **Sprachfilter** in der Sidebar: nur aktive Sprachen werden verarbeitet
+3. **Sprachfilter** in der Sidebar: Primary- und **eingebettete** Sprachen (z. B. JS/CSS in HTML) müssen aktiv sein
 4. Optionen: **Sprachübergreifend vergleichen**, **Nur Struktur** (Pointer-Typen ohne konkrete Substanz-Inhalte)
 
-Die Kanonisierung ruft intern `processCode` auf — dieselbe Pipeline wie beim Datei-Einlesen. Rohtext wird in eine **Sequenz von Pointer-Referenzen** übersetzt; Substanz-Werte landen in der **Root-Registry** (Header).
+Die Kanonisierung ruft `processCode` auf, das die API nutzt. Rohtext wird in eine **Sequenz von Pointer-Referenzen** übersetzt; Substanz-Werte landen in der **Root-Registry** (Header). HTML-Dateien mit `<script>`/`<style>` erzeugen **CHILD-Blöcke** mit jeweiligen Sprachregeln (fraktal).
 
 **Nicht gespeichert** in Snapshots: Pointer-IDs, Registry-Maps, Sequenz-IDs — diese werden beim Laden **deterministisch neu erzeugt** (OG-Invariante).
 
@@ -61,15 +63,15 @@ Der Tab **Resonanz** (intern Redundanz-Analyzer) sucht **wiederkehrende kanonisc
 **Fenster-Modi** (Sidebar):
 
 | Modus | Verhalten |
-|-------|---------|
+|-------|-----------|
 | Fest | Ein Fenster (z. B. 12 Token), 50 % Überlappung |
 | Adaptiv | Parallel [8, 12, 16, 20, 24, 28] Token |
 
-Jeder Treffer zeigt Vorkommen, Kettenlänge und optional eine **I-Kurve** (Perm-Verlauf). Server-seitiger Redundanz-Job in der Workbench: [Redundanz](/erklaerungen/22-redundanz) — der Tensorraum führt den Scan **lokal** im Browser aus.
+Jeder Treffer zeigt Vorkommen, Kettenlänge und optional eine **I-Kurve** (Perm-Verlauf). Server-seitiger Redundanz-Job in der Workbench: [Redundanz](/erklaerungen/22-redundanz) — der Code-Tab führt den Scan **lokal** im Browser aus.
 
 ## Round-Trip — Rekonstruktion prüfen
 
-Der Tab **Round-Trip** dekompiliert jede Datei zurück in Quelltext und vergleicht mit dem Original:
+Der Tab **Round-Trip** vergleicht Original mit der **API-Rekonstruktion** (`reconstructed` aus canonicalize):
 
 - **Original** vs. **Rekonstruiert** nebeneinander (mit Zeilennummern)
 - Metriken: Zeilen, Token, Tiefe, Round-Trip-Status
@@ -93,20 +95,25 @@ Der Tab **Ablage** speichert **Snapshots** im Browser (`localStorage`):
 
 **Laden überschreibt nie** das aktive Projekt — es wird immer ein **neues Live-Projekt** angelegt. JSON-Export/-Import dient als portabler Fallback, wenn die Browser-Ablage voll ist.
 
-## Architektur — client-only (Phase 6)
+## Architektur — GPM/functions-first
 
-In Phase 6 gibt es **keinen Tensorraum-API-Endpoint** und **keine OpenAPI-Erweiterung**:
+| Schicht | Rolle |
+|---------|--------|
+| `GPM/functions/analysis/code` | Tokenize, Block-Parse, Registry, Decompile, `language_manifest` |
+| `POST /api/code/canonicalize` | Wire, `normalized_code`, `reconstructed`, Manifest |
+| `GET /api/code/languages` | Sprachregister (kein paralleles TS-Register) |
+| `web/src/lib/code` | API-Client, Sprachfilter-Gate |
+| `web/src/lib/tensorraum` | Wire-Decode, Registry-UI, Resonanz, Ablage |
 
-- Kanonisierung, Registry, Resonanz, Decompiler und Ablage laufen vollständig in `web/src/lib/tensorraum/`
-- Snapshots in `localStorage` — funktioniert auf Render ohne persistentes Server-Dateisystem
-- **Große Repos** (Enterprise-Codebasen mit tausenden Dateien) sind für einen optionalen **Server-Job** vorgesehen (Worker + Objektspeicher) — bewusst nicht Teil von Phase 6
+Snapshots in `localStorage` — funktioniert auf Render ohne persistentes Server-Dateisystem. **Große Repos** (Enterprise-Codebasen mit tausenden Dateien) sind für einen optionalen **Server-Job** vorgesehen (Worker + Objektspeicher).
 
-Code-Blöcke und Block-Bäume in der Workbench: [Code-Blöcke](/erklaerungen/24-code-blocks).
+Code-Blöcke und Block-Bäume in der Workbench: [Code-Blöcke](/erklaerungen/24-code-blocks). Vertrag für fraktale CHILD-Regeln: `GPM/functions/docs/analyse/fractal-code-contract.md`.
 
 ## Typische Fehler
 
 - **Leere Registry** — zuerst im Workspace kanonisieren oder Dateien laden
 - **Sprache übersprungen** — Dateiendung passt nicht zum aktiven Sprachfilter
+- **Eingebettete Sprache deaktiviert** — HTML mit `<script>` braucht aktives `js` im Filter
 - **Ablage voll** — alte Snapshots löschen oder als JSON exportieren
 - **Gleicher Projektname nach Laden** — mehrere Live-Projekte können denselben Namen tragen; an `sourceSaveId`-Badge und Sidebar-Liste unterscheiden
 

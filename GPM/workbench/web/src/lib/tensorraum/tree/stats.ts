@@ -15,11 +15,20 @@ export interface TreeStats {
   maxDepth: number;
 }
 
-export function sequenceStats(node: { sequence?: SequenceItem[] }): SequenceTypeStats {
+export function sequenceStats(node: { sequence?: SequenceItem[]; children?: SpaceNode[] }): SequenceTypeStats {
   const stats: SequenceTypeStats = { S: 0, N: 0, D: 0, C: 0, CHILD: 0, SYS: 0 };
   const seq = node.sequence ?? [];
   for (const item of seq) {
     if (item.t in stats) stats[item.t as keyof SequenceTypeStats]++;
+  }
+  for (const child of node.children ?? []) {
+    const sub = sequenceStats(child);
+    stats.S += sub.S;
+    stats.N += sub.N;
+    stats.D += sub.D;
+    stats.C += sub.C;
+    stats.CHILD += sub.CHILD;
+    stats.SYS += sub.SYS;
   }
   return stats;
 }

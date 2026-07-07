@@ -1,4 +1,4 @@
-import { SUPPORTED_LANGUAGES } from "./constants";
+import { getLanguagesCache } from "../code/languages";
 import type { TensorraumProject } from "./types";
 
 export interface RegistryOverview {
@@ -19,7 +19,7 @@ function countSpaceNodes(node: { children?: { children?: unknown[] }[] }): numbe
   return c;
 }
 
-export function getRegistryOverview(project: TensorraumProject): RegistryOverview {
+export function getRegistryOverview(project: TensorraumProject, languageTotal?: number): RegistryOverview {
   const reg = project.root.header.registry;
   const total = (["S", "N", "D", "C", "H"] as const).reduce((sum, ty) => sum + reg[ty].size, 0);
   const spaces = project.root.children.reduce((sum, file) => sum + countSpaceNodes(file), 0);
@@ -28,6 +28,6 @@ export function getRegistryOverview(project: TensorraumProject): RegistryOvervie
     files: project.root.children.length,
     spaces,
     languages: project.activeLanguageIds.size,
-    languageTotal: SUPPORTED_LANGUAGES.length,
+    languageTotal: languageTotal ?? getLanguagesCache()?.languages.length ?? project.activeLanguageIds.size,
   };
 }
