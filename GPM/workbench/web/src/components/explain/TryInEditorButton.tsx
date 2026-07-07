@@ -13,7 +13,7 @@ export function TryInEditorButton({ demoText }: TryInEditorButtonProps) {
     <Button
       variant="ghost"
       onClick={() => {
-        saveGpmDraft(demoText);
+        saveGpmDraft({ text: demoText, exportName: "document" });
         navigate("/gpm");
       }}
     >

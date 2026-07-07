@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "validate:text": "node scripts/validate-ui-text.mjs",
-    "build": "npm run validate:text && tsc --noEmit && vite build",
+    "verify:gpm-utils": "node scripts/verify-gpm-utils.mjs",
+    "verify:tensorraum": "node scripts/verify-tensorraum-persistence.mjs",
+    "build": "npm run validate:text && npm run verify:gpm-utils && npm run verify:tensorraum && tsc --noEmit && vite build",
     "lint": "eslint src",
     "preview": "vite preview",
     "codegen": "openapi-typescript openapi.snapshot.json -o src/api/openapi-types.ts",

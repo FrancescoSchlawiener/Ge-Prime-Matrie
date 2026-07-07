@@ -75,6 +75,29 @@
         }
       }
     },
+    "/api/db/stats": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Db Stats",
+        "operationId": "db_stats_api_db_stats_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Db Stats Api Db Stats Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/calc/encode-word": {
       "post": {
         "tags": [
@@ -87,6 +110,47 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/EncodeWordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/calc/encode-batch": {
+      "post": {
+        "tags": [
+          "calc"
+        ],
+        "summary": "Encode Batch",
+        "operationId": "encode_batch_api_calc_encode_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EncodeBatchRequest"
               }
             }
           },
@@ -321,6 +385,47 @@
         }
       }
     },
+    "/api/editor/gpm/read/file": {
+      "post": {
+        "tags": [
+          "editor"
+        ],
+        "summary": "Gpm Read File",
+        "operationId": "gpm_read_file_api_editor_gpm_read_file_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_gpm_read_file_api_editor_gpm_read_file_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/editor/gpm/write": {
       "post": {
         "tags": [
@@ -333,6 +438,47 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/GpmWriteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/editor/gpm/search": {
+      "post": {
+        "tags": [
+          "editor"
+        ],
+        "summary": "Gpm Search",
+        "operationId": "gpm_search_api_editor_gpm_search_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GpmSearchRequest"
               }
             }
           },
@@ -415,6 +561,47 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/WordPairRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/compare/anagram-search": {
+      "post": {
+        "tags": [
+          "compare"
+        ],
+        "summary": "Anagram Search",
+        "operationId": "anagram_search_api_compare_anagram_search_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnagramSearchRequest"
               }
             }
           },
@@ -944,10 +1131,184 @@
           }
         }
       }
+    },
+    "/api/size/encode-word": {
+      "post": {
+        "tags": [
+          "size"
+        ],
+        "summary": "Size Encode Word",
+        "operationId": "size_encode_word_api_size_encode_word_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SizeEncodeWordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/size/encode-batch": {
+      "post": {
+        "tags": [
+          "size"
+        ],
+        "summary": "Size Encode Batch",
+        "operationId": "size_encode_batch_api_size_encode_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SizeEncodeBatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/size/decode": {
+      "post": {
+        "tags": [
+          "size"
+        ],
+        "summary": "Size Decode",
+        "operationId": "size_decode_api_size_decode_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SizeDecodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkbenchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AnagramSearchRequest": {
+        "properties": {
+          "word": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Word"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "og"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "default": 100
+          }
+        },
+        "type": "object",
+        "required": [
+          "word"
+        ],
+        "title": "AnagramSearchRequest"
+      },
+      "Body_gpm_read_file_api_editor_gpm_read_file_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          },
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_gpm_read_file_api_editor_gpm_read_file_post"
+      },
       "CipherEncryptRequest": {
         "properties": {
           "text": {
@@ -1287,6 +1648,27 @@
         "title": "DocumentRefPayload",
         "description": "Inline document for compare without prior compile session."
       },
+      "EncodeBatchRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "default": ""
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "og"
+          },
+          "include_steps": {
+            "type": "boolean",
+            "title": "Include Steps",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "EncodeBatchRequest"
+      },
       "EncodeWordRequest": {
         "properties": {
           "word": {
@@ -1316,8 +1698,18 @@
           "base64": {
             "type": "string",
             "minLength": 4,
-            "contentMediaType": "application/octet-stream",
             "title": "Base64"
+          },
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key"
           }
         },
         "type": "object",
@@ -1325,6 +1717,41 @@
           "base64"
         ],
         "title": "GpmReadRequest"
+      },
+      "GpmSearchRequest": {
+        "properties": {
+          "document_ref": {
+            "type": "string",
+            "title": "Document Ref"
+          },
+          "query": {
+            "type": "string",
+            "title": "Query",
+            "default": ""
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "word",
+              "gcd",
+              "lcm"
+            ],
+            "title": "Mode",
+            "default": "word"
+          },
+          "queries": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Queries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_ref"
+        ],
+        "title": "GpmSearchRequest"
       },
       "GpmWriteRequest": {
         "properties": {
@@ -1614,6 +2041,137 @@
         ],
         "title": "RedundancyScanRequest"
       },
+      "SizeDecodeFallback": {
+        "properties": {
+          "substance": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Substance"
+          },
+          "perm_index": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Perm Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "substance",
+          "perm_index"
+        ],
+        "title": "SizeDecodeFallback"
+      },
+      "SizeDecodeRequest": {
+        "properties": {
+          "content_hash": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 64,
+            "title": "Content Hash"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "og"
+          },
+          "fallback": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SizeDecodeFallback"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "content_hash"
+        ],
+        "title": "SizeDecodeRequest"
+      },
+      "SizeEncodeBatchRequest": {
+        "properties": {
+          "word_hashes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Word Hashes"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "og"
+          }
+        },
+        "type": "object",
+        "required": [
+          "word_hashes"
+        ],
+        "title": "SizeEncodeBatchRequest"
+      },
+      "SizeEncodeWordRequest": {
+        "properties": {
+          "content_hash": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 64,
+            "title": "Content Hash"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "og"
+          },
+          "fallback": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SizeWordFallback"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "content_hash"
+        ],
+        "title": "SizeEncodeWordRequest"
+      },
+      "SizeWordFallback": {
+        "properties": {
+          "original": {
+            "type": "string",
+            "title": "Original",
+            "default": ""
+          },
+          "normalized": {
+            "type": "string",
+            "title": "Normalized",
+            "default": ""
+          },
+          "substance": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Substance",
+            "default": 1
+          },
+          "perm_index": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Perm Index",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "title": "SizeWordFallback"
+      },
       "SpectroscopeRequest": {
         "properties": {
           "document_ref": {
@@ -1664,6 +2222,13 @@
             "type": "string",
             "title": "Detail"
           },
+          "lines": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Lines"
+          },
           "values": {
             "additionalProperties": {
               "anyOf": [
@@ -1691,6 +2256,17 @@
               }
             ],
             "title": "Formula"
+          },
+          "extra": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extra"
           }
         },
         "type": "object",

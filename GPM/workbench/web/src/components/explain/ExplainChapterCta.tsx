@@ -26,7 +26,7 @@ export function ExplainChapterCta({ cta }: ExplainChapterCtaProps) {
         <Button
           variant="ghost"
           onClick={() => {
-            if (cta.demoText) saveGpmDraft(cta.demoText);
+            if (cta.demoText) saveGpmDraft({ text: cta.demoText, exportName: "document" });
             navigate("/gpm");
           }}
         >
@@ -41,6 +41,16 @@ export function ExplainChapterCta({ cta }: ExplainChapterCtaProps) {
       <div className="gpm-explain-cta">
         <Button variant="ghost" onClick={() => navigate("/vergleichen/ikurve")}>
           {t("explain.cta.openICurve")}
+        </Button>
+      </div>
+    );
+  }
+
+  if (cta.type === "tensorraum") {
+    return (
+      <div className="gpm-explain-cta">
+        <Button variant="ghost" onClick={() => navigate("/tensorraum")}>
+          {t("explain.cta.openTensorraum")}
         </Button>
       </div>
     );

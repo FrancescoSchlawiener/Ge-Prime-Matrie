@@ -7,14 +7,16 @@ interface UseGpmCipherOptions {
   loading: boolean;
   setError: (msg: string | null) => void;
   readGpmBase64: (base64: string, key?: string) => Promise<{ needsCipher: true; base64: string } | { needsCipher: false }>;
+  readGpmFile: (file: File, key?: string) => Promise<{ needsCipher: true; file: File } | { needsCipher: false }>;
 }
 
-export function useGpmCipher({ text, loading, setError, readGpmBase64 }: UseGpmCipherOptions) {
+export function useGpmCipher({ text, loading, setError, readGpmBase64, readGpmFile }: UseGpmCipherOptions) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<CipherDialogMode>("encrypt");
   const [cipherMode, setCipherMode] = useState<CipherMode>("word");
   const [key, setKey] = useState("");
   const [pendingBlob, setPendingBlob] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [cipherOut, setCipherOut] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -28,6 +30,16 @@ export function useGpmCipher({ text, loading, setError, readGpmBase64 }: UseGpmC
   function openDecrypt(base64: string) {
     setMode("decrypt");
     setPendingBlob(base64);
+    setPendingFile(null);
+    setCipherOut(null);
+    setError(null);
+    setOpen(true);
+  }
+
+  function openDecryptFile(file: File) {
+    setMode("decrypt");
+    setPendingFile(file);
+    setPendingBlob(null);
     setCipherOut(null);
     setError(null);
     setOpen(true);
@@ -36,6 +48,7 @@ export function useGpmCipher({ text, loading, setError, readGpmBase64 }: UseGpmC
   function close() {
     setOpen(false);
     setPendingBlob(null);
+    setPendingFile(null);
     setCipherOut(null);
   }
 
@@ -44,7 +57,10 @@ export function useGpmCipher({ text, loading, setError, readGpmBase64 }: UseGpmC
     setBusy(true);
     setError(null);
     try {
-      if (mode === "decrypt" && pendingBlob) {
+      if (mode === "decrypt" && pendingFile) {
+        const result = await readGpmFile(pendingFile, key);
+        if (!result.needsCipher) close();
+      } else if (mode === "decrypt" && pendingBlob) {
         const result = await readGpmBase64(pendingBlob, key);
         if (!result.needsCipher) close();
       } else {
@@ -71,6 +87,7 @@ export function useGpmCipher({ text, loading, setError, readGpmBase64 }: UseGpmC
     setKey,
     openEncrypt,
     openDecrypt,
+    openDecryptFile,
     close,
     submit,
   };

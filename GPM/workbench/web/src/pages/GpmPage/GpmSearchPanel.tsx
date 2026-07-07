@@ -3,6 +3,7 @@ import { api } from "../../api/client";
 import { t } from "../../i18n/t";
 import { Button, Input, SegmentToggle } from "../../components/ui";
 import { formatBigInt } from "../../utils/format";
+import { formatSiPair } from "../../utils/formatSi";
 
 type SearchMode = "word" | "gcd" | "lcm";
 
@@ -75,6 +76,7 @@ export function GpmSearchPanel({ documentRef }: GpmSearchPanelProps) {
 function SearchResult({ mode, result }: { mode: SearchMode; result: Record<string, unknown> }) {
   if (mode === "word") {
     const positions = (result.positions as Array<Record<string, unknown>>) ?? [];
+
     return (
       <div className="gpm-table-wrap" style={{ marginTop: "1rem" }}>
         <p className="gpm-metric__hint">
@@ -84,16 +86,18 @@ function SearchResult({ mode, result }: { mode: SearchMode; result: Record<strin
           <thead>
             <tr>
               <th>{t("gpm.tables.position")}</th>
-              <th>word_id</th>
-              <th>I</th>
+              <th>{t("gpm.tables.word")}</th>
+              <th>{t("gpm.tables.siPair")}</th>
             </tr>
           </thead>
           <tbody>
             {positions.slice(0, 30).map((p, i) => (
               <tr key={i}>
                 <td>{String(p.position)}</td>
-                <td>{String(p.word_id)}</td>
-                <td className="mono">{String(p.perm_index)}</td>
+                <td>{String(p.word_normalized ?? p.word ?? "—")}</td>
+                <td className="mono">
+                  {formatSiPair(Number(p.substance ?? 0), Number(p.perm_index ?? 0))}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -105,23 +109,24 @@ function SearchResult({ mode, result }: { mode: SearchMode; result: Record<strin
   const matches = (result.matches as Array<Record<string, unknown>>) ?? [];
   return (
     <div className="gpm-table-wrap" style={{ marginTop: "1rem" }}>
+      <p className="gpm-metric__hint">{t("gpm.searchPanel.genomeOnlyHint")}</p>
       <p className="gpm-metric__hint">
-        {formatBigInt(Number(result.unique_words ?? matches.length))} {t("gpm.searchMatches")}
+        {formatBigInt(Number(result.unique_words ?? matches.length))} {t("gpm.searchHits")}
       </p>
       <table className="gpm-table">
         <thead>
           <tr>
             <th>{t("gpm.tables.word")}</th>
-            <th>S</th>
-            {mode === "gcd" ? <th>ggT</th> : null}
+            <th>{t("gpm.tables.substance")}</th>
+            {mode === "gcd" ? <th>{t("gpm.tables.gcd")}</th> : null}
           </tr>
         </thead>
         <tbody>
           {matches.slice(0, 30).map((m, i) => (
             <tr key={i}>
               <td>{String(m.normalized ?? m.original ?? "—")}</td>
-              <td className="mono">{String(m.substance ?? "—")}</td>
-              {mode === "gcd" ? <td className="mono">{String(m.gcd_value ?? "—")}</td> : null}
+              <td className="mono">{formatBigInt(Number(m.substance ?? 0))}</td>
+              {mode === "gcd" ? <td className="mono">{formatBigInt(Number(m.gcd_value ?? 0))}</td> : null}
             </tr>
           ))}
         </tbody>

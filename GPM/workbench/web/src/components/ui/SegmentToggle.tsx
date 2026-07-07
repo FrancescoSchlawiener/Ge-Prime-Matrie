@@ -1,6 +1,7 @@
 interface SegmentOption<T extends string> {
   value: T;
   label: string;
+  testId?: string;
 }
 
 interface SegmentToggleProps<T extends string> {
@@ -8,6 +9,7 @@ interface SegmentToggleProps<T extends string> {
   value: T;
   options: SegmentOption<T>[];
   onChange: (value: T) => void;
+  disabled?: boolean;
   "aria-label"?: string;
 }
 
@@ -16,12 +18,13 @@ export function SegmentToggle<T extends string>({
   value,
   options,
   onChange,
+  disabled = false,
   "aria-label": ariaLabel,
 }: SegmentToggleProps<T>) {
   return (
-    <fieldset className="gpm-segment" role="radiogroup" aria-label={ariaLabel}>
+    <fieldset className="gpm-segment" role="radiogroup" aria-label={ariaLabel} disabled={disabled}>
       {options.map((opt) => (
-        <label key={opt.value} className="gpm-segment__option">
+        <label key={opt.value} className="gpm-segment__option" data-testid={opt.testId}>
           <input
             type="radio"
             name={name}

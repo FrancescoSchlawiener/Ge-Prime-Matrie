@@ -15,7 +15,7 @@ export {
 } from "@gpm/ui-text/articles";
 
 const rawModules = import.meta.glob(
-  "../../../../ui-text/content/erklaerungen/*.md",
+  "../../../../ui-text/de/erklaerungen/*.md",
   { query: "?raw", import: "default", eager: true },
 ) as Record<string, string>;
 

@@ -45,6 +45,15 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export async function uploadRequest<T>(path: string, form: FormData): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, { method: "POST", body: form });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({ detail: res.statusText }))) as WorkbenchErrorBody;
+    throw parseError(err);
+  }
+  return res.json() as Promise<T>;
+}
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export async function pollJob(jobId: string, onProgress?: (rec: JobRecord) => void): Promise<JobRecord> {

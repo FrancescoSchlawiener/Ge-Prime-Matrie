@@ -41,10 +41,13 @@ def search_by_word(document: GpmDocument, query: str) -> dict:
         if entry.substance == query_substance
     ]
     word_ids = {entry["word_id"] for entry in header_hits}
+    header = document.header
     positions = [
         {
             "position": idx,
-            "word_id": token.word_id,
+            "word": header[token.word_id].word_canonical,
+            "word_normalized": header[token.word_id].word_normalized,
+            "substance": header[token.word_id].substance,
             "perm_index": token.perm_index,
         }
         for idx, token in enumerate(document.tokens)

@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { api } from "../../../api/client";
 import type { CurveMeta } from "../../../api/gpm-api";
 import type { TokenSelection } from "../../../components/result/ikurve/GeometricMatrix";
 import { expandSpectroMatches, mergeSpectroMatches } from "../../../lib/ikurve/spectro";
 import type { SpectroMatch } from "../../../lib/ikurve/spectro";
 import type {
+  ChartLayout,
   ChartScale,
   IcurveMode,
   IngestSourceMode,
@@ -28,18 +29,35 @@ export function useICurveAnalysis() {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [curveMeta, setCurveMeta] = useState<CurveMeta | null>(null);
-  const [openZone, setOpenZone] = useState<string | null>("structure");
-  const [mode, setMode] = useState<IcurveMode>("semantic");
-  const [depth, setDepth] = useState<SemanticDepth | StructuralDepth>("sentence");
-  const [chartScale, setChartScale] = useState<ChartScale>("union");
+  const [mode, setModeState] = useState<IcurveMode>("atomic");
+  const [depth, setDepthState] = useState<SemanticDepth | StructuralDepth>("sentence");
+  const [chartScale, setChartScaleState] = useState<ChartScale>("union");
+  const [chartLayout, setChartLayoutState] = useState<ChartLayout>("overlay");
   const [selA, setSelA] = useState<TokenSelection | null>(null);
   const [selB, setSelB] = useState<TokenSelection | null>(null);
   const [spectroA, setSpectroA] = useState<SpectroMatch[]>([]);
   const [spectroB, setSpectroB] = useState<SpectroMatch[]>([]);
+  const [spectroLoading, setSpectroLoading] = useState(false);
 
   useEffect(() => {
     if (presetA) setTextA(presetA);
   }, [presetA]);
+
+  function setMode(mode: IcurveMode) {
+    startTransition(() => setModeState(mode));
+  }
+
+  function setDepth(depth: SemanticDepth | StructuralDepth) {
+    startTransition(() => setDepthState(depth));
+  }
+
+  function setChartScale(scale: ChartScale) {
+    startTransition(() => setChartScaleState(scale));
+  }
+
+  function setChartLayout(layout: ChartLayout) {
+    startTransition(() => setChartLayoutState(layout));
+  }
 
   async function analyze() {
     if (!textA.trim() || !textB.trim()) return;
@@ -60,6 +78,9 @@ export function useICurveAnalysis() {
       setData(resp.result as Record<string, unknown>);
       setCurveMeta(resp.curve_meta ?? null);
       setLocked(true);
+      requestAnimationFrame(() => {
+        document.getElementById("ikurve-results")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -84,17 +105,24 @@ export function useICurveAnalysis() {
     const sel = side === "a" ? selA : selB;
     const viewport = side === "a" ? data?.viewport_a : data?.viewport_b;
     if (!ref || !sel) return;
-    const tokenEnd = sel.token_start + sel.token_count - 1;
-    const resp = await api.spectroscope(ref, sel.token_start, tokenEnd);
-    const result = resp.result as Record<string, unknown>;
-    const matches = expandSpectroMatches(
-      (result.matches as SpectroMatch[]) ?? [],
-      ((viewport as { token_char_map?: SpectroMatch[] })?.token_char_map ?? []) as never,
-    );
-    const merged = mergeSpectroMatches(matches);
-    if (side === "a") setSpectroA(merged);
-    else setSpectroB(merged);
+    setSpectroLoading(true);
+    try {
+      const tokenEnd = sel.token_start + sel.token_count - 1;
+      const resp = await api.spectroscope(ref, sel.token_start, tokenEnd);
+      const result = resp.result as Record<string, unknown>;
+      const matches = expandSpectroMatches(
+        (result.matches as SpectroMatch[]) ?? [],
+        ((viewport as { token_char_map?: SpectroMatch[] })?.token_char_map ?? []) as never,
+      );
+      const merged = mergeSpectroMatches(matches);
+      if (side === "a") setSpectroA(merged);
+      else setSpectroB(merged);
+    } finally {
+      setSpectroLoading(false);
+    }
   }
+
+  const busy = loading || spectroLoading;
 
   return {
     textA,
@@ -111,17 +139,19 @@ export function useICurveAnalysis() {
     setGpmNameB,
     locked,
     loading,
+    busy,
+    spectroLoading,
     error,
     data,
     curveMeta,
-    openZone,
-    setOpenZone,
     mode,
     setMode,
     depth,
     setDepth,
     chartScale,
     setChartScale,
+    chartLayout,
+    setChartLayout,
     docRefA,
     docRefB,
     selA,

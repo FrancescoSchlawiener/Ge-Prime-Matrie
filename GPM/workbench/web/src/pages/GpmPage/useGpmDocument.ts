@@ -1,59 +1,76 @@
 import { useEffect, useState } from "react";
 import { api, WorkbenchError } from "../../api/client";
 import { t } from "../../i18n/t";
-import { arrayBufferToBase64, base64ToUint8Array, bytesStartWithMagic } from "../../utils/binaryBase64";
+import { base64ToUint8Array, bytesStartWithMagic } from "../../utils/binaryBase64";
+import { normalizeGpmFilename } from "../../utils/gpmFilename";
+import { basenameWithoutExtension, ingestGpmOrTextFile } from "../../utils/gpmIngest";
+import type { GpmDraft } from "../../utils/sessionBridge";
 
 export type CipherMode = "word" | "prime" | "si" | "hardcore";
 export type CipherDialogMode = "encrypt" | "decrypt";
 
 const GPM_MIN_BYTES = 12;
 
-export function useGpmDocument(initialText = "") {
-  const [text, setText] = useState(initialText);
+export function useGpmDocument(initialDraft: GpmDraft) {
+  const [text, setText] = useState(initialDraft.text);
+  const [exportName, setExportName] = useState(initialDraft.exportName);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [documentRef, setDocumentRef] = useState<string | null>(null);
   const [stats, setStats] = useState<Record<string, unknown> | null>(null);
-  const [reconstructed, setReconstructed] = useState<string | null>(null);
-  const [fileName, setFileName] = useState<string | null>(null);
+  const [cachedGpmBase64, setCachedGpmBase64] = useState<string | null>(null);
 
-  async function applyReadResult(r: Record<string, unknown>) {
+  function cacheFromBase64(b64: string) {
+    if (!b64) {
+      throw new WorkbenchError("gpm_invalid_stream", t("feedback.errors.gpm_invalid_stream"));
+    }
+    const bytes = base64ToUint8Array(b64);
+    if (bytes.length < GPM_MIN_BYTES || !bytesStartWithMagic(bytes, "GPM")) {
+      throw new WorkbenchError("gpm_invalid_stream", t("feedback.errors.gpm_invalid_stream"));
+    }
+    setCachedGpmBase64(b64);
+  }
+
+  function applyReadResult(r: Record<string, unknown>) {
     const ref = String(r.document_ref ?? "");
     if (ref) setDocumentRef(ref);
+    else setDocumentRef(null);
     if (Object.keys(r).length > 1 || ref) setStats(r);
-    let reconstructedText = String(r.reconstructed_text ?? "");
-    if (!reconstructedText && ref) {
-      try {
-        const resp = await api.reconstruct(ref, "nl");
-        reconstructedText = String((resp.result as { text?: string }).text ?? "");
-      } catch {
-        /* reconstruct optional fallback */
-      }
-    }
+    else setStats(null);
+
+    const reconstructedText = String(r.reconstructed_text ?? "");
     if (reconstructedText) setText(reconstructedText);
+
+    const b64 = String(r.base64 ?? "");
+    if (b64) cacheFromBase64(b64);
+  }
+
+  function resetTextIngestState(nextText: string, file: File) {
+    setText(nextText);
+    setDocumentRef(null);
+    setStats(null);
+    setCachedGpmBase64(null);
+    setExportName(basenameWithoutExtension(file.name));
+    setError(null);
+  }
+
+  async function cacheGpmExport(ref: string) {
+    const resp = await api.gpmWrite(ref, "og");
+    const b64 = String((resp.result as { base64?: string }).base64 ?? "");
+    cacheFromBase64(b64);
   }
 
   async function compile() {
     setLoading(true);
     setError(null);
     setStats(null);
-    setReconstructed(null);
+    setCachedGpmBase64(null);
     try {
       const resp = await api.compile("nl", text, "og");
-      await applyReadResult(resp.result as Record<string, unknown>);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function reconstruct() {
-    if (!documentRef) return;
-    setLoading(true);
-    try {
-      const resp = await api.reconstruct(documentRef, "nl");
-      setReconstructed(String((resp.result as { text?: string }).text ?? ""));
+      const result = resp.result as Record<string, unknown>;
+      applyReadResult(result);
+      const ref = String(result.document_ref ?? "");
+      if (ref) await cacheGpmExport(ref);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -69,7 +86,7 @@ export function useGpmDocument(initialText = "") {
     setError(null);
     try {
       const resp = await api.gpmRead(base64, key);
-      await applyReadResult(resp.result as Record<string, unknown>);
+      applyReadResult(resp.result as Record<string, unknown>);
       return { needsCipher: false };
     } catch (err) {
       if (err instanceof WorkbenchError && err.code === "cipher_key_required" && !key) {
@@ -82,77 +99,101 @@ export function useGpmDocument(initialText = "") {
     }
   }
 
-  async function loadFile(file: File): Promise<{ needsCipher: true; base64: string } | { needsCipher: false }> {
-    const buf = await file.arrayBuffer();
-    const bytes = new Uint8Array(buf);
-    if (!bytesStartWithMagic(bytes, "GPM") && !bytesStartWithMagic(bytes, "GPC")) {
-      setError(t("feedback.errors.gpm_invalid_stream"));
-      return { needsCipher: false };
-    }
-    const base64 = arrayBufferToBase64(buf);
-    setFileName(file.name);
-    return readGpmBase64(base64);
-  }
-
-  async function downloadGpm() {
-    if (!documentRef) return;
+  async function readGpmFile(
+    file: File,
+    key?: string,
+  ): Promise<{ needsCipher: true; file: File } | { needsCipher: false }> {
     setLoading(true);
+    setError(null);
     try {
-      const resp = await api.gpmWrite(documentRef, "og");
-      const b64 = String((resp.result as { base64?: string }).base64 ?? "");
-      if (!b64) {
-        setError(t("feedback.errors.gpm_invalid_stream"));
-        return;
-      }
-      const bytes = base64ToUint8Array(b64);
-      if (bytes.length < GPM_MIN_BYTES || !bytesStartWithMagic(bytes, "GPM")) {
-        setError(t("feedback.errors.gpm_invalid_stream"));
-        return;
-      }
-      const blob = new Blob([Uint8Array.from(bytes)], { type: "application/octet-stream" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fileName?.endsWith(".gpm") ? fileName : "document.gpm";
-      a.click();
-      URL.revokeObjectURL(url);
+      const resp = await api.gpmReadFile(file, key);
+      applyReadResult(resp.result as Record<string, unknown>);
+      setExportName(basenameWithoutExtension(file.name));
+      return { needsCipher: false };
     } catch (err) {
+      if (err instanceof WorkbenchError && err.code === "cipher_key_required" && !key) {
+        return { needsCipher: true, file };
+      }
       setError(err instanceof Error ? err.message : String(err));
+      return { needsCipher: false };
     } finally {
       setLoading(false);
     }
+  }
+
+  async function ingestFile(
+    file: File,
+    key?: string,
+  ): Promise<{ needsCipher: true; file: File } | { needsCipher: false }> {
+    setLoading(true);
+    setError(null);
+    try {
+      const ingested = await ingestGpmOrTextFile(file, key);
+      if (ingested.kind === "text") {
+        resetTextIngestState(ingested.text, file);
+        return { needsCipher: false };
+      }
+      applyReadResult(ingested.result);
+      setExportName(basenameWithoutExtension(file.name));
+      return { needsCipher: false };
+    } catch (err) {
+      if (err instanceof WorkbenchError && err.code === "cipher_key_required" && !key) {
+        return { needsCipher: true, file };
+      }
+      setError(err instanceof Error ? err.message : String(err));
+      return { needsCipher: false };
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function downloadGpm(suffix: ".gpm" | ".gpc" = ".gpm") {
+    if (!cachedGpmBase64) return;
+    const bytes = base64ToUint8Array(cachedGpmBase64);
+    if (bytes.length < GPM_MIN_BYTES || !bytesStartWithMagic(bytes, "GPM")) {
+      setError(t("feedback.errors.gpm_invalid_stream"));
+      return;
+    }
+    const blob = new Blob([Uint8Array.from(bytes)], { type: "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = normalizeGpmFilename(exportName, suffix);
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function clearDocument() {
     setText("");
     setDocumentRef(null);
     setStats(null);
-    setReconstructed(null);
-    setFileName(null);
+    setExportName("document");
+    setCachedGpmBase64(null);
     setError(null);
   }
 
   return {
     text,
     setText,
+    exportName,
+    setExportName,
     loading,
     error,
     setError,
     documentRef,
     stats,
-    reconstructed,
-    fileName,
+    cachedGpmBase64,
     compile,
-    reconstruct,
-    loadFile,
+    ingestFile,
     readGpmBase64,
+    readGpmFile,
     downloadGpm,
     clearDocument,
   };
 }
 
-export function useGpmDraftPersistence(text: string, saveDraft: (text: string) => void) {
+export function useGpmDraftPersistence(draft: GpmDraft, saveDraft: (draft: GpmDraft) => void) {
   useEffect(() => {
-    saveDraft(text);
-  }, [text, saveDraft]);
+    saveDraft(draft);
+  }, [draft, saveDraft]);
 }

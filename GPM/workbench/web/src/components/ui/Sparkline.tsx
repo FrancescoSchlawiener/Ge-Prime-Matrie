@@ -1,4 +1,5 @@
-export type ChartScale = "union" | "shorter";
+import type { ChartScale } from "../../lib/ikurve/curves";
+import { scaleBoundsY } from "../../lib/ikurve/chartLayout";
 
 interface CurvePoint {
   i_ratio?: number;
@@ -11,22 +12,15 @@ interface SparklineProps {
   labelA?: string;
   labelB?: string;
   chartScale?: ChartScale;
+  valueKey?: string;
+  indexKey?: string;
   ariaLabel?: string;
   emptyLabel?: string;
 }
 
-function scaleBounds(curveA: CurvePoint[], curveB: CurvePoint[], chartScale: ChartScale) {
-  const valsA = curveA.map((p) => p.i_ratio ?? 0);
-  const valsB = curveB.map((p) => p.i_ratio ?? 0);
-  if (chartScale === "shorter") {
-    const ref = valsA.length <= valsB.length ? valsA : valsB;
-    if (!ref.length) return { min: 0, max: 1 };
-    return { min: Math.min(...ref), max: Math.max(...ref) };
-  }
-  const all = [...valsA, ...valsB];
-  if (!all.length) return { min: 0, max: 1 };
-  return { min: Math.min(...all), max: Math.max(...all) };
-}
+const VIEW_W = 640;
+const VIEW_H = 120;
+const PAD = 8;
 
 export function Sparkline({
   curveA,
@@ -34,22 +28,30 @@ export function Sparkline({
   labelA = "A",
   labelB = "B",
   chartScale = "union",
+  valueKey = "i_ratio",
+  indexKey = "position",
   ariaLabel,
   emptyLabel = "",
 }: SparklineProps) {
-  const w = 640;
-  const h = 120;
-  const pad = 8;
-  const { min, max } = scaleBounds(curveA, curveB, chartScale);
+  const valsA = curveA.map((p) => Number(p.i_ratio ?? 0));
+  const valsB = curveB.map((p) => Number(p.i_ratio ?? 0));
+  const { min, max } = scaleBoundsY(valsA, valsB, chartScale);
   const span = max - min || 1;
 
+  const maxIndex = Math.max(
+    curveA.reduce((m, p, i) => Math.max(m, Number(p.position ?? i)), 0),
+    curveB.reduce((m, p, i) => Math.max(m, Number(p.position ?? i)), 0),
+    1,
+  );
+
   function pathFor(points: CurvePoint[]): string {
-    const vals = points.map((p) => p.i_ratio ?? 0);
-    if (!vals.length) return "";
-    return vals
-      .map((v, i) => {
-        const x = pad + (i / Math.max(vals.length - 1, 1)) * (w - pad * 2);
-        const y = h - pad - ((v - min) / span) * (h - pad * 2);
+    if (!points.length) return "";
+    return points
+      .map((p, i) => {
+        const idx = Number(p[indexKey as keyof CurvePoint] ?? p.position ?? i);
+        const val = Number(p[valueKey as keyof CurvePoint] ?? p.i_ratio ?? 0);
+        const x = PAD + (idx / maxIndex) * (VIEW_W - PAD * 2);
+        const y = VIEW_H - PAD - ((val - min) / span) * (VIEW_H - PAD * 2);
         return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
       })
       .join(" ");
@@ -63,8 +65,8 @@ export function Sparkline({
   }
 
   return (
-    <figure>
-      <svg className="gpm-sparkline" viewBox={`0 0 ${w} ${h}`} role="img" aria-label={ariaLabel ?? `${labelA} ${labelB}`}>
+    <figure className="gpm-sparkline-figure">
+      <svg className="gpm-sparkline" viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} role="img" aria-label={ariaLabel ?? `${labelA} ${labelB}`}>
         {pathA ? <path className="gpm-sparkline__line gpm-sparkline__line--a" d={pathA} /> : null}
         {pathB ? <path className="gpm-sparkline__line gpm-sparkline__line--b" d={pathB} /> : null}
       </svg>

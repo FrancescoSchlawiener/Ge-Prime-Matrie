@@ -1,43 +1,41 @@
 import { t } from "../../i18n/t";
+import { formatBigInt } from "../../utils/format";
+import { formatSiPair } from "../../utils/formatSi";
 
 interface CompileResultTablesProps {
   stats: Record<string, unknown>;
-  segment?: "registry" | "tokens";
+  segment?: "genome" | "geometry";
 }
 
 export function CompileResultTables({ stats, segment }: CompileResultTablesProps) {
-  const tokens = (stats.tokens as Array<Record<string, unknown>>) ?? [];
-  const header = (stats.header as Array<Record<string, unknown>>) ?? [];
-  const registry = (stats.registry_entries as Array<Record<string, unknown>>) ?? [];
-  const wordRows = header.length ? header : registry;
+  const genomePreview = (stats.genome_preview as Array<Record<string, unknown>>) ?? [];
+  const geometryPreview = (stats.geometry_preview as Array<Record<string, unknown>>) ?? [];
 
-  const showRegistry = segment !== "tokens" && wordRows.length;
-  const showTokens = segment !== "registry" && tokens.length;
+  const showGenome = segment !== "geometry" && genomePreview.length > 0;
+  const showGeometry = segment !== "genome" && geometryPreview.length > 0;
 
-  if (!showRegistry && !showTokens) return null;
+  if (!showGenome && !showGeometry) return null;
 
   return (
     <div>
-      {showRegistry ? (
+      {showGenome ? (
         <>
-          <h4 className="gpm-card__subtitle">{t("gpm.tables.header")}</h4>
+          <h4 className="gpm-card__subtitle">{t("gpm.tables.genome")}</h4>
           <div className="gpm-table-wrap">
             <table className="gpm-table">
               <thead>
                 <tr>
-                  <th>ID</th>
+                  <th>{t("gpm.tables.wordId")}</th>
                   <th>{t("gpm.tables.word")}</th>
-                  <th>S</th>
-                  <th>I</th>
+                  <th>{t("gpm.tables.substance")}</th>
                 </tr>
               </thead>
               <tbody>
-                {wordRows.slice(0, 40).map((row) => (
+                {genomePreview.slice(0, 40).map((row) => (
                   <tr key={String(row.word_id)}>
                     <td>{String(row.word_id)}</td>
-                    <td>{String(row.word_normalized ?? row.word_canonical ?? "—")}</td>
-                    <td className="mono">{String(row.substance ?? "—")}</td>
-                    <td className="mono">{String(row.perm_index ?? "—")}</td>
+                    <td>{String(row.word_normalized ?? row.word ?? "—")}</td>
+                    <td className="mono">{formatBigInt(Number(row.substance ?? 0))}</td>
                   </tr>
                 ))}
               </tbody>
@@ -45,26 +43,28 @@ export function CompileResultTables({ stats, segment }: CompileResultTablesProps
           </div>
         </>
       ) : null}
-      {showTokens ? (
+      {showGeometry ? (
         <>
-          <h4 className="gpm-card__subtitle" style={{ marginTop: showRegistry ? "1rem" : 0 }}>
-            {t("gpm.tables.tokens")}
+          <h4 className="gpm-card__subtitle" style={{ marginTop: showGenome ? "1rem" : 0 }}>
+            {t("gpm.tables.geometry")}
           </h4>
           <div className="gpm-table-wrap">
             <table className="gpm-table">
               <thead>
                 <tr>
-                  <th>#</th>
-                  <th>word_id</th>
-                  <th>I</th>
+                  <th>{t("gpm.tables.position")}</th>
+                  <th>{t("gpm.tables.word")}</th>
+                  <th>{t("gpm.tables.siPair")}</th>
                 </tr>
               </thead>
               <tbody>
-                {tokens.slice(0, 60).map((row, i) => (
-                  <tr key={i}>
-                    <td>{i}</td>
-                    <td>{String(row.word_id ?? "—")}</td>
-                    <td className="mono">{String(row.perm_index ?? "—")}</td>
+                {geometryPreview.slice(0, 60).map((row) => (
+                  <tr key={String(row.position)}>
+                    <td>{String(row.position)}</td>
+                    <td>{String(row.word_normalized ?? row.word ?? "—")}</td>
+                    <td className="mono">
+                      {formatSiPair(Number(row.substance ?? 0), Number(row.perm_index ?? 0))}
+                    </td>
                   </tr>
                 ))}
               </tbody>

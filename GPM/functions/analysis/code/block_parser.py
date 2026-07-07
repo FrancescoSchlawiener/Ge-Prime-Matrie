@@ -41,7 +41,11 @@ def _intern_token(
         )
     kind = PointerKind(tok.type or "S")
     if kind is PointerKind.N:
-        ptr = registry.intern(kind, int(tok.value), context=context)
+        raw_n = str(tok.value)
+        if raw_n.endswith("n") or raw_n.endswith("N"):
+            ptr = registry.intern(kind, int(raw_n[:-1]), context=context)
+        else:
+            ptr = registry.intern(kind, int(raw_n), context=context)
     else:
         ptr = registry.intern(kind, tok.value, context=context)
     return PointerRef(kind=kind, ptr_id=ptr, nl=tok.nl, col_prefix=tok.col_prefix)

@@ -10,24 +10,25 @@ import { useGpmDocument, useGpmDraftPersistence } from "./useGpmDocument";
 
 export function GpmPage() {
   const navigate = useNavigate();
-  const gpm = useGpmDocument(loadGpmDraft() ?? "");
+  const gpm = useGpmDocument(loadGpmDraft() ?? { text: "", exportName: "document" });
   const cipher = useGpmCipher({
     text: gpm.text,
     loading: gpm.loading,
     setError: gpm.setError,
     readGpmBase64: gpm.readGpmBase64,
+    readGpmFile: gpm.readGpmFile,
   });
 
-  useGpmDraftPersistence(gpm.text, saveGpmDraft);
+  useGpmDraftPersistence({ text: gpm.text, exportName: gpm.exportName }, saveGpmDraft);
 
   function openInICurve() {
-    saveICurveSideA(gpm.reconstructed ?? gpm.text);
+    saveICurveSideA(gpm.text);
     navigate("/vergleichen/ikurve");
   }
 
   async function handleFile(file: File) {
-    const result = await gpm.loadFile(file);
-    if (result.needsCipher) cipher.openDecrypt(result.base64);
+    const result = await gpm.ingestFile(file);
+    if (result.needsCipher) cipher.openDecryptFile(result.file);
   }
 
   return (
@@ -35,18 +36,17 @@ export function GpmPage() {
       <PageHead title={t("gpm.title")} lead={t("gpm.lead")} />
       <GpmEditorWorkspace
         text={gpm.text}
+        exportName={gpm.exportName}
         loading={gpm.loading}
-        documentRef={gpm.documentRef}
+        cachedGpmBase64={gpm.cachedGpmBase64}
         stats={gpm.stats}
-        reconstructed={gpm.reconstructed}
-        fileName={gpm.fileName}
         onTextChange={gpm.setText}
+        onExportNameChange={gpm.setExportName}
         onCompile={() => void gpm.compile()}
         onClear={gpm.clearDocument}
         onFile={(f) => void handleFile(f)}
-        onReconstruct={() => void gpm.reconstruct()}
         onOpenICurve={openInICurve}
-        onDownload={() => void gpm.downloadGpm()}
+        onDownload={() => gpm.downloadGpm()}
         onCipher={cipher.openEncrypt}
       />
       <GpmSearchPanel documentRef={gpm.documentRef} />

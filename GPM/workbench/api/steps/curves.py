@@ -5,6 +5,11 @@ from __future__ import annotations
 from analysis.curves.compare import analyze_pair_full
 from analysis.curves.i_curve import extract_cell_geometry, extract_i_curve, summarize_curve
 from analysis.document.model import GpmDocument
+from analysis.document.preview import (
+    assert_referential_integrity,
+    build_genome_preview,
+    build_geometry_preview,
+)
 from analysis.hierarchy.curves import (
     extract_line_curve,
     extract_paragraph_curve,
@@ -20,6 +25,12 @@ SPARKLINE_LIMIT = 512
 RESPONSE_POINT_LIMIT = SPARKLINE_LIMIT
 PREVIEW_POINT_LIMIT = 80
 MAX_I_CURVE_TOKENS = 10_000
+
+
+def _assert_icurve_dual_gateway(doc_a: GpmDocument, doc_b: GpmDocument) -> None:
+    """Invariante I3-G: beide Docs synchron validieren vor Extraktion/DTW."""
+    assert_referential_integrity(doc_a)
+    assert_referential_integrity(doc_b)
 
 
 def assert_icurve_token_limit(doc_a: GpmDocument, doc_b: GpmDocument) -> None:
@@ -70,6 +81,7 @@ def _trim_meta(meta: dict) -> dict:
 
 
 def build_i_curve_result(doc_a: GpmDocument, doc_b: GpmDocument) -> tuple[dict, list[Step], CurveMeta | None]:
+    _assert_icurve_dual_gateway(doc_a, doc_b)
     curve_a = extract_i_curve(doc_a)
     curve_b = extract_i_curve(doc_b)
     comparison = analyze_pair_full(doc_a, doc_b).get("comparison", {})
@@ -118,6 +130,7 @@ def build_i_curve_result(doc_a: GpmDocument, doc_b: GpmDocument) -> tuple[dict, 
 
 
 def build_full_pair_result(doc_a: GpmDocument, doc_b: GpmDocument) -> tuple[dict, list[Step], CurveMeta | None]:
+    _assert_icurve_dual_gateway(doc_a, doc_b)
     assert_icurve_token_limit(doc_a, doc_b)
     full = analyze_pair_full(doc_a, doc_b)
     comparison = full.get("comparison") or {}
@@ -176,6 +189,10 @@ def build_full_pair_result(doc_a: GpmDocument, doc_b: GpmDocument) -> tuple[dict
             "cross_analysis_b": full.get("cross_analysis_b"),
             "viewport_a": serialize_viewport(doc_a),
             "viewport_b": serialize_viewport(doc_b),
+            "genome_preview_a": build_genome_preview(doc_a),
+            "genome_preview_b": build_genome_preview(doc_b),
+            "geometry_preview_a": build_geometry_preview(doc_a),
+            "geometry_preview_b": build_geometry_preview(doc_b),
             "geometry_score": full.get("geometry_score"),
             "summary_a": full.get("summary_a"),
             "summary_b": full.get("summary_b"),

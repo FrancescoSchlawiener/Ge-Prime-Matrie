@@ -102,6 +102,22 @@ def _cell_substance(document: GpmDocument, token_start: int, token_count: int) -
     return fold_lcm_span(substances)
 
 
+def _cell_label(document: GpmDocument, token_start: int, token_count: int) -> str:
+    explicit_map = dict(document.explicit)
+    words: list[str] = []
+    for i in range(token_count):
+        pos = token_start + i
+        if pos >= len(document.tokens):
+            break
+        token = document.tokens[pos]
+        entry = document.header[token.word_id]
+        if pos in explicit_map:
+            words.append(explicit_map[pos])
+        else:
+            words.append(apply_case(entry.word_canonical, token.case_code))
+    return " ".join(words)
+
+
 def extract_cell_geometry(document: GpmDocument) -> list[dict]:
     materialize_geometry(document)
     points: list[dict] = []
@@ -129,6 +145,7 @@ def extract_cell_geometry(document: GpmDocument) -> list[dict]:
                 "cell_index": cell_index,
                 "token_start": cell.token_start,
                 "token_count": cell.token_count,
+                "label": _cell_label(document, cell.token_start, cell.token_count),
                 "category_count": len(cell.categories),
                 "skeleton": list(sk),
                 "skeleton_hash": sk_hash,

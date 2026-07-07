@@ -102,6 +102,7 @@ def compile_with_cache(req: CompileRequest) -> WorkbenchResponse:
             mode="nl", profile=profile, document=entry.document, source_text=text
         )
         result = build_nl_payload(entry.document, document_ref=ref, roundtrip_ok=roundtrip_ok)
+        result["reconstructed_text"] = reconstructed
         steps = map_nl_compile_steps(entry.stats, entry.trace) if entry.stats else map_nl_compile_steps(
             entry.trace.compile_stats, entry.trace
         )

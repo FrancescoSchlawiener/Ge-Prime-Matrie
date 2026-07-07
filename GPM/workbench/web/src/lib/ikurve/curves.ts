@@ -2,6 +2,7 @@ export type IcurveMode = "atomic" | "semantic" | "structural";
 export type SemanticDepth = "phrase" | "sentence" | "paragraph";
 export type StructuralDepth = "line";
 export type ChartScale = "union" | "shorter";
+export type ChartLayout = "overlay" | "stacked";
 export type IngestSourceMode = "text" | "gpm";
 
 export interface CurvePayload {

@@ -10,6 +10,7 @@ export const explain = {
     dokument: "Dokumentmodell",
     analyse: "Analyse",
     code: "Code & Sicherheit",
+    tensorraum: "Tensorraum",
   },
   search: {
     placeholder: "Kapitel suchen…",
@@ -52,5 +53,6 @@ export const explain = {
     tryWordPair: "Als Wortpaar öffnen",
     openGpm: "Im GPM-Editor öffnen",
     openICurve: "In I-Kurve öffnen",
+    openTensorraum: "Im Tensorraum öffnen",
   },
 } as const;

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { t } from "../../i18n/t";
-import { formatBigInt } from "../../utils/format";
+import { formatSiPair } from "../../utils/formatSi";
 
 export interface PairWordData {
   original: string;
@@ -24,9 +24,7 @@ export function PairWordCard({
     <div className="gpm-pair-word">
       <div className="gpm-pair-word__original">{original}</div>
       <div className="gpm-pair-word__norm">{normalized}</div>
-      <div className="gpm-pair-word__si mono">
-        S = {formatBigInt(substance)} · I = {formatBigInt(permIndex)}
-      </div>
+      <div className="gpm-pair-word__si mono">{formatSiPair(substance, permIndex)}</div>
       {actions ? <div className="gpm-pair-word__actions">{actions}</div> : null}
     </div>
   );

@@ -18,8 +18,10 @@ from analysis.code.tokens import (
 )
 
 _TOKEN_CORE = re.compile(
-    r'("(?:\\[\s\S]|[^"\\])*"|\'(?:\\[\s\S]|[^\'\\])*\'|`(?:\\[\s\S]|[^`\\])*`)'
+    r"(/(?:\\.|[^/\\\r\n])+/[gimsuy]*)"
+    r"|(@[\w-]+)"
     r"|(\b[\w\u0080-\U0010FFFF]+\b)"
+    r"|([0-9]+n)"
     r"|([0-9]+\.[0-9]+|[0-9]+)"
     r"|([{}()\[\]])"
     r"|(=>|\?\?|\?\.|===|!==|\+\+|--|<<|>>|[+\-*/=<>!&|^%?:]+)"
@@ -45,6 +47,8 @@ def classify_code_token(value: str, *, context: ParseContext, language_id: str) 
         return PointerKind.C
     if re.fullmatch(r"[+-]?\d+", value):
         return PointerKind.N
+    if re.fullmatch(r"[+-]?\d+n", value):
+        return PointerKind.N
     if re.fullmatch(r"[+-]?\d+\.\d+", value):
         return PointerKind.D
     spec = language_for_id(language_id)
@@ -54,6 +58,15 @@ def classify_code_token(value: str, *, context: ParseContext, language_id: str) 
         return PointerKind.C
     if re.fullmatch(r"(=>|\?\?|\?\.|===|!==|\+\+|--|<<|>>|[+\-*/=<>!&|^%?:]+)", value):
         return PointerKind.C
+    if re.fullmatch(r"/(?:\\.|[^/\\\r\n])+/[gimsuy]*", value):
+        return PointerKind.C
+    from gpm_types.classify import PayloadKind, classify_token
+
+    try:
+        if classify_token(value) is PayloadKind.H:
+            return PointerKind.H
+    except ValueError:
+        pass
     return PointerKind.S
 
 
@@ -82,6 +95,85 @@ def _find_next_comment(source: str, pos: int, comment_style: str) -> tuple[str, 
                 return hit
         p += 1
     return None
+
+
+def _scan_quoted_string(source: str, pos: int) -> tuple[str, int] | None:
+    if pos >= len(source):
+        return None
+    quote = source[pos]
+    if quote not in '"\'':
+        return None
+    i = pos + 1
+    while i < len(source):
+        ch = source[i]
+        if ch == "\\":
+            i += 2
+            continue
+        if ch == quote:
+            return source[pos : i + 1], i + 1
+        i += 1
+    return None
+
+
+def _scan_template_literal(source: str, pos: int) -> tuple[str, int] | None:
+    if pos >= len(source) or source[pos] != "`":
+        return None
+    i = pos + 1
+    while i < len(source):
+        ch = source[i]
+        if ch == "\\":
+            i += 2
+            continue
+        if ch == "`":
+            return source[pos : i + 1], i + 1
+        if ch == "$" and i + 1 < len(source) and source[i + 1] == "{":
+            i += 2
+            depth = 1
+            while i < len(source) and depth > 0:
+                c = source[i]
+                if c == "{":
+                    depth += 1
+                    i += 1
+                elif c == "}":
+                    depth -= 1
+                    i += 1
+                elif c == "/":
+                    reg_m = re.match(r"/(?:\\.|[^/\\\r\n])+/[gimsuy]*", source[i:])
+                    if reg_m:
+                        i += reg_m.end()
+                    else:
+                        i += 1
+                elif c in '"\'':
+                    hit = _scan_quoted_string(source, i)
+                    if hit is None:
+                        return None
+                    _, i = hit
+                elif c == "`":
+                    hit = _scan_template_literal(source, i)
+                    if hit is None:
+                        return None
+                    _, i = hit
+                else:
+                    i += 1
+            continue
+        i += 1
+    return None
+
+
+def _find_next_string_or_template(source: str, pos: int) -> tuple[str, int, int] | None:
+    if pos >= len(source):
+        return None
+    ch = source[pos]
+    if ch in '"\'':
+        hit = _scan_quoted_string(source, pos)
+    elif ch == "`":
+        hit = _scan_template_literal(source, pos)
+    else:
+        return None
+    if hit is None:
+        return None
+    text, end = hit
+    return text, pos, end
 
 
 def _emit_scalar(
@@ -149,9 +241,31 @@ def _lex_scanned(
 
     while pos < n:
         comm = _find_next_comment(source, pos, comment_style)
+        str_hit = _find_next_string_or_template(source, pos)
         tok_m = _TOKEN_CORE.search(source, pos)
 
-        if comm and (tok_m is None or comm[1] <= tok_m.start()):
+        if tok_m is not None and tok_m.start() > pos:
+            for i in range(pos, tok_m.start()):
+                if source[i] in '"\'`':
+                    str_hit = _find_next_string_or_template(source, i)
+                    break
+
+        next_pos = n
+        next_kind = None
+        if comm is not None:
+            next_pos = comm[1]
+            next_kind = "comm"
+        if str_hit is not None and str_hit[1] < next_pos:
+            next_pos = str_hit[1]
+            next_kind = "str"
+        if tok_m is not None and tok_m.start() < next_pos:
+            next_pos = tok_m.start()
+            next_kind = "tok"
+
+        if next_kind is None:
+            break
+
+        if next_kind == "comm":
             text, c_start, c_end = comm
             nl, col_prefix = split_leading_gap(source, last, c_start)
             tokens.append(
@@ -161,8 +275,13 @@ def _lex_scanned(
             pos = c_end
             continue
 
-        if tok_m is None:
-            break
+        if next_kind == "str":
+            text, s_start, s_end = str_hit
+            nl, col_prefix = split_leading_gap(source, last, s_start)
+            _emit_scalar(tokens, text, nl, col_prefix, ctx, language_id)
+            last = s_end
+            pos = s_end
+            continue
 
         val = tok_m.group(0)
         if not val.strip():
@@ -321,25 +440,78 @@ def tokenize_indent(source: str, language_id: str) -> TokenizeResult:
     return TokenizeResult(tokens=tokens, trailing_whitespace=trailing)
 
 
+_HTML_RAWTEXT: dict[str, str] = {"script": "js", "style": "css"}
+_RAWTEXT_CLOSE_RE: dict[str, re.Pattern[str]] = {
+    "script": re.compile(r"</script\s*>", re.IGNORECASE),
+    "style": re.compile(r"</style\s*>", re.IGNORECASE),
+}
+
+
+def _find_rawtext_close(source: str, pos: int, tag: str) -> re.Match[str]:
+    pat = _RAWTEXT_CLOSE_RE[tag.lower()]
+    m = pat.search(source, pos)
+    if not m:
+        raise ValueError(f"Unclosed <{tag}> element")
+    return m
+
+
+def _merge_rawtext_body(
+    tokens: list[CodeToken],
+    body: str,
+    lang_id: str,
+    *,
+    first_nl: int = 0,
+    first_col: str = "",
+) -> str:
+    """Tokenize embedded script/style body; return trailing whitespace before close tag."""
+    inner = tokenize_source(body, lang_id)
+    for i, tok in enumerate(inner.tokens):
+        if i == 0 and (first_nl or first_col):
+            tok.nl = first_nl + tok.nl
+            tok.col_prefix = first_col + tok.col_prefix
+        tokens.append(tok)
+    return inner.trailing_whitespace
+
+
 def tokenize_html(source: str) -> TokenizeResult:
     assert_no_surrogates(source)
     source = unicodedata.normalize("NFC", normalize_line_endings(source))
     tag_re = re.compile(
-        r"<!--[\s\S]*?-->|<\/([A-Za-z_][\w:.\-]*)\s*>|<([A-Za-z_][\w:.\-]*)((?:\s+[^<>]*?)?)\s*(\/?)>|[^<]+"
+        r"<!--[\s\S]*?-->"
+        r"|<\?[\s\S]*?\?>"
+        r"|<![^>]+>"
+        r"|<\/([A-Za-z_][\w:.\-]*)\s*>"
+        r"|<([A-Za-z_][\w:.\-]*)((?:\s+[^<>]*?)?)\s*(\/?)>"
+        r"|[^<]+"
     )
     tokens: list[CodeToken] = []
     last = 0
     pending_nl = 0
     trailing_buf = ""
+    pos = 0
+    n = len(source)
 
-    for m in tag_re.finditer(source):
+    while pos < n:
+        m = tag_re.search(source, pos)
+        if not m:
+            tail = source[pos:]
+            if tail.strip() == "":
+                trailing_buf += tail
+            elif tail.strip():
+                nl, col_prefix = split_leading_gap(source, last, n)
+                nl += pending_nl
+                tokens.append(CodeToken(type=PointerKind.S.value, value=tail, nl=nl, col_prefix=col_prefix))
+            last = n
+            break
+
         raw = m.group(0)
 
         if raw.strip() == "":
-            if m.end() >= len(source):
+            if m.end() >= n:
                 trailing_buf += raw
             else:
                 pending_nl += raw.count("\n")
+            pos = m.end()
             last = m.end()
             continue
 
@@ -347,8 +519,9 @@ def tokenize_html(source: str) -> TokenizeResult:
         nl += pending_nl
         pending_nl = 0
         last = m.end()
+        pos = m.end()
 
-        if raw.startswith("<!--"):
+        if raw.startswith("<!--") or raw.startswith("<?") or raw.startswith("<!"):
             tokens.append(
                 CodeToken(type=PointerKind.C.value, value=raw, nl=nl, col_prefix=col_prefix)
             )
@@ -365,7 +538,9 @@ def tokenize_html(source: str) -> TokenizeResult:
                     visual_style="tag",
                 )
             )
-        elif m.group(2):
+            continue
+
+        if m.group(2):
             name = m.group(2)
             tag_text = raw.strip()
             self_close = m.group(4) == "/" or name.upper() in VOID_HTML_TAGS
@@ -384,10 +559,33 @@ def tokenize_html(source: str) -> TokenizeResult:
             )
             if self_close:
                 tokens.append(CodeToken(block="close", value="", nl=0, visual_style="tag"))
-        else:
-            text = raw
-            if text.strip():
-                tokens.append(CodeToken(type=PointerKind.S.value, value=text, nl=nl, col_prefix=col_prefix))
+                continue
+
+            raw_lang = _HTML_RAWTEXT.get(name.lower())
+            if raw_lang is not None:
+                body_start = m.end()
+                close_m = _find_rawtext_close(source, body_start, name)
+                body = source[body_start:close_m.start()]
+                inner_trail = _merge_rawtext_body(tokens, body, raw_lang)
+                body_end = body_start + len(body) - len(inner_trail)
+                close_nl, close_col = split_leading_gap(source, body_end, close_m.start())
+                close_text = source[close_m.start() : close_m.end()]
+                tokens.append(
+                    CodeToken(
+                        block="close",
+                        value=close_text,
+                        nl=close_nl,
+                        col_prefix=close_col,
+                        visual_style="tag",
+                    )
+                )
+                last = close_m.end()
+                pos = close_m.end()
+            continue
+
+        text = raw
+        if text.strip():
+            tokens.append(CodeToken(type=PointerKind.S.value, value=text, nl=nl, col_prefix=col_prefix))
 
     trailing = trailing_buf or extract_trailing_whitespace(source, last)
     return TokenizeResult(tokens=tokens, trailing_whitespace=trailing)

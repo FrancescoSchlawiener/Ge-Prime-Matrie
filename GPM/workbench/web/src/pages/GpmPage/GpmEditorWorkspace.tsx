@@ -3,20 +3,20 @@ import { t } from "../../i18n/t";
 import { GpmDocumentMetaBar } from "./GpmDocumentMetaBar";
 import { GpmEditorResults } from "./GpmEditorResults";
 import { GpmEditorToolbar } from "./GpmEditorToolbar";
+import { GpmExportBar } from "./GpmExportBar";
 import { GpmSourceEditor } from "./GpmSourceEditor";
 
 interface GpmEditorWorkspaceProps {
   text: string;
+  exportName: string;
   loading: boolean;
-  documentRef: string | null;
+  cachedGpmBase64: string | null;
   stats: Record<string, unknown> | null;
-  reconstructed: string | null;
-  fileName: string | null;
   onTextChange: (v: string) => void;
+  onExportNameChange: (v: string) => void;
   onCompile: () => void;
   onClear: () => void;
   onFile: (file: File) => void;
-  onReconstruct: () => void;
   onOpenICurve: () => void;
   onDownload: () => void;
   onCipher: () => void;
@@ -24,16 +24,15 @@ interface GpmEditorWorkspaceProps {
 
 export function GpmEditorWorkspace({
   text,
+  exportName,
   loading,
-  documentRef,
+  cachedGpmBase64,
   stats,
-  reconstructed,
-  fileName,
   onTextChange,
+  onExportNameChange,
   onCompile,
   onClear,
   onFile,
-  onReconstruct,
   onOpenICurve,
   onDownload,
   onCipher,
@@ -45,17 +44,16 @@ export function GpmEditorWorkspace({
       <header className="gpm-editor-workspace__header">
         <strong>{t("gpm.title")}</strong>
         <span>{t("gpm.workspace.formatBadge")}</span>
-        {fileName ? <span>{fileName}</span> : null}
       </header>
       <div className="gpm-editor-workspace__body">
         <GpmSourceEditor text={text} onTextChange={onTextChange} onFile={onFile} />
+        <GpmExportBar exportName={exportName} onExportNameChange={onExportNameChange} />
         <GpmEditorToolbar
           loading={loading}
-          documentRef={documentRef}
+          cachedGpmBase64={cachedGpmBase64}
           onCompile={onCompile}
           onClear={onClear}
           onLoadFile={() => fileRef.current?.click()}
-          onReconstruct={onReconstruct}
           onDownload={onDownload}
           onOpenICurve={onOpenICurve}
           onCipher={onCipher}
@@ -63,7 +61,7 @@ export function GpmEditorWorkspace({
         <input
           ref={fileRef}
           type="file"
-          accept=".gpm,.gpc"
+          accept=".gpm,.gpc,.txt,.md,text/*"
           hidden
           onChange={(e) => {
             const f = e.target.files?.[0];
@@ -71,8 +69,8 @@ export function GpmEditorWorkspace({
           }}
         />
       </div>
-      <GpmDocumentMetaBar documentRef={documentRef} stats={stats} />
-      <GpmEditorResults stats={stats} reconstructed={reconstructed} />
+      <GpmDocumentMetaBar stats={stats} />
+      <GpmEditorResults stats={stats} />
     </div>
   );
 }

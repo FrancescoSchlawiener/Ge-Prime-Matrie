@@ -153,6 +153,58 @@
   padding: 0 var(--gpm-space-md) var(--gpm-space-md);
 }
 
+.gpm-export-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gpm-space-sm) var(--gpm-space-md);
+  margin-top: var(--gpm-space-sm);
+}
+
+.gpm-export-bar__label {
+  font-size: 0.85rem;
+  color: var(--gpm-muted);
+}
+
+.gpm-export-bar__field {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex: 1;
+  min-width: 12rem;
+  max-width: 24rem;
+}
+
+.gpm-export-bar__input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius) 0 0 var(--gpm-radius);
+  background: var(--gpm-surface);
+  color: var(--gpm-text);
+  font: inherit;
+}
+
+.gpm-export-bar__suffix {
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--gpm-border);
+  border-left: none;
+  border-radius: 0 var(--gpm-radius) var(--gpm-radius) 0;
+  background: var(--gpm-surface-2);
+  color: var(--gpm-muted);
+  font-size: 0.85rem;
+  user-select: none;
+}
+
+.gpm-roundtrip-ok {
+  color: var(--gpm-accent, #2d8a4e);
+}
+
+.gpm-roundtrip-fail {
+  color: var(--gpm-warn, #b45309);
+}
+
 .gpm-editor-workspace .gpm-editor {
   border: none;
   border-radius: 0;
@@ -1820,7 +1872,7 @@
 /* I-Kurve OG polish */
 .gpm-ikurve-signal-overview {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0.5rem;
   margin: 0 0 1rem;
 }
@@ -2100,8 +2152,465 @@
   margin-top: 1rem;
 }
 
+/* OG structure matrix + level metrics + chart stack */
+.gpm-ikurve-structure-matrix {
+  margin: 0 0 1rem;
+}
+
+.gpm-ikurve-geo-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0 0 0.75rem;
+}
+
+.gpm-ikurve-geo-badge {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.gpm-ikurve-geo-badge--offset {
+  background: rgba(255, 152, 0, 0.15);
+  color: var(--gpm-orange);
+}
+
+.gpm-ikurve-geo-badge--stretch {
+  background: rgba(33, 150, 243, 0.12);
+  color: #2196f3;
+}
+
+.gpm-ikurve-geo-badge--hybrid {
+  background: rgba(156, 39, 176, 0.12);
+  color: #9c27b0;
+}
+
+.gpm-ikurve-plag-score-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+}
+
+.gpm-ikurve-plag-score-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 0.15rem 0.5rem;
+  align-items: center;
+}
+
+.gpm-ikurve-plag-score-label {
+  font-size: 0.8rem;
+  color: var(--gpm-muted);
+}
+
+.gpm-ikurve-plag-score-value {
+  font-weight: 700;
+}
+
+.gpm-ikurve-plag-score-bar {
+  grid-column: 1 / -1;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(127, 127, 127, 0.2);
+  overflow: hidden;
+}
+
+.gpm-ikurve-plag-score-bar span {
+  display: block;
+  height: 100%;
+}
+
+.gpm-ikurve-score-high .gpm-ikurve-plag-score-bar span {
+  background: var(--gpm-green);
+}
+
+.gpm-ikurve-score-mid .gpm-ikurve-plag-score-bar span {
+  background: var(--gpm-orange);
+}
+
+.gpm-ikurve-score-low .gpm-ikurve-plag-score-bar span {
+  background: rgba(127, 127, 127, 0.55);
+}
+
+.gpm-ikurve-kombi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.gpm-ikurve-metric-card {
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius-sm);
+  background: var(--gpm-surface-2);
+}
+
+.gpm-ikurve-metric-card__label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gpm-muted);
+}
+
+.gpm-ikurve-metric-card__value {
+  font-weight: 700;
+  margin-top: 0.2rem;
+}
+
+.gpm-ikurve-level-metrics-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.gpm-ikurve-level-head {
+  margin-bottom: 0.35rem;
+}
+
+.gpm-ikurve-level-head__title {
+  margin: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.gpm-ikurve-level-head__hint {
+  margin: 0.15rem 0 0;
+}
+
+.gpm-ikurve-level-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.gpm-ikurve-level-metric {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius-sm);
+  background: var(--gpm-surface-2);
+}
+
+.gpm-ikurve-level-metric__label {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--gpm-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.gpm-ikurve-level-metric__value {
+  display: block;
+  font-weight: 700;
+  margin-top: 0.2rem;
+}
+
+.gpm-ikurve-lens-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: center;
+  margin: 0.5rem 0;
+}
+
+.gpm-ikurve-charts-container {
+  margin: 0.75rem 0;
+}
+
+.gpm-ikurve-charts-container--scroll {
+  max-height: 32rem;
+  overflow-y: auto;
+}
+
+.gpm-ikurve-charts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.gpm-ikurve-chart-pair {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.gpm-ikurve-chart-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.gpm-ikurve-chart-label {
+  font-size: 0.75rem;
+  color: var(--gpm-muted);
+}
+
+.gpm-ikurve-sparkline {
+  display: block;
+  width: 100%;
+  height: 90px;
+  color: inherit;
+}
+
+.gpm-ikurve-sparkline--a {
+  color: var(--gpm-ikurve-a, var(--gpm-accent));
+}
+
+.gpm-ikurve-sparkline--b {
+  color: var(--gpm-ikurve-b, var(--gpm-green));
+}
+
+.gpm-ikurve-sparkline-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+}
+
+.gpm-ikurve-dual-preview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
 @media (max-width: 900px) {
   .gpm-ikurve-signal-overview {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .gpm-ikurve-level-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .gpm-ikurve-dual-preview {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* DOM-H: disclosure affordances (scoped marker reset) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.gpm-disclosure {
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius-sm);
+  background: var(--gpm-surface-2);
+  margin-top: 0.75rem;
+}
+
+.gpm-disclosure--nested {
+  margin-top: 0.5rem;
+  border-style: dashed;
+  background: transparent;
+}
+
+.gpm-disclosure > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.gpm-disclosure > summary::-webkit-details-marker {
+  display: none !important;
+}
+
+.gpm-disclosure__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: inherit;
+}
+
+.gpm-disclosure:not([open]) > .gpm-disclosure__summary {
+  border-left: 3px solid var(--gpm-accent);
+}
+
+.gpm-disclosure__summary:hover {
+  background: rgba(127, 127, 127, 0.06);
+}
+
+.gpm-disclosure__summary:focus-visible {
+  outline: 2px solid var(--gpm-accent);
+  outline-offset: 2px;
+}
+
+.gpm-disclosure__chevron {
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  color: var(--gpm-muted);
+  transition: transform 0.15s ease;
+}
+
+.gpm-disclosure[open] > summary .gpm-disclosure__chevron {
+  transform: rotate(90deg);
+}
+
+.gpm-disclosure__title {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.gpm-disclosure__brief {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.85rem;
+  color: var(--gpm-muted);
+  text-align: right;
+}
+
+.gpm-disclosure__body {
+  padding: 0 0.85rem 0.85rem;
+}
+
+.gpm-disclosure__scroll {
+  max-height: 12rem;
+  overflow-y: auto;
+  overflow-x: auto;
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--gpm-radius-sm);
+  border: 1px solid var(--gpm-border);
+  background: var(--gpm-surface);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.gpm-ikurve-results {
+  scroll-margin-top: 5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.gpm-ikurve-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.gpm-ikurve-hero__head {
+  text-align: center;
+}
+
+.gpm-ikurve-hero__label {
+  margin: 0;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gpm-muted);
+}
+
+.gpm-ikurve-hero__score {
+  margin: 0.15rem 0 0;
+  font-size: clamp(2rem, 6vw, 3rem);
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.gpm-ikurve-hero__classification {
+  margin: 0.35rem 0 0;
+  font-size: 0.95rem;
+  color: var(--gpm-muted);
+}
+
+.gpm-ikurve-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: center;
+}
+
+.gpm-ikurve-fusion-trio {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.gpm-ikurve-fusion-card {
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius-sm);
+  background: var(--gpm-surface);
+  min-width: 0;
+}
+
+.gpm-ikurve-fusion-card__label {
+  margin: 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gpm-muted);
+}
+
+.gpm-ikurve-fusion-card__score {
+  margin: 0.25rem 0 0.35rem;
+  font-size: 1.65rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.gpm-ikurve-fusion-card__hint {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+}
+
+.gpm-meta-genome-card--compact {
+  padding: 0.65rem 0.75rem;
+}
+
+.gpm-ikurve-word-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.gpm-ikurve-word-chip {
+  font-size: 0.78rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--gpm-border);
+  background: var(--gpm-surface);
+  font-family: var(--gpm-mono);
+}
+
+.gpm-ikurve-structure-tail {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--gpm-border);
+}
+
+.gpm-disclosure .gpm-ikurve-signal-overview {
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+}
+
+@media (max-width: 720px) {
+  .gpm-ikurve-fusion-trio {
+    grid-template-columns: 1fr;
+  }
+
+  .gpm-disclosure__brief {
+    flex-basis: 100%;
+    text-align: left;
   }
 }

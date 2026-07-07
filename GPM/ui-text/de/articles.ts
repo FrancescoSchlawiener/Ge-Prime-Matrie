@@ -1,4 +1,4 @@
-export type ExplainSection = "grundlagen" | "vergleich" | "dokument" | "analyse" | "code";
+export type ExplainSection = "grundlagen" | "vergleich" | "dokument" | "analyse" | "code" | "tensorraum";
 
 export interface ExplainWorkbenchStep {
   where: string;
@@ -18,7 +18,7 @@ export interface ExplainExampleBlock {
   rows: ExplainExampleRow[];
 }
 
-export type ExplainCtaType = "encode" | "decode" | "compare" | "gpm" | "ikurve";
+export type ExplainCtaType = "encode" | "decode" | "compare" | "gpm" | "ikurve" | "tensorraum";
 
 export interface ExplainArticleMeta {
   slug: string;
@@ -46,6 +46,7 @@ export const EXPLAIN_SECTIONS: { id: ExplainSection; labelKey: string }[] = [
   { id: "dokument", labelKey: "explain.sections.dokument" },
   { id: "analyse", labelKey: "explain.sections.analyse" },
   { id: "code", labelKey: "explain.sections.code" },
+  { id: "tensorraum", labelKey: "explain.sections.tensorraum" },
 ];
 
 export { EXPLAIN_SLUG_REDIRECTS, resolveExplainSlug } from "./explain-redirects";

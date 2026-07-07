@@ -8,6 +8,11 @@ from analysis.blocks.context import ParseDomain
 from analysis.code.hybrid import HybridDocument, render_fence_boundary
 from analysis.document.model import GpmDocument
 from analysis.curves.i_curve import extract_cell_geometry
+from analysis.document.preview import (
+    assert_referential_integrity,
+    build_genome_preview,
+    build_geometry_preview,
+)
 from api.session import document_to_dict
 
 
@@ -79,6 +84,7 @@ def build_hybrid_payload(hybrid: HybridDocument, *, document_ref: str, roundtrip
 
 
 def build_nl_payload(doc: GpmDocument, *, document_ref: str, roundtrip_ok: bool) -> dict[str, Any]:
+    assert_referential_integrity(doc)
     payload = document_to_dict(doc)
     cells = extract_cell_geometry(doc) if doc.tokens else []
     payload.update(
@@ -88,6 +94,8 @@ def build_nl_payload(doc: GpmDocument, *, document_ref: str, roundtrip_ok: bool)
             "roundtrip_ok": roundtrip_ok,
             "cells": cells[:512],
             "cell_count": len(cells),
+            "genome_preview": build_genome_preview(doc),
+            "geometry_preview": build_geometry_preview(doc),
             "registry_entries": [
                 {
                     "word_id": e.word_id,

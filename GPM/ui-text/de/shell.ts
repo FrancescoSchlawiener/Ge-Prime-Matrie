@@ -7,11 +7,13 @@ export const shell = {
     compare: "Vergleichen",
     gpm: "GPM Datei",
     database: "Datenbank",
+    tensorraum: "Tensorraum",
     explain: "Erklärungen",
   },
   leads: {
     codec: "Wörter zu Substanz S und Index I kodieren — oder aus S+I rekonstruieren",
     compare: "Wortpaare, Anagramme und I-Kurven-Vergleich auf Dokumentebene",
+    tensorraum: "Quellcode kanonisieren, Registry visualisieren, Redundanz und Reversibilität prüfen",
   },
   subtabs: {
     codecAria: "S(I)-Untertabs",

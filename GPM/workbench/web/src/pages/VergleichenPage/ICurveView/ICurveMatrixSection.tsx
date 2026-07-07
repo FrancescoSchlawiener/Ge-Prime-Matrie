@@ -15,6 +15,7 @@ interface ICurveMatrixSectionProps {
   selB: TokenSelection | null;
   spectroA: SpectroMatch[];
   spectroB: SpectroMatch[];
+  spectroLoading?: boolean;
   onSelectionA: (sel: TokenSelection | null) => void;
   onSelectionB: (sel: TokenSelection | null) => void;
   onSpectroA: () => void;
@@ -30,6 +31,7 @@ export function ICurveMatrixSection({
   selB,
   spectroA,
   spectroB,
+  spectroLoading = false,
   onSelectionA,
   onSelectionB,
   onSpectroA,
@@ -59,8 +61,8 @@ export function ICurveMatrixSection({
         </div>
       </div>
       <div className="gpm-word-pair" style={{ marginTop: "0.75rem" }}>
-        <IcurveSpectroPanel docRef={docRefA} selection={selA} onAnalyze={onSpectroA} />
-        <IcurveSpectroPanel docRef={docRefB} selection={selB} onAnalyze={onSpectroB} />
+        <IcurveSpectroPanel docRef={docRefA} selection={selA} loading={spectroLoading} onAnalyze={onSpectroA} />
+        <IcurveSpectroPanel docRef={docRefB} selection={selB} loading={spectroLoading} onAnalyze={onSpectroB} />
       </div>
       {curveMeta?.downsampled ? (
         <p className="gpm-metric__hint" role="status">

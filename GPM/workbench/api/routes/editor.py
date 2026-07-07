@@ -5,7 +5,7 @@ from __future__ import annotations
 import base64
 import binascii
 
-from fastapi import APIRouter
+from fastapi import APIRouter, File, Form, UploadFile
 
 from analysis.binary.format import read_gpm, write_gpm
 from analysis.binary.gpc import decrypt_gpm_file, is_encrypted_gpm_blob, wrap_cipher_payload
@@ -13,6 +13,11 @@ from analysis.code.decompile import reconstruct_hybrid, reconstruct_source
 from analysis.compile.reconstruct import reconstruct_text
 from analysis.search.spectroscope import spectroscope_analyze
 from analysis.binary.search import search_by_gcd, search_by_lcm, search_by_word
+from analysis.document.preview import (
+    assert_referential_integrity,
+    build_genome_preview,
+    build_geometry_preview,
+)
 from analysis.security.cipher import encrypt_text
 from api.compile_service import compile_with_cache
 from api.schemas.common import Step, WorkbenchError, WorkbenchResponse
@@ -69,18 +74,18 @@ def reconstruct_endpoint(req: ReconstructRequest) -> WorkbenchResponse:
     )
 
 
-@router.post("/gpm/read", response_model=WorkbenchResponse)
-def gpm_read(req: GpmReadRequest) -> WorkbenchResponse:
-    raw = bytes(req.base64)
+def _gpm_read_bytes(raw: bytes, key: str | None) -> WorkbenchResponse:
+    if not raw:
+        raise WorkbenchError("value_error", "Leere Datei.", status_code=400)
     if is_encrypted_gpm_blob(raw):
-        if not req.key:
+        if not key:
             raise WorkbenchError(
                 "cipher_key_required",
                 "Verschlüsselte GPC-Datei — Schlüssel erforderlich.",
                 status_code=401,
             )
         try:
-            dec = decrypt_gpm_file(raw, keys_raw=req.key)
+            dec = decrypt_gpm_file(raw, keys_raw=key)
         except ValueError as exc:
             raise WorkbenchError("value_error", str(exc), status_code=400) from exc
         dec_text = dec["text"]
@@ -122,19 +127,49 @@ def gpm_read(req: GpmReadRequest) -> WorkbenchResponse:
             status_code=422,
         ) from exc
     ref = store.put_document(mode="gpm", profile=doc.profile, document=doc, gpm_bytes=raw)
-    if doc.registry is not None and doc.root_block is not None:
+    if (
+        doc.registry is not None
+        and doc.root_block is not None
+        and (doc.root_block.children or doc.root_block.sequence)
+    ):
         text = reconstruct_source(doc.root_block, doc.registry)
     else:
         text = reconstruct_text(doc)
+    assert_referential_integrity(doc)
     return WorkbenchResponse(
         result={
             **document_to_dict(doc),
             "document_ref": ref,
             "base64_size": len(raw),
+            "base64": gpm_bytes_to_b64(raw),
             "reconstructed_text": text,
+            "genome_preview": build_genome_preview(doc),
+            "geometry_preview": build_geometry_preview(doc),
         },
         steps=[Step(id="gpm_read", title="GPM lesen", detail="Binärdatei dekodiert.", values={"tokens": len(doc.tokens)})],
     )
+
+
+@router.post("/gpm/read", response_model=WorkbenchResponse)
+def gpm_read(req: GpmReadRequest) -> WorkbenchResponse:
+    try:
+        raw = base64.b64decode(req.base64.strip(), validate=True)
+    except (ValueError, binascii.Error) as exc:
+        raise WorkbenchError(
+            "gpm_invalid_stream",
+            "Ungültige Base64-Kodierung.",
+            status_code=422,
+        ) from exc
+    return _gpm_read_bytes(raw, req.key)
+
+
+@router.post("/gpm/read/file", response_model=WorkbenchResponse)
+async def gpm_read_file(
+    file: UploadFile = File(...),
+    key: str | None = Form(None),
+) -> WorkbenchResponse:
+    raw = await file.read()
+    return _gpm_read_bytes(raw, key)
 
 
 @router.post("/gpm/write", response_model=WorkbenchResponse)

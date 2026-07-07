@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal
+from typing import Any, Literal
 
-from pydantic import Base64Bytes, BaseModel, Field
+from pydantic import BaseModel, Field
 
 
 class EncodeWordRequest(BaseModel):
@@ -41,13 +41,19 @@ class CompileRequest(BaseModel):
     content_key: str | None = Field(default=None, min_length=64, max_length=64)
 
 
+class TensorraumCanonicalizeRequest(BaseModel):
+    source: str = ""
+    filename: str = "snippet.js"
+    profile: str = "og"
+
+
 class ReconstructRequest(BaseModel):
     mode: Literal["nl", "code", "hybrid"]
     document_ref: str
 
 
 class GpmReadRequest(BaseModel):
-    base64: Annotated[bytes, Base64Bytes] = Field(min_length=4)
+    base64: str = Field(min_length=4)
     key: str | None = None
 
 

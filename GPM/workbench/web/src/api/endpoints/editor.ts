@@ -1,5 +1,5 @@
 import type { WorkbenchResponse } from "../gpm-api";
-import { request } from "../request";
+import { request, uploadRequest } from "../request";
 
 export const editorEndpoints = {
   compile: (mode: string, text: string, profile: string, languageId?: string, contentKey?: string) =>
@@ -25,6 +25,13 @@ export const editorEndpoints = {
       method: "POST",
       body: JSON.stringify({ base64, key: key ?? null }),
     }),
+
+  gpmReadFile: (file: File, key?: string) => {
+    const form = new FormData();
+    form.append("file", file);
+    if (key) form.append("key", key);
+    return uploadRequest<WorkbenchResponse>("/api/editor/gpm/read/file", form);
+  },
 
   gpmSearch: (documentRef: string, query: string, mode: "word" | "gcd" | "lcm", queries?: string[]) =>
     request<WorkbenchResponse>("/api/editor/gpm/search", {

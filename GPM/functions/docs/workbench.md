@@ -12,7 +12,7 @@ Pedagogical web UI over `GPM/functions`. The Workbench does **not** duplicate ma
 | `scripts/` | Production (`run_prod.py`) and CI (`export_openapi.py`) |
 | `render.yaml` | Render.com deploy blueprint |
 
-Explain chapters live in **`GPM/ui-text/content/erklaerungen/`** (markdown, bundled via Vite `import.meta.glob` in `web/src/content/index.ts`). Chapter metadata: `GPM/ui-text/de/articles.ts`.
+Explain chapters live in **`GPM/ui-text/de/erklaerungen/`** (markdown, bundled via Vite `import.meta.glob` in `web/src/content/index.ts`). Chapter metadata: `GPM/ui-text/de/articles-data.ts`.
 
 ## Architecture pillars
 
@@ -41,7 +41,7 @@ Start scripts: `start/dev.bat` (Windows), `start/dev.sh` (Unix). `dev.bat` alway
 ### UI text (Phase 2 — I2-A..C)
 
 - UI chrome strings: `GPM/ui-text/de/` (`shell`, `encode`, `decode`, `wortpaar`, `ikurve`, `gpm`, `datenbank`, `explain`, `feedback`, `result`).
-- Explain markdown: `GPM/ui-text/content/erklaerungen/`; metadata in `GPM/ui-text/de/articles.ts`.
+- Explain markdown: `GPM/ui-text/de/erklaerungen/`; metadata in `GPM/ui-text/de/articles-data.ts`.
 - Frontend entry: `web/src/i18n/t.ts` → `createTranslationEngine(uiTextDe)`.
 - Technical terms stay English (Registry, Gaps, Tier, Token, Roundtrip, Steps, Spectroscope).
 - Do **not** move API `steps[]` or substance values into ui-text.
@@ -126,5 +126,5 @@ See `render.yaml` — bind `0.0.0.0:$PORT`, ephemeral filesystem (in-memory sess
 
 ## Related docs
 
-- Chapters: `GPM/ui-text/content/erklaerungen/00-einstieg.md` … `24-cipher-gpc.md`
+- Chapters: `GPM/ui-text/de/erklaerungen/00-einstieg.md` … `29-tensorraum.md`
 - OG tree (`Ge-Prime-Matrix OG/`) is **not** part of the Workbench — stay under `GPM/`.

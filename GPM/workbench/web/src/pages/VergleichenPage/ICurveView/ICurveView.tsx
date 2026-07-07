@@ -1,10 +1,11 @@
-import { IcurveIngestPanel } from "../../../components/result/ikurve";
-import { Card, TabGuide } from "../../../components/ui";
+import { TabGuide } from "../../../components/ui";
+import { Card } from "../../../components/ui";
 import { t } from "../../../i18n/t";
-import { curvePointCount } from "../../../lib/ikurve/curves";
-import { fmtEmpty } from "../../../lib/ikurve/format";
+import { IcurveIngestPanel } from "../../../components/result/ikurve";
+import { IcurveChainsZone } from "../../../components/result/ikurve/IcurveChainsZone";
+import { IcurveLensZone } from "../../../components/result/ikurve/IcurveLensZone";
+import { IcurveStructureZone } from "../../../components/result/ikurve/IcurveStructureZone";
 import { ICurveMatrixSection } from "./ICurveMatrixSection";
-import { ICurveZonesSection } from "./ICurveZonesSection";
 import { useICurveAnalysis } from "./useICurveAnalysis";
 
 export function ICurveView() {
@@ -13,6 +14,7 @@ export function ICurveView() {
   return (
     <>
       <TabGuide>{t("ikurve.guide")}</TabGuide>
+      <p className="gpm-metric__hint">{t("ikurve.decomposition")}</p>
       <Card>
         <IcurveIngestPanel
           textA={ic.textA}
@@ -35,18 +37,24 @@ export function ICurveView() {
       </Card>
       {ic.error ? <div className="gpm-error">{ic.error}</div> : null}
       {ic.data ? (
-        <>
-          <TabGuide>{t("ikurve.decomposition")}</TabGuide>
-          <dl className="gpm-metric-grid gpm-ikurve-token-strip">
-            <div className="gpm-metric">
-              <dt className="gpm-metric__label">{t("ikurve.metrics.tokensA")}</dt>
-              <dd className="gpm-metric__value">{fmtEmpty(curvePointCount(ic.data.curve_a as never))}</dd>
-            </div>
-            <div className="gpm-metric">
-              <dt className="gpm-metric__label">{t("ikurve.metrics.tokensB")}</dt>
-              <dd className="gpm-metric__value">{fmtEmpty(curvePointCount(ic.data.curve_b as never))}</dd>
-            </div>
-          </dl>
+        <div id="ikurve-results" className="gpm-ikurve-results">
+          <Card>
+            <IcurveStructureZone data={ic.data} />
+          </Card>
+          <Card>
+            <IcurveLensZone
+              data={ic.data}
+              mode={ic.mode}
+              depth={ic.depth}
+              chartScale={ic.chartScale}
+              chartLayout={ic.chartLayout}
+              disabled={ic.busy}
+              onModeChange={ic.setMode}
+              onDepthChange={ic.setDepth}
+              onChartScaleChange={ic.setChartScale}
+              onChartLayoutChange={ic.setChartLayout}
+            />
+          </Card>
           <ICurveMatrixSection
             data={ic.data}
             curveMeta={ic.curveMeta}
@@ -56,23 +64,16 @@ export function ICurveView() {
             selB={ic.selB}
             spectroA={ic.spectroA}
             spectroB={ic.spectroB}
+            spectroLoading={ic.spectroLoading}
             onSelectionA={ic.setSelA}
             onSelectionB={ic.setSelB}
             onSpectroA={() => void ic.runSpectro("a")}
             onSpectroB={() => void ic.runSpectro("b")}
           />
-          <ICurveZonesSection
-            data={ic.data}
-            mode={ic.mode}
-            depth={ic.depth}
-            chartScale={ic.chartScale}
-            openZone={ic.openZone}
-            onOpenZone={ic.setOpenZone}
-            onModeChange={ic.setMode}
-            onDepthChange={ic.setDepth}
-            onChartScaleChange={ic.setChartScale}
-          />
-        </>
+          <Card>
+            <IcurveChainsZone data={ic.data} mode={ic.mode} depth={ic.depth} />
+          </Card>
+        </div>
       ) : (
         <p className="gpm-empty">{t("ikurve.empty")}</p>
       )}

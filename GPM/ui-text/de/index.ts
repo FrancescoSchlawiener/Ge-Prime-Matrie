@@ -9,6 +9,7 @@ import { explain } from "./explain";
 import { feedback } from "./feedback";
 import { result } from "./result";
 import { languages } from "./languages";
+import { tensorraum } from "./tensorraum";
 
 export const uiTextDe = {
   shell,
@@ -22,6 +23,7 @@ export const uiTextDe = {
   feedback,
   result,
   languages,
+  tensorraum,
 } as const;
 
 export type UiTextKeys = typeof uiTextDe;
@@ -38,12 +40,32 @@ function walk(obj: NestedObject, parts: string[]): string | undefined {
   return typeof cur === "string" ? cur : undefined;
 }
 
+function applyVars(template: string, vars?: Record<string, string | number>): string {
+  if (!vars) return template;
+  let out = template;
+  for (const [k, v] of Object.entries(vars)) {
+    out = out.replaceAll(`{${k}}`, String(v));
+  }
+  return out;
+}
+
 export function createTranslationEngine<T extends NestedObject>(translations: T) {
-  return function t(key: string, fallback?: string): string {
-    const value = walk(translations, key.split("."));
-    if (value !== undefined) return value;
-    return fallback ?? key;
+  return function t(
+    key: string,
+    varsOrFallback?: Record<string, string | number> | string,
+    fallback?: string,
+  ): string {
+    let vars: Record<string, string | number> | undefined;
+    let fb = fallback;
+    if (typeof varsOrFallback === "string") {
+      fb = varsOrFallback;
+    } else if (varsOrFallback) {
+      vars = varsOrFallback;
+    }
+    const raw = walk(translations, key.split("."));
+    if (raw === undefined) return fb ?? key;
+    return applyVars(raw, vars);
   };
 }
 
-export { shell, encode, decode, wortpaar, ikurve, gpm, datenbank, explain, feedback, result, languages };
+export { shell, encode, decode, wortpaar, ikurve, gpm, datenbank, explain, feedback, result, languages, tensorraum };

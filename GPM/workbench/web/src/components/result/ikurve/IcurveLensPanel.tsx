@@ -1,8 +1,6 @@
 import { t } from "../../../i18n/t";
-import { pct } from "../../../utils/format";
-import { SegmentToggle } from "../../ui";
-import { PairedSparkline } from "./PairedSparkline";
 import type {
+  ChartLayout,
   ChartScale,
   IcurveMode,
   SemanticDepth,
@@ -12,16 +10,28 @@ import {
   SEMANTIC_DEPTH_CONFIG,
   STRUCTURAL_DEPTH_CONFIG,
 } from "../../../lib/ikurve/curves";
-import { fmtTemplate, fmtPct } from "../../../lib/ikurve/format";
+import { pct } from "../../../utils/format";
+import { fmtTemplate } from "../../../lib/ikurve/format";
+import { IcurveLevelMetrics } from "./IcurveLevelMetrics";
+import {
+  IcurveChartStack,
+  buildAtomicChartPairs,
+  buildSemanticChartPair,
+  buildStructuralChartPair,
+} from "./IcurveChartStack";
+import { SegmentToggle } from "../../ui";
 
 interface IcurveLensPanelProps {
   data: Record<string, unknown>;
   mode: IcurveMode;
   depth: SemanticDepth | StructuralDepth;
   chartScale: ChartScale;
+  chartLayout: ChartLayout;
+  disabled?: boolean;
   onModeChange: (mode: IcurveMode) => void;
   onDepthChange: (depth: SemanticDepth | StructuralDepth) => void;
   onChartScaleChange: (scale: ChartScale) => void;
+  onChartLayoutChange: (layout: ChartLayout) => void;
 }
 
 export function IcurveLensPanel({
@@ -29,11 +39,13 @@ export function IcurveLensPanel({
   mode,
   depth,
   chartScale,
+  chartLayout,
+  disabled = false,
   onModeChange,
   onDepthChange,
   onChartScaleChange,
+  onChartLayoutChange,
 }: IcurveLensPanelProps) {
-  const comparison = (data.comparison ?? {}) as Record<string, unknown>;
   const hierarchy = (data.hierarchy_comparison ?? {}) as Record<
     string,
     Record<string, Record<string, unknown>>
@@ -58,11 +70,21 @@ export function IcurveLensPanel({
 
   const depthLabel = dtwDepthKey ? t(`ikurve.depth.${dtwDepthKey}` as "ikurve.depth.phrase") : "";
 
+  const chartPairs =
+    mode === "atomic"
+      ? buildAtomicChartPairs(data)
+      : mode === "semantic"
+        ? [buildSemanticChartPair(data, depth as SemanticDepth)]
+        : [buildStructuralChartPair(data)];
+
   return (
     <div className="gpm-ikurve-zone">
+      <IcurveLevelMetrics data={data} mode={mode} />
+
       <SegmentToggle
         name="ikurve-mode"
         value={mode}
+        disabled={disabled}
         onChange={(v) => onModeChange(v as IcurveMode)}
         options={[
           { value: "atomic", label: t("ikurve.modes.atomic") },
@@ -77,6 +99,7 @@ export function IcurveLensPanel({
             <button
               key={key}
               type="button"
+              disabled={disabled}
               className={`gpm-ikurve-depth-btn${depth === key ? " gpm-ikurve-depth-active" : ""}`}
               aria-pressed={depth === key}
               onClick={() => onDepthChange(key)}
@@ -89,97 +112,46 @@ export function IcurveLensPanel({
 
       {mode === "structural" ? (
         <div className="gpm-ikurve-depth-pills" role="group" aria-label={t("ikurve.aria.depth")}>
-          <button
-            type="button"
-            className="gpm-ikurve-depth-btn gpm-ikurve-depth-active"
-            aria-pressed
-          >
+          <button type="button" className="gpm-ikurve-depth-btn gpm-ikurve-depth-active" aria-pressed disabled>
             {t("ikurve.depth.line")}
           </button>
         </div>
       ) : null}
 
-      <div className="gpm-ikurve-chart-scale" role="group" aria-label={t("ikurve.aria.chartScale")}>
-        {(["union", "shorter"] as ChartScale[]).map((key) => (
-          <button
-            key={key}
-            type="button"
-            className={`gpm-ikurve-chart-scale-btn${chartScale === key ? " gpm-ikurve-chart-scale-active" : ""}`}
-            aria-pressed={chartScale === key}
-            onClick={() => onChartScaleChange(key)}
-          >
-            {t(`ikurve.chartScale.${key}`)}
-          </button>
-        ))}
+      <div className="gpm-ikurve-lens-controls">
+        <div className="gpm-ikurve-chart-scale" role="group" aria-label={t("ikurve.aria.chartScale")}>
+          {(["union", "shorter"] as ChartScale[]).map((key) => (
+            <button
+              key={key}
+              type="button"
+              disabled={disabled}
+              className={`gpm-ikurve-chart-scale-btn${chartScale === key ? " gpm-ikurve-chart-scale-active" : ""}`}
+              aria-pressed={chartScale === key}
+              onClick={() => onChartScaleChange(key)}
+            >
+              {t(`ikurve.chartScale.${key}`)}
+            </button>
+          ))}
+        </div>
+        <div className="gpm-ikurve-chart-layout-toggle" role="group" aria-label={t("ikurve.chartLayout.legend")}>
+          {(["overlay", "stacked"] as ChartLayout[]).map((key) => (
+            <button
+              key={key}
+              type="button"
+              disabled={disabled}
+              className={`gpm-ikurve-chart-scale-btn${chartLayout === key ? " gpm-ikurve-chart-scale-active" : ""}`}
+              aria-pressed={chartLayout === key}
+              onClick={() => onChartLayoutChange(key)}
+            >
+              {t(`ikurve.chartLayout.${key}`)}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {mode !== "atomic" ? (
-        <p className="gpm-metric__hint">{t("ikurve.lensHint")}</p>
-      ) : null}
+      {mode !== "atomic" ? <p className="gpm-metric__hint">{t("ikurve.lensHint")}</p> : null}
 
-      {mode === "atomic" ? (
-        <>
-          <PairedSparkline
-            payloadA={data.curve_a as Record<string, unknown>}
-            payloadB={data.curve_b as Record<string, unknown>}
-            labelA={t("ikurve.sideA")}
-            labelB={t("ikurve.sideB")}
-            chartScale={chartScale}
-          />
-          <PairedSparkline
-            payloadA={data.substance_a as Record<string, unknown>}
-            payloadB={data.substance_b as Record<string, unknown>}
-            valueKey="ggt_kgv_ratio"
-            labelA={t("ikurve.substanceA")}
-            labelB={t("ikurve.substanceB")}
-            chartScale={chartScale}
-          />
-          <PairedSparkline
-            payloadA={data.cell_geometry_a as Record<string, unknown>}
-            payloadB={data.cell_geometry_b as Record<string, unknown>}
-            valueKey="i_satz_ratio"
-            labelA={t("ikurve.structuralA")}
-            labelB={t("ikurve.structuralB")}
-            chartScale={chartScale}
-          />
-        </>
-      ) : null}
-
-      {mode === "semantic" ? (
-        <PairedSparkline
-          payloadA={
-            (data.semantic_a as Record<string, Record<string, unknown>>)?.[
-              SEMANTIC_DEPTH_CONFIG[depth as SemanticDepth].dataKey
-            ]
-          }
-          payloadB={
-            (data.semantic_b as Record<string, Record<string, unknown>>)?.[
-              SEMANTIC_DEPTH_CONFIG[depth as SemanticDepth].dataKey
-            ]
-          }
-          valueKey={SEMANTIC_DEPTH_CONFIG[depth as SemanticDepth].ratioKey}
-          labelA={fmtTemplate("ikurve.labels.sideDepth", {
-            side: t("ikurve.sideShort.a"),
-            depth: t(`ikurve.depth.${depth}`),
-          })}
-          labelB={fmtTemplate("ikurve.labels.sideDepth", {
-            side: t("ikurve.sideShort.b"),
-            depth: t(`ikurve.depth.${depth}`),
-          })}
-          chartScale={chartScale}
-        />
-      ) : null}
-
-      {mode === "structural" ? (
-        <PairedSparkline
-          payloadA={(data.structural_a as Record<string, Record<string, unknown>>)?.lines}
-          payloadB={(data.structural_b as Record<string, Record<string, unknown>>)?.lines}
-          valueKey={STRUCTURAL_DEPTH_CONFIG.line.ratioKey}
-          labelA={t("ikurve.structuralA")}
-          labelB={t("ikurve.structuralB")}
-          chartScale={chartScale}
-        />
-      ) : null}
+      <IcurveChartStack pairs={chartPairs} chartScale={chartScale} chartLayout={chartLayout} />
 
       {mode !== "atomic" ? (
         <p className="gpm-ikurve-dtw-line gpm-metric__hint">
@@ -194,21 +166,6 @@ export function IcurveLensPanel({
           )}
         </p>
       ) : null}
-
-      <dl className="gpm-metric-grid" style={{ marginTop: "1rem" }}>
-        <div className="gpm-metric">
-          <dt className="gpm-metric__label">{t("ikurve.metrics.fusion")}</dt>
-          <dd className="gpm-metric__value">{fmtPct(comparison.geometry_score, pct)}</dd>
-        </div>
-        <div className="gpm-metric">
-          <dt className="gpm-metric__label">{t("ikurve.metrics.wordDtw")}</dt>
-          <dd className="gpm-metric__value">{fmtPct(comparison.geometry_score_dtw, pct)}</dd>
-        </div>
-        <div className="gpm-metric">
-          <dt className="gpm-metric__label">{t("ikurve.metrics.literal")}</dt>
-          <dd className="gpm-metric__value">{fmtPct(comparison.literal_match_ratio, pct)}</dd>
-        </div>
-      </dl>
     </div>
   );
 }

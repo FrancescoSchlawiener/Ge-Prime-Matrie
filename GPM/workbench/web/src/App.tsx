@@ -13,6 +13,9 @@ const GpmPage = lazy(() => import("./pages/GpmPage/GpmPage").then((m) => ({ defa
 const ICurveView = lazy(() =>
   import("./pages/VergleichenPage/ICurveView/ICurveView").then((m) => ({ default: m.ICurveView })),
 );
+const TensorraumPage = lazy(() =>
+  import("./pages/TensorraumPage/TensorraumPage").then((m) => ({ default: m.TensorraumPage })),
+);
 
 function LegacyRedirect({ to }: { to: string }) {
   return <Navigate to={to} replace />;
@@ -46,6 +49,14 @@ export function App() {
             element={
               <Suspense fallback={<p className="gpm-empty">…</p>}>
                 <GpmPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="tensorraum"
+            element={
+              <Suspense fallback={<p className="gpm-empty">…</p>}>
+                <TensorraumPage />
               </Suspense>
             }
           />

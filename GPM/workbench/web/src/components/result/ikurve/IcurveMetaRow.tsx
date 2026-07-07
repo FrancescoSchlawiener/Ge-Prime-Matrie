@@ -1,6 +1,10 @@
 import { t } from "../../../i18n/t";
+import { DisclosureSection } from "../../ui/DisclosureSection";
+import { SummaryStrip } from "../SummaryStrip";
 import { pct } from "../../../utils/format";
 import { fmtEmpty } from "../../../lib/ikurve/format";
+
+const VECTOR_BRIEF_LIMIT = 128;
 
 interface IcurveMetaRowProps {
   metaA: Record<string, unknown>;
@@ -8,36 +12,50 @@ interface IcurveMetaRowProps {
   metaComparison: Record<string, unknown> | null | undefined;
 }
 
+function formatVector(vector: unknown): string {
+  if (Array.isArray(vector)) return vector.join(", ");
+  if (vector == null) return "";
+  return String(vector);
+}
+
+function vectorBrief(full: string): string {
+  if (full.length <= VECTOR_BRIEF_LIMIT) return full;
+  return full.slice(0, VECTOR_BRIEF_LIMIT) + t("ikurve.common.ellipsis");
+}
+
 function MetaGenomeCard({ label, meta }: { label: string; meta: Record<string, unknown> }) {
   const topWords = (meta.top_words as Array<{ word?: string; count?: number }>) ?? [];
-  const vector = meta.vector as number[] | string | undefined;
+  const fullVector = formatVector(meta.vector);
 
   return (
-    <div className="gpm-meta-genome-card">
+    <div className="gpm-meta-genome-card gpm-meta-genome-card--compact">
       <div className="gpm-meta-genome-card__title">{label}</div>
-      <dl className="gpm-letter-list">
-        <dt>{t("ikurve.meta.vector")}</dt>
-        <dd className="mono">
-          {Array.isArray(vector) ? `[${vector.join(", ")}]` : fmtEmpty(vector)}
-        </dd>
-        <dt>{t("ikurve.meta.letterMass")}</dt>
-        <dd className="mono">{fmtEmpty(meta.total_letter_mass)}</dd>
-        <dt>{t("ikurve.meta.tokens")}</dt>
-        <dd className="mono">{fmtEmpty(meta.token_count)}</dd>
-        <dt>{t("ikurve.meta.unique")}</dt>
-        <dd className="mono">{fmtEmpty(meta.unique_words)}</dd>
-        <dt>{t("ikurve.meta.vectorBits")}</dt>
-        <dd className="mono">{fmtEmpty(meta.vector_bits)}</dd>
-        <dt>{t("ikurve.meta.primeFactors")}</dt>
-        <dd className="mono">{fmtEmpty(meta.prime_factor_count)}</dd>
-      </dl>
+      <SummaryStrip
+        items={[
+          { label: t("ikurve.meta.letterMass"), value: fmtEmpty(meta.total_letter_mass), mono: true },
+          { label: t("ikurve.meta.tokens"), value: fmtEmpty(meta.token_count), mono: true },
+          { label: t("ikurve.meta.unique"), value: fmtEmpty(meta.unique_words), mono: true },
+          { label: t("ikurve.meta.vectorBits"), value: fmtEmpty(meta.vector_bits), mono: true },
+          { label: t("ikurve.meta.primeFactors"), value: fmtEmpty(meta.prime_factor_count), mono: true },
+        ]}
+      />
       {topWords.length ? (
-        <p className="gpm-metric__hint">
-          {t("ikurve.meta.topWords")}:{" "}
-          {topWords
-            .map((w) => `${w.word ?? t("ikurve.common.unknown")}(${w.count ?? 0})`)
-            .join(t("ikurve.common.separator"))}
-        </p>
+        <div className="gpm-ikurve-word-chips">
+          {topWords.map((w) => (
+            <span key={`${w.word}-${w.count}`} className="gpm-ikurve-word-chip">
+              {w.word ?? t("ikurve.common.unknown")}({w.count ?? 0})
+            </span>
+          ))}
+        </div>
+      ) : null}
+      {fullVector ? (
+        <DisclosureSection
+          level="nested"
+          title={t("ikurve.details.vectorTitle")}
+          brief={t("ikurve.details.vectorBrief", { preview: vectorBrief(fullVector) })}
+        >
+          <pre className="gpm-disclosure__scroll mono">{fullVector}</pre>
+        </DisclosureSection>
       ) : null}
     </div>
   );
@@ -45,7 +63,9 @@ function MetaGenomeCard({ label, meta }: { label: string; meta: Record<string, u
 
 export function IcurveMetaRow({ metaA, metaB, metaComparison }: IcurveMetaRowProps) {
   const mc = metaComparison ?? {};
-  const sharedPrimes = mc.heavy_shared_primes as Array<{ prime: number; letter: string; exponent: number }> | undefined;
+  const sharedPrimes = mc.heavy_shared_primes as
+    | Array<{ prime: number; letter: string; exponent: number }>
+    | undefined;
 
   return (
     <div className="gpm-ikurve-meta-row">
@@ -53,7 +73,7 @@ export function IcurveMetaRow({ metaA, metaB, metaComparison }: IcurveMetaRowPro
         <MetaGenomeCard label={t("ikurve.sideA")} meta={metaA} />
         <MetaGenomeCard label={t("ikurve.sideB")} meta={metaB} />
       </div>
-      {sharedPrimes && sharedPrimes.length > 0 && (
+      {sharedPrimes && sharedPrimes.length > 0 ? (
         <div style={{ marginTop: "1rem" }}>
           <h4 className="gpm-ikurve-zone__title">{t("ikurve.meta.sharedPrimes")}</h4>
           <p className="gpm-metric__hint" style={{ marginTop: "0.25rem" }}>
@@ -62,8 +82,8 @@ export function IcurveMetaRow({ metaA, metaB, metaComparison }: IcurveMetaRowPro
               .join(t("ikurve.common.separator"))}
           </p>
         </div>
-      )}
-      {(mc.similarity_ratio != null || mc.ggt_kgv_similarity != null) ? (
+      ) : null}
+      {mc.similarity_ratio != null || mc.ggt_kgv_similarity != null ? (
         <p className="gpm-metric__hint" style={{ marginTop: "0.5rem" }}>
           {t("ikurve.meta.comparisonHint")}
           {mc.similarity_ratio != null ? `: ${pct(Number(mc.similarity_ratio))}` : ""}

@@ -1,0 +1,1414 @@
+/* C(I) Fraktaler Tensorraum — scoped workbench skin (OG v35 port) */
+.gpm-page--tensor {
+  max-width: none;
+}
+
+.gpm-page--tensor .gpm-btn:not(.gpm-btn--ghost) {
+  background: var(--gpm-surface-2);
+  border-color: var(--gpm-border);
+  color: var(--gpm-text);
+}
+
+.gpm-page--tensor .gpm-btn:not(.gpm-btn--ghost):hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--gpm-text) 35%, var(--gpm-border));
+  background: color-mix(in srgb, var(--gpm-text) 6%, var(--gpm-surface-2));
+  opacity: 1;
+}
+
+.gpm-page--tensor .gpm-tensor-clear {
+  border-color: color-mix(in srgb, var(--gpm-danger) 45%, var(--gpm-border));
+  color: var(--gpm-muted);
+}
+
+.gpm-main--tensor {
+  max-width: none;
+  padding-bottom: 0;
+}
+
+.gpm-tensor-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0 0 1rem;
+}
+
+.gpm-tensor-tab {
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius-sm);
+  background: var(--gpm-surface-2);
+  color: var(--gpm-muted);
+  cursor: pointer;
+}
+
+.gpm-tensor-tab--active,
+.gpm-tensor-tab:hover {
+  border-color: var(--gpm-accent);
+  color: var(--gpm-accent);
+}
+
+.gpm-tensor-layout {
+  display: grid;
+  grid-template-columns: minmax(16rem, 18rem) minmax(0, 1fr);
+  gap: 0;
+  min-height: calc(100vh - 14rem);
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius);
+  overflow: hidden;
+  background: var(--gpm-surface);
+}
+
+.gpm-tensor-sidebar {
+  border-right: 1px solid var(--gpm-border);
+  background: var(--gpm-surface-2);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.gpm-tensor-sidebar__block {
+  padding: 1rem;
+  border-bottom: 1px solid var(--gpm-border);
+}
+
+.gpm-tensor-sidebar__label {
+  margin: 0 0 0.5rem;
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gpm-muted);
+}
+
+.gpm-tensor-sidebar__row {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.gpm-tensor-sidebar__row--between {
+  justify-content: space-between;
+}
+
+.gpm-tensor-project-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+  max-height: 6rem;
+  overflow-y: auto;
+}
+
+.gpm-tensor-project-btn {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  text-align: left;
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.72rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius-sm);
+  background: transparent;
+  color: var(--gpm-muted);
+  cursor: pointer;
+}
+
+.gpm-tensor-project-btn--active {
+  border-color: color-mix(in srgb, var(--gpm-text) 35%, var(--gpm-border));
+  color: var(--gpm-text);
+  background: color-mix(in srgb, var(--gpm-text) 5%, var(--gpm-surface-2));
+}
+
+.gpm-tensor-project-badge {
+  font-size: 0.55rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.1rem 0.3rem;
+  border-radius: var(--gpm-radius-sm);
+  border: 1px solid color-mix(in srgb, var(--gpm-accent) 40%, var(--gpm-border));
+  color: var(--gpm-muted);
+  background: var(--gpm-surface-2);
+}
+
+.gpm-tensor-select {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8rem;
+}
+
+.gpm-tensor-drop {
+  border: 1px dashed var(--gpm-border);
+  border-radius: var(--gpm-radius-sm);
+  padding: 0.75rem;
+  text-align: center;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--gpm-muted);
+}
+
+.gpm-tensor-drop--active {
+  border-color: var(--gpm-border);
+  color: var(--gpm-text);
+  background: color-mix(in srgb, var(--gpm-text) 4%, var(--gpm-surface));
+}
+
+.gpm-tensor-drop__actions {
+  justify-content: center;
+  width: 100%;
+  margin-top: 0.35rem;
+}
+
+.gpm-tensor-project-name {
+  margin-bottom: 0.5rem;
+  font-size: 0.82rem;
+}
+
+.gpm-tensor-lang-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  max-height: 8rem;
+  overflow-y: auto;
+  margin-bottom: 0.5rem;
+}
+
+.gpm-tensor-lang-chip {
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.62rem;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid var(--gpm-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--gpm-muted);
+  opacity: 0.45;
+  cursor: pointer;
+}
+
+.gpm-tensor-lang-chip--active {
+  opacity: 1;
+  border-color: color-mix(in srgb, var(--gpm-text) 35%, var(--gpm-border));
+  color: var(--gpm-text);
+}
+
+.gpm-tensor-check {
+  display: flex;
+  gap: 0.4rem;
+  align-items: flex-start;
+  font-size: 0.72rem;
+  color: var(--gpm-muted);
+  margin-top: 0.35rem;
+}
+
+.gpm-tensor-window-size {
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.72rem;
+  color: var(--gpm-muted);
+  min-width: 11.5rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.gpm-tensor-window-body {
+  min-height: 4.75rem;
+  margin-top: 0.35rem;
+}
+
+.gpm-tensor-slider {
+  width: 100%;
+  margin: 0.35rem 0;
+}
+
+.gpm-tensor-sidebar__stats {
+  margin-top: auto;
+  padding: 1rem;
+  border-top: 1px solid var(--gpm-border);
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.68rem;
+  color: var(--gpm-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.gpm-tensor-sidebar__stats > div {
+  display: flex;
+  justify-content: space-between;
+}
+
+.gpm-tensor-sidebar__stats strong {
+  color: var(--gpm-text);
+}
+
+.gpm-tensor-export {
+  margin-top: 0.5rem;
+}
+
+.gpm-tensor-clear {
+  color: var(--gpm-danger);
+  border-color: var(--gpm-danger);
+}
+
+.gpm-tensor-main {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--gpm-bg);
+}
+
+.gpm-tensor-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(14rem, 22rem);
+  gap: 1rem;
+  height: 100%;
+  padding: 1rem;
+}
+
+.gpm-tensor-panel {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius);
+  background: var(--gpm-surface);
+  min-height: 0;
+}
+
+.gpm-tensor-panel--grow {
+  min-height: 20rem;
+}
+
+.gpm-tensor-panel--log {
+  max-height: 100%;
+}
+
+.gpm-tensor-panel__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--gpm-border);
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gpm-muted);
+}
+
+.gpm-tensor-panel__body {
+  flex: 1;
+  min-height: 0;
+  padding: 0.75rem;
+}
+
+.gpm-tensor-panel__body--col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.gpm-tensor-code-input {
+  flex: 1;
+  min-height: 12rem;
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.8rem;
+}
+
+.gpm-tensor-log {
+  overflow-y: auto;
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.68rem;
+  color: var(--gpm-muted);
+}
+
+.gpm-tensor-log__line {
+  padding: 0.15rem 0;
+}
+
+.gpm-tensor-registry {
+  padding: 1rem;
+  overflow-y: auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.gpm-tensor-registry__head h3 {
+  margin: 0 0 0.25rem;
+  font-family: var(--gpm-mono, monospace);
+}
+
+.gpm-tensor-registry-headline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--gpm-border);
+}
+
+.gpm-tensor-registry-headline__title {
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gpm-muted);
+}
+
+.gpm-tensor-registry-headline h4 {
+  margin: 0.25rem 0;
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.85rem;
+}
+
+.gpm-tensor-registry-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  min-width: min(100%, 28rem);
+}
+
+.gpm-tensor-registry-metric {
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius);
+  background: var(--gpm-surface-2);
+}
+
+.gpm-tensor-registry-metric span {
+  display: block;
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gpm-muted);
+}
+
+.gpm-tensor-registry-metric b {
+  display: block;
+  margin-top: 0.2rem;
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.9rem;
+}
+
+.gpm-tensor-registry-subtabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.gpm-tensor-registry-subtab {
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--gpm-border);
+  border-radius: 999px;
+  background: var(--gpm-surface-2);
+  color: var(--gpm-muted);
+  cursor: pointer;
+}
+
+.gpm-tensor-registry-subtab--active,
+.gpm-tensor-registry-subtab:hover {
+  border-color: var(--gpm-border);
+  color: var(--gpm-text);
+  background: color-mix(in srgb, var(--gpm-text) 6%, var(--gpm-surface-2));
+}
+
+.gpm-tensor-registry-panel {
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius);
+  background: var(--gpm-surface);
+  overflow: hidden;
+}
+
+.gpm-tensor-registry-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.18fr) minmax(280px, 1fr);
+  gap: 0.75rem;
+  min-height: 24rem;
+}
+
+.gpm-tensor-registry-categories {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.gpm-tensor-registry-search {
+  margin-bottom: 0.5rem;
+  font-size: 0.78rem;
+}
+
+.gpm-tensor-registry-table-wrap {
+  overflow-x: auto;
+}
+
+.gpm-tensor-registry-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+}
+
+.gpm-tensor-registry-row td {
+  padding: 0.35rem 0.25rem;
+  border-bottom: 1px solid var(--gpm-border);
+  vertical-align: top;
+}
+
+.gpm-tensor-registry-row__type {
+  width: 2.5rem;
+}
+
+.gpm-tensor-registry-row__label {
+  font-family: var(--gpm-mono, monospace);
+  word-break: break-word;
+  color: var(--gpm-text);
+  padding-right: 0.5rem;
+}
+
+.gpm-tensor-registry-row__id {
+  width: 5.5rem;
+  text-align: right;
+}
+
+.gpm-tensor-registry-row__id-btn {
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.58rem;
+  color: var(--gpm-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-align: right;
+  width: 100%;
+}
+
+.gpm-tensor-registry-row__id-btn:hover {
+  color: var(--gpm-text);
+  text-decoration: underline;
+}
+
+.gpm-tensor-sequence-preview {
+  margin-bottom: 0.65rem;
+}
+
+.gpm-tensor-sequence-preview__label {
+  display: block;
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gpm-muted);
+  margin-bottom: 0.35rem;
+}
+
+.gpm-tensor-sequence-preview__tokens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.gpm-tensor-sequence-preview__token {
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.68rem;
+  padding: 0.15rem 0.4rem;
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius-sm);
+  background: var(--gpm-surface);
+  color: var(--gpm-text);
+}
+
+.gpm-tensor-sequence-preview__more {
+  color: var(--gpm-muted);
+  font-size: 0.68rem;
+}
+
+.gpm-tensor-registry-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius);
+  background: var(--gpm-surface-2);
+}
+
+.gpm-tensor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
+.gpm-tensor-registry-toolbar-label {
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gpm-muted);
+}
+
+.gpm-tensor-registry-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 32rem;
+  overflow-y: auto;
+}
+
+.gpm-tensor-registry-section .gpm-disclosure__body {
+  padding: 0.5rem;
+}
+
+.gpm-tensor-registry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 0.5rem;
+}
+
+.gpm-tensor-registry-card {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius);
+  background: var(--gpm-surface-2);
+  font-size: 0.72rem;
+}
+
+.gpm-tensor-registry-card__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.35rem;
+  align-items: flex-start;
+}
+
+.gpm-tensor-registry-card__value {
+  text-align: right;
+  word-break: break-word;
+  color: var(--gpm-text);
+  line-height: 1.35;
+}
+
+.gpm-tensor-registry-expand-btn {
+  grid-column: 1 / -1;
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.gpm-tensor-registry-tree-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.gpm-tensor-registry-tree-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) auto;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius);
+  background: var(--gpm-surface-2);
+}
+
+.gpm-tensor-registry-tree-overview h4 {
+  margin: 0 0 0.35rem;
+  font-family: var(--gpm-mono, monospace);
+}
+
+.gpm-tensor-registry-tree-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(5.5rem, 1fr));
+  gap: 0.35rem;
+}
+
+.gpm-tensor-registry-tree-metric {
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius-sm);
+  background: var(--gpm-surface);
+}
+
+.gpm-tensor-registry-tree-metric span {
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gpm-muted);
+}
+
+.gpm-tensor-registry-tree-metric strong {
+  display: block;
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.85rem;
+  margin-top: 0.15rem;
+}
+
+.gpm-tensor-registry-tree-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 0.75rem;
+}
+
+.gpm-tensor-registry-node {
+  border: 1px solid var(--gpm-border);
+  border-left: 4px solid var(--registry-accent, var(--gpm-border));
+  border-radius: var(--gpm-radius);
+  background: var(--gpm-surface-2);
+  overflow: hidden;
+}
+
+.gpm-tensor-registry-node > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.gpm-tensor-registry-node-head {
+  min-width: 0;
+  flex: 1;
+}
+
+.gpm-tensor-registry-node > summary::-webkit-details-marker {
+  display: none;
+}
+
+.gpm-tensor-registry-node[open] > summary {
+  border-bottom: 1px solid var(--gpm-border);
+  background: var(--gpm-surface);
+}
+
+.gpm-tensor-registry-node-head strong {
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.75rem;
+}
+
+.gpm-tensor-registry-node-head small {
+  display: block;
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.55rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gpm-muted);
+  margin-top: 0.2rem;
+}
+
+.gpm-tensor-registry-node-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+}
+
+.gpm-tensor-registry-node-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  justify-content: flex-end;
+}
+
+.gpm-tensor-registry-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.4rem;
+  border: 1px solid var(--gpm-border);
+  border-radius: 999px;
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.55rem;
+  color: var(--gpm-muted);
+}
+
+.gpm-tensor-registry-mini strong {
+  color: var(--gpm-text);
+}
+
+.gpm-tensor-registry-node-body {
+  padding: 0.65rem;
+}
+
+.gpm-tensor-registry-node-children {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--gpm-border);
+}
+
+.gpm-tensor-registry-section h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gpm-muted);
+}
+
+.gpm-tensor-registry-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.gpm-tensor-registry-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: baseline;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius-sm);
+  font-size: 0.72rem;
+}
+
+.gpm-tensor-registry-value {
+  word-break: break-all;
+  color: var(--gpm-text);
+}
+
+.gpm-tensor-ptr {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.gpm-tensor-ptr--n {
+  color: var(--gpm-green);
+  border: 1px solid rgba(0, 200, 120, 0.25);
+  background: rgba(0, 200, 120, 0.06);
+}
+
+.gpm-tensor-ptr--d {
+  color: var(--gpm-orange);
+  border: 1px solid rgba(255, 180, 0, 0.25);
+  background: rgba(255, 180, 0, 0.06);
+}
+
+.gpm-tensor-ptr--s {
+  color: var(--gpm-accent);
+  border: 1px solid rgba(0, 180, 220, 0.25);
+  background: rgba(0, 180, 220, 0.06);
+}
+
+.gpm-tensor-ptr--c {
+  color: var(--gpm-danger);
+  border: 1px solid rgba(255, 80, 100, 0.25);
+  background: rgba(255, 80, 100, 0.06);
+}
+
+.gpm-tensor-ptr--h {
+  color: #c9a227;
+  border: 1px solid rgba(201, 162, 39, 0.35);
+  background: rgba(201, 162, 39, 0.08);
+}
+
+.gpm-tensor-registry-row__segments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+
+.gpm-tensor-registry-row__segments .gpm-tensor-ptr {
+  font-size: 0.68rem;
+  padding: 0.1rem 0.35rem;
+}
+
+.gpm-tensor-placeholder {
+  padding: 1.25rem;
+}
+
+.gpm-tensor-placeholder h3 {
+  margin: 0 0 0.5rem;
+  font-family: var(--gpm-mono, monospace);
+}
+
+.gpm-tensor-tabnav {
+  margin: 0 0 1rem;
+}
+
+.gpm-tensor-tabnav .gpm-segment {
+  flex-wrap: wrap;
+}
+
+.gpm-tensor-docs {
+  margin-bottom: 0.75rem;
+}
+
+.gpm-tensor-docs__link {
+  margin: 1rem 0 0;
+  font-size: 0.78rem;
+}
+
+.gpm-tensor-docs__link a {
+  color: var(--gpm-accent);
+  text-decoration: none;
+}
+
+.gpm-tensor-docs__link a:hover {
+  text-decoration: underline;
+}
+
+.gpm-tensor-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.55rem 1rem;
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius-sm);
+  background: var(--gpm-surface-2);
+  color: var(--gpm-text);
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.gpm-tensor-cta:hover {
+  border-color: color-mix(in srgb, var(--gpm-text) 35%, var(--gpm-border));
+  background: color-mix(in srgb, var(--gpm-text) 6%, var(--gpm-surface-2));
+}
+
+.gpm-tensor-cta--sm {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.68rem;
+}
+
+.gpm-tensor-sidebar__row--actions {
+  gap: 0.35rem;
+}
+
+.gpm-tensor-sidebar-action {
+  flex: 1;
+  min-width: 0;
+}
+
+.gpm-tensor-sidebar .gpm-segment {
+  width: 100%;
+}
+
+.gpm-tensor-redundancy {
+  padding: 1rem;
+  overflow-y: auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.gpm-tensor-resonance-scan {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius);
+  background: var(--gpm-surface-2);
+}
+
+.gpm-tensor-resonance-scan h4 {
+  margin: 0 0 0.25rem;
+  font-family: var(--gpm-mono, monospace);
+}
+
+.gpm-tensor-resonance-scan__params {
+  margin: 0.35rem 0 0;
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  color: var(--gpm-muted);
+}
+
+.gpm-tensor-resonance-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.gpm-tensor-resonance-toolbar__count {
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.68rem;
+  color: var(--gpm-muted);
+}
+
+.gpm-tensor-resonance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: 0.75rem;
+}
+
+.gpm-tensor-resonance-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius);
+  background: var(--gpm-surface);
+}
+
+.gpm-tensor-resonance-card__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.gpm-tensor-resonance-card__rank {
+  display: block;
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gpm-muted);
+}
+
+.gpm-tensor-resonance-card__meta {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.68rem;
+  color: var(--gpm-muted);
+}
+
+.gpm-tensor-resonance-card__hash {
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.58rem;
+  color: var(--gpm-muted);
+  word-break: break-all;
+}
+
+.gpm-tensor-resonance-card__locations h5 {
+  margin: 0 0 0.35rem;
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gpm-muted);
+}
+
+.gpm-tensor-resonance-card__locations ul {
+  margin: 0;
+  padding-left: 1rem;
+  font-size: 0.68rem;
+  color: var(--gpm-text);
+}
+
+.gpm-tensor-resonance-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.gpm-tensor-resonance-sparkline {
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius-sm);
+  background: var(--gpm-surface-2);
+}
+
+.gpm-tensor-resonance-sparkline__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.35rem;
+  margin-bottom: 0.25rem;
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.58rem;
+  color: var(--gpm-muted);
+}
+
+.gpm-tensor-resonance-sparkline__ni {
+  color: var(--gpm-accent);
+}
+
+.gpm-tensor-resonance-sparkline__svg {
+  display: block;
+  width: 100%;
+  height: 3.5rem;
+}
+
+.gpm-tensor-resonance-more {
+  width: 100%;
+}
+
+.gpm-tensor-reversibility {
+  padding: 1rem;
+  overflow-y: auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.gpm-tensor-reversibility__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--gpm-border);
+}
+
+.gpm-tensor-reversibility__head h3 {
+  margin: 0 0 0.25rem;
+  font-family: var(--gpm-mono, monospace);
+}
+
+.gpm-tensor-reversibility-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  min-width: min(100%, 28rem);
+}
+
+.gpm-tensor-reversibility-metric {
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius);
+  background: var(--gpm-surface-2);
+}
+
+.gpm-tensor-reversibility-metric span {
+  display: block;
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gpm-muted);
+}
+
+.gpm-tensor-reversibility-metric b {
+  display: block;
+  margin-top: 0.2rem;
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.9rem;
+}
+
+.gpm-tensor-reversibility-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.gpm-tensor-reversibility-card {
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius);
+  background: var(--gpm-surface);
+  overflow: hidden;
+}
+
+.gpm-tensor-reversibility-card__summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 0.75rem 0.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: var(--gpm-surface-2);
+}
+
+.gpm-tensor-reversibility-card__summary::-webkit-details-marker {
+  display: none;
+}
+
+.gpm-tensor-reversibility-card[open] > .gpm-tensor-reversibility-card__summary {
+  border-bottom: 1px solid var(--gpm-border);
+}
+
+.gpm-tensor-reversibility-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.gpm-tensor-reversibility-card__head strong {
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.78rem;
+}
+
+.gpm-tensor-reversibility-status {
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--gpm-border);
+}
+
+.gpm-tensor-reversibility-status--ok {
+  color: var(--gpm-green);
+  border-color: color-mix(in srgb, var(--gpm-green) 40%, var(--gpm-border));
+}
+
+.gpm-tensor-reversibility-status--fail {
+  color: var(--gpm-danger);
+  border-color: color-mix(in srgb, var(--gpm-danger) 40%, var(--gpm-border));
+}
+
+.gpm-tensor-reversibility-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.58rem;
+  color: var(--gpm-muted);
+}
+
+.gpm-tensor-reversibility-card__body {
+  padding: 0.75rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.gpm-tensor-reversibility-fail {
+  padding: 0.5rem 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--gpm-danger) 35%, var(--gpm-border));
+  border-radius: var(--gpm-radius-sm);
+  background: color-mix(in srgb, var(--gpm-danger) 8%, var(--gpm-surface-2));
+  font-size: 0.72rem;
+}
+
+.gpm-tensor-reversibility-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.gpm-tensor-reversibility-code {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius-sm);
+  overflow: hidden;
+  background: var(--gpm-surface-2);
+}
+
+.gpm-tensor-reversibility-code--ok {
+  border-left: 3px solid var(--gpm-green);
+}
+
+.gpm-tensor-reversibility-code--fail {
+  border-left: 3px solid var(--gpm-danger);
+}
+
+.gpm-tensor-reversibility-code__label {
+  padding: 0.35rem 0.55rem;
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gpm-muted);
+  border-bottom: 1px solid var(--gpm-border);
+  background: var(--gpm-surface);
+}
+
+.gpm-tensor-reversibility-code__pre {
+  margin: 0;
+  padding: 0.5rem 0.55rem;
+  max-height: 16rem;
+  overflow: auto;
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.68rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--gpm-text);
+}
+
+.gpm-tensor-reversibility-more {
+  width: 100%;
+}
+
+.gpm-tensor-storage {
+  padding: 1rem;
+  overflow-y: auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.gpm-tensor-storage-hint {
+  padding: 0.75rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--gpm-accent) 35%, var(--gpm-border));
+  border-radius: var(--gpm-radius);
+  background: color-mix(in srgb, var(--gpm-accent) 8%, var(--gpm-surface-2));
+}
+
+.gpm-tensor-storage-hint strong {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+}
+
+.gpm-tensor-storage-hint p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--gpm-muted);
+  line-height: 1.45;
+}
+
+.gpm-tensor-storage-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--gpm-border);
+}
+
+.gpm-tensor-storage-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.gpm-tensor-storage-empty {
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.gpm-tensor-storage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.gpm-tensor-storage-card {
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius);
+  background: var(--gpm-surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.gpm-tensor-storage-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.gpm-tensor-storage-card__head strong {
+  display: block;
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.82rem;
+}
+
+.gpm-tensor-storage-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.gpm-tensor-storage-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.gpm-tensor-storage-badges span {
+  font-family: var(--gpm-mono, monospace);
+  font-size: 0.58rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid var(--gpm-border);
+  border-radius: var(--gpm-radius-sm);
+  color: var(--gpm-muted);
+  background: var(--gpm-surface);
+}
+
+@media (max-width: 960px) {
+  .gpm-tensor-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .gpm-tensor-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .gpm-tensor-registry-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .gpm-tensor-registry-categories {
+    grid-template-columns: 1fr;
+  }
+
+  .gpm-tensor-registry-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gpm-tensor-registry-tree-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .gpm-tensor-resonance-scan {
+    flex-direction: column;
+  }
+
+  .gpm-tensor-resonance-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .gpm-tensor-reversibility-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gpm-tensor-reversibility-compare {
+    grid-template-columns: 1fr;
+  }
+
+  .gpm-tensor-reversibility__head {
+    flex-direction: column;
+  }
+
+  .gpm-tensor-storage-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .gpm-tensor-storage-toolbar__actions {
+    flex-wrap: wrap;
+  }
+}

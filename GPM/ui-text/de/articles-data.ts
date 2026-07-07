@@ -540,4 +540,26 @@ export const EXPLAIN_ARTICLES_DATA: ExplainArticleMeta[] = [
     related: ["25-cipher", "13-gpm-binary"],
     cta: { type: "gpm", demoText: "Geheim.\n" },
   },
+  {
+    slug: "29-tensorraum",
+    section: "tensorraum",
+    title: "Tensorraum",
+    summary: "Client-seitige Kanonisierung, Registry, Resonanz und Projektvergleich",
+    atAGlance: [
+      "Der Tensorraum kanonisiert Quellcode im Browser zu S/N/D/C-Pointern — ohne Server-Roundtrip.",
+      "Mehrere Live-Projekte in der Sidebar ermöglichen Vergleich von Resonanz und Round-Trip.",
+      "Snapshots speichern nur Rohcode und Einstellungen; Registry wird beim Laden neu aufgebaut.",
+      "Resonanz-Scan nutzt feste oder adaptive Fenster auf Block- und Satz-Ebene.",
+      "Kein OpenAPI-Endpoint in Phase 6 — große Repos bleiben optional für spätere Server-Jobs.",
+    ],
+    workbench: [
+      wb("Tab Tensorraum → Workspace", "Snippet oder Dateien einlesen", "Kanonisierte Pointer in Registry"),
+      wb("Tab Registry", "Atlas oder Fraktal öffnen", "S/N/D/C-Kategorien und Canvas-Atlas"),
+      wb("Tab Resonanz", "Scan starten", "Wiederholungsketten mit I-Kurve"),
+      wb("Tab Round-Trip", "Dateien prüfen", "Original vs. rekonstruierter Code"),
+      wb("Tab Ablage", "Snapshot laden", "Neues Projekt in Sidebar — Vergleich mit bestehendem"),
+    ],
+    related: ["15-registry", "22-redundanz", "24-code-blocks", "17-payload-kinds"],
+    cta: { type: "tensorraum" },
+  },
 ];

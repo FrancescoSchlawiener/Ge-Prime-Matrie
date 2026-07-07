@@ -47,4 +47,13 @@ test("smoke: OG tabs codec → vergleichen → gpm compile", async ({ page }) =>
     page.getByText(/Struktur-Kreuzvalidierung|Wort-Geometrie/i).first(),
   ).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText(/Geometrische Matrix/i)).toBeVisible();
+
+  await page.goto("/#/tensorraum");
+  await expect(page.getByTestId("nav-tensorraum")).toBeVisible();
+  await page.getByTestId("tensorraum-code-input").fill("function add(a,b){return a+b;}");
+  await page.getByTestId("tensorraum-canonicalize").click();
+  await expect(page.getByText(/Kanonisiert/i)).toBeVisible({ timeout: 10_000 });
+  await page.getByTestId("tensorraum-tab-registry").click();
+  await expect(page.getByTestId("tensorraum-registry")).toBeVisible();
+  await expect(page.getByText(/function|add/i).first()).toBeVisible();
 });

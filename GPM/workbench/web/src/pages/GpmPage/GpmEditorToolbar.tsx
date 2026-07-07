@@ -3,11 +3,10 @@ import { Button } from "../../components/ui";
 
 interface GpmEditorToolbarProps {
   loading: boolean;
-  documentRef: string | null;
+  cachedGpmBase64: string | null;
   onCompile: () => void;
   onClear: () => void;
   onLoadFile: () => void;
-  onReconstruct: () => void;
   onDownload: () => void;
   onOpenICurve: () => void;
   onCipher: () => void;
@@ -15,11 +14,10 @@ interface GpmEditorToolbarProps {
 
 export function GpmEditorToolbar({
   loading,
-  documentRef,
+  cachedGpmBase64,
   onCompile,
   onClear,
   onLoadFile,
-  onReconstruct,
   onDownload,
   onOpenICurve,
   onCipher,
@@ -38,19 +36,12 @@ export function GpmEditorToolbar({
         <Button variant="ghost" onClick={onLoadFile}>
           {t("gpm.readFile")}
         </Button>
-        {documentRef ? (
+        {cachedGpmBase64 ? (
           <Button variant="ghost" onClick={onDownload}>
             {t("gpm.download")}
           </Button>
         ) : null}
       </div>
-      {documentRef ? (
-        <div className="gpm-editor-toolbar__group">
-          <Button variant="ghost" onClick={onReconstruct}>
-            {t("gpm.reconstruct")}
-          </Button>
-        </div>
-      ) : null}
       <div className="gpm-editor-toolbar__group">
         <Button variant="ghost" onClick={onCipher}>
           {t("gpm.toolbar.cipher")}

@@ -11,7 +11,7 @@ import {
 } from "../../../components/result";
 import { Button, Card } from "../../../components/ui";
 import { t } from "../../../i18n/t";
-import { formatBigInt } from "../../../utils/format";
+import { formatSiPair } from "../../../utils/formatSi";
 import { encodeSummaryItems } from "./encodeSummary";
 import type { EncodeWordResult, WordSizeState } from "./encodeTypes";
 import { EMPTY_WORD_SIZE } from "./encodeTypes";
@@ -75,7 +75,7 @@ export function EncodeResults({
               key={`${row.word}-${i}`}
               index={i + 1}
               title={row.word}
-              brief={`S = ${formatBigInt(row.substance)} · I = ${formatBigInt(row.index)}`}
+              brief={formatSiPair(row.substance, row.index)}
               defaultOpen={i === 0}
               summary={<SummaryStrip items={encodeSummaryItems(row)} />}
               actions={

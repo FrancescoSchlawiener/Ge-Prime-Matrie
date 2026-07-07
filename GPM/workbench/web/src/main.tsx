@@ -4,6 +4,7 @@ import { App } from "./App";
 import "./styles/tokens.css";
 import "./styles/reset.css";
 import "./styles/primitives.css";
+import "./styles/tensorraum.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

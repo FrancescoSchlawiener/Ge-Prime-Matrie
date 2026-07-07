@@ -1,4 +1,4 @@
-"""DocumentRegistry — Write-once S/C/N/D Layer."""
+"""DocumentRegistry — Write-once S/C/N/D/H Layer."""
 
 from __future__ import annotations
 
@@ -8,6 +8,8 @@ from alphabets import AlphabetProfile
 from analysis.blocks.context import COrigin, NL_CONTEXT, ParseContext, ParseDomain
 from analysis.blocks.kinds import PointerKind
 from analysis.document.model import GpmHeaderEntry
+from gpm_types.hi.codec import decode_hi
+from gpm_types.hi.segments import HiPayload, parse_hi_segments
 
 
 @dataclass
@@ -28,10 +30,12 @@ class DocumentRegistry:
     c_entries: list[StructureEntry] = field(default_factory=list)
     n_entries: list[int] = field(default_factory=list)
     d_entries: list[str] = field(default_factory=list)
+    h_entries: list[HiPayload] = field(default_factory=list)
     _s_reverse: dict[str, int] = field(default_factory=dict, repr=False)
     _c_reverse: dict[tuple[COrigin, bytes], int] = field(default_factory=dict, repr=False)
     _n_reverse: dict[int, int] = field(default_factory=dict, repr=False)
     _d_reverse: dict[str, int] = field(default_factory=dict, repr=False)
+    _h_reverse: dict[str, int] = field(default_factory=dict, repr=False)
 
     def intern_s_header(self, entry: GpmHeaderEntry) -> int:
         key = entry.word_canonical
@@ -156,6 +160,24 @@ class DocumentRegistry:
             entry_id = len(self.d_entries)
             self.d_entries.append(value)
             self._d_reverse[value] = entry_id
+            return entry_id
+
+        if kind is PointerKind.H:
+            if not isinstance(value, str):
+                raise TypeError("H-Wert muss str sein.")
+            payload = parse_hi_segments(value)
+            raw_key = decode_hi(payload)
+            existing = self._h_reverse.get(raw_key)
+            if existing is not None:
+                return existing
+            for seg in payload.segments:
+                if seg.tag == "N":
+                    self.intern(PointerKind.N, int(seg.value), context=context)
+                else:
+                    self.intern(PointerKind.S, seg.value, context=context)
+            entry_id = len(self.h_entries)
+            self.h_entries.append(payload)
+            self._h_reverse[raw_key] = entry_id
             return entry_id
 
         raise ValueError(f"PointerKind {kind} nicht unterstützt für intern().")

@@ -27,10 +27,10 @@ GPM/ui-text/
     feedback.ts          — Fortschritt, Fehler (snake_case = error.code)
     result.ts            — Gemeinsame Result-/Compare-Strings
     articles.ts          — Erklär-Kapitel-Metadaten (slug, title, summary, miniCalc)
+    articles-data.ts     — Metadaten-Array für Erklärungen
     index.ts             — uiTextDe, createTranslationEngine
-  content/
     erklaerungen/        — Markdown-Kapitel (kanonische Prosa)
-      00-einstieg.md … 24-cipher-gpc.md
+      00-einstieg.md … 29-tensorraum.md
 ```
 
 ## Anbindung (Workbench Web)
@@ -44,9 +44,9 @@ import { uiTextDe, createTranslationEngine } from "@gpm/ui-text";
 export const t = createTranslationEngine(uiTextDe);
 ```
 
-- Erklärungen: `web/src/content/index.ts` lädt Markdown via `import.meta.glob` aus `ui-text/content/erklaerungen/`
+- Erklärungen: `web/src/content/index.ts` lädt Markdown via `import.meta.glob` aus `ui-text/de/erklaerungen/`
 
 ## Nicht migrieren
 
 - API `steps[]`, `word_canonical`, Substanz-Werte (bleiben in Python, sprachneutral bzw. API-Pedagogik)
-- `articles.ts` enthält nur Metadaten — der Artikeltext steht in `content/erklaerungen/*.md`
+- `articles-data.ts` enthält nur Metadaten — der Artikeltext steht in `de/erklaerungen/*.md`

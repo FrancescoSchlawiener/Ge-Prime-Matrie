@@ -6,7 +6,7 @@ import { jobEndpoints } from "./endpoints/jobs";
 import { sizeEndpoints } from "./endpoints/size";
 import { systemEndpoints } from "./endpoints/system";
 
-export { WorkbenchError, pollJob } from "./request";
+export { WorkbenchError, pollJob, uploadRequest } from "./request";
 export type { JobRecord, RedundancyScanOptions } from "./request";
 
 export const api = {

@@ -2,28 +2,30 @@ import { t } from "../../i18n/t";
 import { formatBigInt } from "../../utils/format";
 
 interface GpmDocumentMetaBarProps {
-  documentRef: string | null;
   stats: Record<string, unknown> | null;
 }
 
-export function GpmDocumentMetaBar({ documentRef, stats }: GpmDocumentMetaBarProps) {
-  if (!stats && !documentRef) return null;
+export function GpmDocumentMetaBar({ stats }: GpmDocumentMetaBarProps) {
+  if (!stats) return null;
+
+  const roundtripOk = stats.roundtrip_ok;
+  const showRoundtrip = typeof roundtripOk === "boolean";
 
   return (
     <dl className="gpm-editor-meta">
-      {stats ? (
+      <div>
+        <dt>{t("gpm.stats")}: </dt>
+        <dd className="mono">
+          {formatBigInt(Number(stats.token_count ?? 0))} Token ·{" "}
+          {formatBigInt(Number(stats.unique_words ?? 0))} Wörter
+        </dd>
+      </div>
+      {showRoundtrip ? (
         <div>
-          <dt>{t("gpm.stats")}: </dt>
-          <dd className="mono">
-            {formatBigInt(Number(stats.token_count ?? 0))} Token ·{" "}
-            {formatBigInt(Number(stats.unique_words ?? 0))} Wörter
+          <dt>{t("gpm.workspace.roundtripLabel")}: </dt>
+          <dd className={roundtripOk ? "gpm-roundtrip-ok" : "gpm-roundtrip-fail"}>
+            {roundtripOk ? t("gpm.workspace.roundtripOk") : t("gpm.workspace.roundtripFail")}
           </dd>
-        </div>
-      ) : null}
-      {documentRef ? (
-        <div>
-          <dt>{t("gpm.workspace.docRef")}: </dt>
-          <dd className="mono">{documentRef}</dd>
         </div>
       ) : null}
     </dl>

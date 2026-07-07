@@ -1,10 +1,7 @@
 import { t } from "../../i18n/t";
 
 export function fmtTemplate(key: string, vars: Record<string, string | number>): string {
-  return Object.entries(vars).reduce(
-    (acc, [k, v]) => acc.replaceAll(`{${k}}`, String(v)),
-    t(key),
-  );
+  return t(key, vars);
 }
 
 export function fmtEmpty(v: unknown): string {
