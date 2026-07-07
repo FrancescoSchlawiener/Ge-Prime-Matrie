@@ -8,11 +8,37 @@ from alphabets import AlphabetProfile
 from analysis.blocks.context import COrigin, NL_CONTEXT, ParseContext, ParseDomain
 from analysis.blocks.kinds import PointerKind
 from analysis.document.model import GpmHeaderEntry
+from gpm_types.ci.registry import checksum_c
+from gpm_types.ci.substance import perm_index_c, perm_space_c, substance_c
 from gpm_types.di.relation import DRelation
 from gpm_types.hi.codec import decode_hi
 from gpm_types.hi.segments import HiPayload, HiSegment, parse_hi_segments, parse_hi_segments_code
+from gpm_types.hi.substance import substance_hi
 from gpm_types.ni.registry import checksum_n, pointer_id_n
 from gpm_types.ni.substance import substance_n
+
+
+# Exakter Multiset-Permutations-Rang ist O(n*k) mit Fakultaeten — nur fuer
+# kurze Struktur-Token (Operatoren/Klammern) sinnvoll und billig. Fuer laengere
+# Token (Keywords, Kommentare, lange Symbole) ist der exakte Rang weder guenstig
+# noch nuetzlich; dort dient die reihenfolgesensitive checksum_c als Index.
+_CODE_PERM_MAX_LEN = 12
+
+
+def _code_geometry(text: str) -> tuple[int, int, int]:
+    """(substance, perm_index, perm_space) fuer ein Code-Struktur-Token.
+
+    Leere Werte fallen auf die neutrale Identitaet (1,1,1) zurueck. Substanz ist
+    immer das exakte Primprodukt (billig). Der Reihenfolge-Index ist fuer kurze
+    Token der exakte Permutations-Rang, fuer lange Token die reihenfolge-
+    sensitive checksum_c (beschraenkt Laufzeit, bleibt kollisionsarm).
+    """
+    if not text:
+        return 1, 1, 1
+    substance = substance_c(text)
+    if len(text) <= _CODE_PERM_MAX_LEN:
+        return substance, perm_index_c(text), perm_space_c(text)
+    return substance, checksum_c(text), 1
 
 
 @dataclass(frozen=True)
@@ -128,7 +154,9 @@ class DocumentRegistry:
                     substance, perm_index = encode_si(value, self.profile)
                     word_normalized = value.upper()
                 except ValueError:
-                    substance, perm_index = 1, 1
+                    # Nicht-OG-Token (Symbole, gemischte Identifier): echte
+                    # Primzahl-Geometrie statt Entartung auf substance=1.
+                    substance, perm_index, _ = _code_geometry(value)
                     word_normalized = value.upper()
                 entry = GpmHeaderEntry(
                     word_id=len(self.s_entries),
@@ -145,18 +173,20 @@ class DocumentRegistry:
         if kind is PointerKind.SYS:
             if context.domain is ParseDomain.NL:
                 raise ValueError("SYS nicht erlaubt im NL-Kontext.")
-            key = str(value).encode("utf-8")
+            text = str(value)
+            key = text.encode("utf-8")
             rev_key = (origin, key)
             if rev_key in self._c_reverse:
                 return self._c_reverse[rev_key]
+            geo_s, geo_i, geo_space = _code_geometry(text)
             entry_id = len(self.c_entries)
             self.c_entries.append(
                 StructureEntry(
                     entry_id=entry_id,
                     key_bytes=key,
-                    substance=1,
-                    perm_index=1,
-                    perm_space=1,
+                    substance=geo_s,
+                    perm_index=geo_i,
+                    perm_space=geo_space,
                     origin=origin,
                 )
             )
@@ -170,6 +200,11 @@ class DocumentRegistry:
             rev_key = (origin, key)
             if rev_key in self._c_reverse:
                 return self._c_reverse[rev_key]
+            # Code-Struktur-Token (Keyword/Klammer/Operator) bekommen echte
+            # Primzahl-Geometrie; NL-Zell-C (GEOM, pickled bytes) behaelt die
+            # vom Aufrufer uebergebene Zell-Geometrie (perm_index/perm_space).
+            if origin is COrigin.CODE and isinstance(value, str):
+                substance, perm_index, perm_space = _code_geometry(value)
             entry_id = len(self.c_entries)
             self.c_entries.append(
                 StructureEntry(
@@ -269,6 +304,68 @@ class DocumentRegistry:
         if isinstance(entry, int):
             return checksum_n(str(entry))
         return entry.checksum
+
+    def c_display(self, ptr_id: int) -> str:
+        """Klartext eines C(I)/SYS-Struktureintrags."""
+        return self.c_entries[ptr_id].key_bytes.decode("utf-8", errors="replace")
+
+    def c_substance(self, ptr_id: int) -> int:
+        """Primprodukt-Substanz eines C(I)-Struktureintrags."""
+        return self.c_entries[ptr_id].substance
+
+    def c_perm_index(self, ptr_id: int) -> int:
+        """Permutations-Rang (Reihenfolge) eines C(I)-Struktureintrags."""
+        return self.c_entries[ptr_id].perm_index
+
+    def c_checksum(self, ptr_id: int) -> int:
+        """Checksum-Identität (C_<checksum>) eines C(I)-Struktureintrags."""
+        return checksum_c(self.c_display(ptr_id))
+
+    def h_substance(self, ptr_id: int) -> int:
+        """Gewichtete Segment-Substanz eines H(I)-Eintrags."""
+        return substance_hi(self.h_entries[ptr_id])
+
+    def collision_report(self) -> dict[str, dict[str, int | bool]]:
+        """Kollisionsfreiheit je Kategorie prüfen.
+
+        Für jede Kategorie wird gezählt, ob zwei **unterschiedliche** Literale
+        dieselbe geometrische Identität teilen. Kollisionsfrei heißt: Anzahl
+        eindeutiger Identitäten == Anzahl eindeutiger Literale.
+        """
+        report: dict[str, dict[str, int | bool]] = {}
+
+        def _bucket(literals: list[str], identity) -> dict[str, int | bool]:
+            uniq_lit = set(literals)
+            ids = {identity(lit) for lit in uniq_lit}
+            return {
+                "entries": len(uniq_lit),
+                "identities": len(ids),
+                "collisions": len(uniq_lit) - len(ids),
+                "collision_free": len(uniq_lit) == len(ids),
+            }
+
+        # S: Identität = (substance, perm_index)
+        s_lits = [e.word_canonical for e in self.s_entries]
+        report["S"] = _bucket(
+            s_lits,
+            lambda lit: (
+                self.s_entries[self._s_reverse[lit]].substance,
+                self.s_entries[self._s_reverse[lit]].perm_index,
+            ),
+        )
+        # N: Identität = substance_n (Atom/Komposit), Literal = n_display
+        n_lits = [self.n_display(i) for i in range(len(self.n_entries))]
+        report["N"] = _bucket(n_lits, substance_n)
+        # C: Identität = (substance, order-index) mit gebundener Perm-Berechnung
+        c_lits = [self.c_display(i) for i in range(len(self.c_entries))]
+        report["C"] = _bucket(c_lits, lambda lit: _code_geometry(lit)[:2])
+        # H: Identität = substance_hi, Literal = raw
+        h_lits = [decode_hi(p) for p in self.h_entries]
+        report["H"] = _bucket(
+            h_lits,
+            lambda lit, idx={decode_hi(p): i for i, p in enumerate(self.h_entries)}: self.h_substance(idx[lit]),
+        )
+        return report
 
     def intern_n_from_display(self, text: str, *, context: ParseContext) -> int:
         """Wire/Decode: Ziffernliteral → atomarer oder Tupel-N-Eintrag."""
