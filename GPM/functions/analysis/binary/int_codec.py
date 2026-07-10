@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from collections import Counter
 
+from alphabets.profiles import AlphabetProfile
+from gpm_types.si.substance import ingredients_for_profile
 from perm.multiset import calc_total_perms
 
 WIDTH_CLASSES = (2, 4, 8, 16)
@@ -44,6 +46,17 @@ def perm_width_class(normalized: str) -> int:
 
 def perm_width_bytes(normalized: str) -> int:
     return width_bytes_for_class(perm_width_class(normalized))
+
+
+def perm_space_size_from_substance(substance: int, profile: AlphabetProfile | str) -> int:
+    counts = ingredients_for_profile(substance, profile)
+    return calc_total_perms(counts)
+
+
+def perm_width_bytes_from_substance(substance: int, profile: AlphabetProfile | str) -> int:
+    return width_bytes_for_class(
+        width_class_for_magnitude(perm_space_size_from_substance(substance, profile))
+    )
 
 
 def encode_fixed_int(value: int, width_bytes: int) -> bytes:

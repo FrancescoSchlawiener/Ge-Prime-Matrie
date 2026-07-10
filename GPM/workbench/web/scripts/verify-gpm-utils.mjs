@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /** Magic-byte and filename helpers (mirrors gpmIngest.ts / gpmFilename.ts). */
-const GPM_VERSIONS = new Set([4, 8, 9]);
+const GPM_VERSIONS = new Set([4, 8, 9, 10]);
 
 function isGpmOrGpcMagic(head) {
   if (head.length < 4) return false;
@@ -27,6 +27,7 @@ function assert(cond, msg) {
 }
 
 assert(isGpmOrGpcMagic(new Uint8Array([0x47, 0x50, 0x4d, 0x09])), "GPM v9");
+assert(isGpmOrGpcMagic(new Uint8Array([0x47, 0x50, 0x4d, 0x0a])), "GPM v10");
 assert(isGpmOrGpcMagic(new Uint8Array([0x47, 0x50, 0x4d, 0x04])), "GPM v4");
 assert(isGpmOrGpcMagic(new Uint8Array([0x47, 0x50, 0x43, 0x01])), "GPC");
 assert(!isGpmOrGpcMagic(new Uint8Array([0x74, 0x65, 0x73, 0x74])), "plain text");

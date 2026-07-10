@@ -6,7 +6,7 @@ Ge-Prime-Matrix existiert als **Web-App** (OG) und als **Bibliothek** (GPM/funct
 flowchart TB
   subgraph lib [GPM/functions Bibliothek]
     SI[33 Profile S/I]
-    Code[Code Hybrid v9]
+    Code[Code Hybrid v10]
     Analysis[Compile Compare Binary]
   end
   subgraph og [Ge-Prime-Matrix OG]
@@ -28,7 +28,7 @@ flowchart TB
 
 | Schicht | Ziel |
 |---------|------|
-| **GPM/functions** | Bitgenaue Rekonstruktion, 33 Profile, v9, Code/Hybrid, Bibliotheks-API |
+| **GPM/functions** | Bitgenaue Rekonstruktion, 33 Profile, v10, Code/Hybrid, Bibliotheks-API |
 | **OG Web-App** | Editor, HTTP-API, v7-Produktion, Linguistik, Cipher, DB-Korpus |
 | **Toy v35** | Normalisierte Redundanz-Analyse (Kommentare weg, Uppercase) |
 
@@ -36,9 +36,9 @@ flowchart TB
 
 | Format | OG | GPM/functions |
 |--------|-----|---------------|
-| Schreiben | v7 Standard | **v9** Standard |
-| Lesen | v1–v7 | v4, v8, v9, v7 best-effort |
-| Block-Tree | — | `FLAG_BLOCK_TREE` in v9 |
+| Schreiben | v7 Standard | **v10** Standard |
+| Lesen | v1–v7 | v4, v8, v9, v10, v7 best-effort |
+| Block-Tree | — | `FLAG_BLOCK_TREE` in v9/v10 (Code/Hybrid) |
 | GPC-Verschlüsselung | ja | nein (Roadmap) |
 
 ## Was wo liegt

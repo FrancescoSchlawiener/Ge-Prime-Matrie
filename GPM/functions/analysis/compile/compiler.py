@@ -152,25 +152,38 @@ def compile_text_to_gpm(
     version: int | None = None,
     use_gap_rle: bool = False,
 ) -> tuple[GpmDocument, bytes, CompileStats]:
-    """Kompiliert Text und serialisiert nach .gpm (v8 Standard)."""
-    from analysis.binary.format import FILE_HEADER_SIZE, write_gpm
-    from analysis.binary.int_codec import genome_substance_field_bytes, perm_width_bytes
+    """Kompiliert Text und serialisiert nach .gpm (v10 Standard)."""
+    from analysis.binary.format import FILE_HEADER_SIZE, VERSION, VERSION_V9, write_gpm
+    from analysis.binary.int_codec import (
+        genome_substance_field_bytes,
+        perm_width_bytes,
+        perm_width_bytes_from_substance,
+    )
 
     document, stats = compile_text(text, profile, case_policy=case_policy)
     materialize_geometry(document)
     blob = write_gpm(document, version=version, use_gap_rle=use_gap_rle)
 
-    genome_bytes = sum(
-        4
-        + len(e.word_canonical.encode("utf-8"))
-        + len(e.word_normalized.encode("utf-8"))
-        + genome_substance_field_bytes(e.substance)
-        for e in document.header
-    )
-    body_bytes = sum(
-        3 + perm_width_bytes(document.header[t.word_id].word_normalized)
-        for t in document.tokens
-    )
+    target_version = VERSION if version is None else version
+    if target_version == VERSION:
+        genome_bytes = sum(
+            genome_substance_field_bytes(e.substance)
+            + perm_width_bytes_from_substance(e.substance, document.profile)
+            for e in document.header
+        )
+        body_bytes = 3 * len(document.tokens)
+    else:
+        genome_bytes = sum(
+            4
+            + len(e.word_canonical.encode("utf-8"))
+            + len(e.word_normalized.encode("utf-8"))
+            + genome_substance_field_bytes(e.substance)
+            for e in document.header
+        )
+        body_bytes = sum(
+            3 + perm_width_bytes(document.header[t.word_id].word_normalized)
+            for t in document.tokens
+        )
     explicit_bytes = sum(8 + len(text.encode("utf-8")) for _, text in document.explicit)
     profile_bytes = 1 + len(document.profile.value.encode("utf-8"))
 

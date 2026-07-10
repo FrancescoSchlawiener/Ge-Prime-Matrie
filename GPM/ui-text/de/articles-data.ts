@@ -262,9 +262,9 @@ export const EXPLAIN_ARTICLES_DATA: ExplainArticleMeta[] = [
     slug: "13-gpm-binary",
     section: "dokument",
     title: "GPM Binary",
-    summary: "Container-Format .gpm, Magic, Version 9",
+    summary: "Container-Format .gpm, Magic, Version 10",
     atAGlance: [
-      "Magic GPM, Version 9 ist Standard (Profil, Block-Tree, GAP-RLE).",
+      "Magic GPM, Version 10 ist Standard (SI-Genom, Profil, GAP-RLE).",
       "write_gpm → read_gpm → reconstruct_text muss bitgenau sein.",
       "Verschlüsselt: Magic GPC\\x01 — siehe Kapitel 28.",
     ],

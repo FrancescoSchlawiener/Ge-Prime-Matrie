@@ -32,9 +32,10 @@ Ein `GpmDocument` im Speicher wird deterministisch in Bytes serialisiert und zur
 |---------|--------|----------------|
 | **4** | Legacy | Flaches Layout, OG-lesbar |
 | **8** | Profil | + `AlphabetProfile` im Header |
-| **9** | **Standard** | Fraktal-Geometrie, Registry-C, GAP-RLE, Block-Tree |
+| **9** | Lesen | Fraktal-Geometrie, Registry-C, GAP-RLE, Block-Tree |
+| **10** | **Standard** | SI-Genom (nur S+I), kompakter Body, optional Canonical-Override |
 
-Die Workbench schreibt standardmäßig **Version 9**.
+Die Workbench schreibt standardmäßig **Version 10**.
 
 ## Flags (Auswahl)
 
@@ -45,11 +46,12 @@ Die Workbench schreibt standardmäßig **Version 9**.
 | `FLAG_FRACTAL` | Registry-C + Geometrie |
 | `FLAG_BLOCK_TREE` | Code-/Block-Baum eingebettet |
 | `FLAG_BODY_CELL` | Zell-Geometrie aktiv |
+| `FLAG_GENOME_SI` | Genom nur S+I (v10) |
 
 ## Ablauf — Speichern
 
 1. Text/Code/Hybrid kompilieren → `GpmDocument`
-2. `write_gpm(doc, version=9)` → `bytes`
+2. `write_gpm(doc)` → `bytes` (Standard: v10)
 3. Bytes als `.gpm` ablegen oder Base64 an API senden
 
 ## Ablauf — Laden

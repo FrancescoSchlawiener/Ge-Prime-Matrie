@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from analysis.binary.int_codec import perm_space_size
+from analysis.binary.int_codec import perm_space_size, perm_space_size_from_substance
 from analysis.document.invariants import assert_gap_symmetry
 from analysis.document.model import GpmDocument
 
@@ -25,7 +25,10 @@ def assert_referential_integrity(document: GpmDocument) -> None:
                 f"(Header-Länge {len(header)})."
             )
         entry = header[word_id]
-        n = perm_space_size(entry.word_normalized)
+        if entry.word_normalized:
+            n = perm_space_size(entry.word_normalized)
+        else:
+            n = perm_space_size_from_substance(entry.substance, document.profile)
         if not 1 <= token.perm_index <= n:
             raise ValueError(
                 f"Index I={token.perm_index} außerhalb N={n} "

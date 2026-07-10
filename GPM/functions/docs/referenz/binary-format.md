@@ -16,9 +16,10 @@ flowchart TB
 |---------|----------|----------------|
 | **4** | Legacy | Flaches Layout, OG-lesbar |
 | **8** | Profil | + `AlphabetProfile` im Header |
-| **9** | **Default** | + Fraktal-Geometrie, Registry-C, GAP-RLE, optional Block-Tree |
+| **9** | Lesen | Fraktal-Geometrie, Registry-C, GAP-RLE, Block-Tree (Schreiben: `version=9`) |
+| **10** | **Default** | SI-Genom (nur S+I), kompakter Body, optional Canonical-Override, Code-Registry-Wire |
 
-Konstante: `analysis.binary.format.VERSION` (= 9).
+Konstante: `analysis.binary.format.VERSION` (= 10).
 
 ## Datei-Header (29 Byte)
 
@@ -45,6 +46,7 @@ Konstante: `analysis.binary.format.VERSION` (= 9).
 | `FLAG_PROFILE` | 0x10 | Profilname im Payload |
 | `FLAG_FRACTAL` | 0x20 | Registry-C + Geometrie |
 | `FLAG_BLOCK_TREE` | 0x40 | Code-/Block-Baum eingebettet |
+| `FLAG_GENOME_SI` | 0x80 | Genom nur S+I (v10), Body ohne per-Token-I |
 
 ## Payload-Reihenfolge (v9)
 
@@ -60,7 +62,13 @@ flowchart LR
   prof --> reg --> tree --> gen --> body --> mid --> exp
 ```
 
-Block-Tree: 4-Byte Länge + `encode_block_tree(root_block)` wenn `FLAG_BLOCK_TREE`.
+## Payload-Reihenfolge (v10)
+
+Profil → Registry (leer / C-SI / Code-Wire) → Block-Tree (optional, nur Code/Hybrid) → Genom (S+I [+ optional Canonical]) → Token-Body (word_id + case_code) → GAP Middle → Explicit
+
+**v10 Genom-Eintrag:** Substanz S + Index I (binär). Wenn die Schreibweise von S/I abweicht (z. B. Umlaute `ö` vs. `oe`), folgt ein optionaler Canonical-Override (UTF-8).
+
+**Registry v10:** NL-only → leer (count=0). Kurze Code-Symbole → C-Einträge nur mit S+I. Hybrid/Code → Code-Registry-Wire (`count=0xFFFF` + Länge + `encode_code_registry`).
 
 ## I/O-API
 

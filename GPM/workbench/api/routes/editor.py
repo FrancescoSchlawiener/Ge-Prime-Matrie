@@ -127,9 +127,12 @@ def _gpm_read_bytes(raw: bytes, key: str | None) -> WorkbenchResponse:
             status_code=422,
         ) from exc
     ref = store.put_document(mode="gpm", profile=doc.profile, document=doc, gpm_bytes=raw)
+    from analysis.blocks.node import BlockLevel
+
     if (
         doc.registry is not None
         and doc.root_block is not None
+        and doc.root_block.level in (BlockLevel.MODULE, BlockLevel.CODE_BLOCK)
         and (doc.root_block.children or doc.root_block.sequence)
     ):
         text = reconstruct_source(doc.root_block, doc.registry)

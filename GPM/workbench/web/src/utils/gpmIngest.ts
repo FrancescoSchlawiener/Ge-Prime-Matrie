@@ -1,6 +1,6 @@
 import { api } from "../api/client";
 
-const GPM_VERSIONS = new Set([4, 8, 9]);
+const GPM_VERSIONS = new Set([4, 8, 9, 10]);
 const GPC_MAGIC = [0x47, 0x50, 0x43, 0x01] as const;
 
 export type GpmIngestResult =

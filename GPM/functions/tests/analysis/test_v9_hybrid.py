@@ -3,7 +3,7 @@
 import unittest
 
 from alphabets import AlphabetProfile
-from analysis.binary.format import FLAG_BLOCK_TREE, VERSION, read_gpm
+from analysis.binary.format import FLAG_BLOCK_TREE, VERSION, VERSION_V9, read_gpm
 from analysis.code.compile import compile_hybrid_to_gpm, verify_hybrid_reversibility
 
 
